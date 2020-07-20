@@ -19,14 +19,17 @@ import torch
 from torch import nn
 import torch.utils.data
 
-from nemo.collections.tts.sam.data.utils import load_wav_to_torch, load_filepaths_and_text
-from nemo.collections.tts.sam.data.text_process import TextProcess
+from nemo.collections.tts.sam.data.utils import (
+    load_wav_to_torch,
+    load_filepaths_and_text,
+)
 import nemo.collections.tts.sam.data.cmudict as cmudict
 
 from scipy.signal import get_window
 from librosa.util import pad_center, tiny
 from librosa import stft, istft
 from librosa.filters import mel as librosa_mel_fn
+
 
 def dynamic_range_compression(x, C=1, clip_val=1e-5):
     """
@@ -38,16 +41,23 @@ def dynamic_range_compression(x, C=1, clip_val=1e-5):
 
 
 def dynamic_range_decompression(x, C=1):
-  """
+    """
   PARAMS
   ------
   C: compression factor used to compress
   """
-  return torch.exp(x) / C
+    return torch.exp(x) / C
 
 
-def window_sumsquare(window, n_frames, hop_length=200, win_length=800,
-                     n_fft=800, dtype=np.float32, norm=None):
+def window_sumsquare(
+    window,
+    n_frames,
+    hop_length=200,
+    win_length=800,
+    n_fft=800,
+    dtype=np.float32,
+    norm=None,
+):
     """
     # from librosa 0.6
     Compute the sum-square envelope of a window function at a given hop length.
@@ -88,20 +98,22 @@ def window_sumsquare(window, n_frames, hop_length=200, win_length=800,
 
     # Compute the squared window at the desired length
     win_sq = get_window(window, win_length, fftbins=True)
-    win_sq = librosa_util.normalize(win_sq, norm=norm)**2
+    win_sq = librosa_util.normalize(win_sq, norm=norm) ** 2
     win_sq = librosa_util.pad_center(win_sq, n_fft)
 
     # Fill the envelope
     for i in range(n_frames):
         sample = i * hop_length
-        x[sample:min(n, sample + n_fft)] += win_sq[:max(0, min(n_fft, n - sample))]
+        x[sample : min(n, sample + n_fft)] += win_sq[: max(0, min(n_fft, n - sample))]
     return x
+
 
 class STFT(torch.nn.Module):
     """adapted from Prem Seetharaman's https://github.com/pseeth/pytorch-stft"""
 
-    def __init__(self, filter_length=800, hop_length=200, win_length=800,
-                 window='hann'):
+    def __init__(
+        self, filter_length=800, hop_length=200, win_length=800, window="hann"
+    ):
         super(STFT, self).__init__()
         self.filter_length = filter_length
         self.hop_length = hop_length
@@ -112,15 +124,17 @@ class STFT(torch.nn.Module):
         fourier_basis = np.fft.fft(np.eye(self.filter_length))
 
         cutoff = int((self.filter_length / 2 + 1))
-        fourier_basis = np.vstack([np.real(fourier_basis[:cutoff, :]),
-                                   np.imag(fourier_basis[:cutoff, :])])
+        fourier_basis = np.vstack(
+            [np.real(fourier_basis[:cutoff, :]), np.imag(fourier_basis[:cutoff, :])]
+        )
 
         forward_basis = torch.FloatTensor(fourier_basis[:, None, :])
         inverse_basis = torch.FloatTensor(
-            np.linalg.pinv(scale * fourier_basis).T[:, None, :])
+            np.linalg.pinv(scale * fourier_basis).T[:, None, :]
+        )
 
         if window is not None:
-            assert (filter_length >= win_length)
+            assert filter_length >= win_length
             # get window and zero center pad it to filter_length
             fft_window = get_window(window, win_length, fftbins=True)
             fft_window = pad_center(fft_window, filter_length)
@@ -130,8 +144,8 @@ class STFT(torch.nn.Module):
             forward_basis *= fft_window
             inverse_basis *= fft_window
 
-        self.register_buffer('forward_basis', forward_basis.float())
-        self.register_buffer('inverse_basis', inverse_basis.float())
+        self.register_buffer("forward_basis", forward_basis.float())
+        self.register_buffer("inverse_basis", inverse_basis.float())
 
     def transform(self, input_data):
         num_batches = input_data.size(0)
@@ -145,14 +159,13 @@ class STFT(torch.nn.Module):
             input_data = F.pad(
                 input_data.unsqueeze(1),
                 (int(self.filter_length / 2), int(self.filter_length / 2), 0, 0),
-                mode='reflect')
+                mode="reflect",
+            )
             input_data = input_data.squeeze(1)
 
             forward_transform = F.conv1d(
-                input_data,
-                self.forward_basis,
-                stride=self.hop_length,
-                padding=0)
+                input_data, self.forward_basis, stride=self.hop_length, padding=0
+            )
 
             cutoff = int((self.filter_length / 2) + 1)
             real_part = forward_transform[:, :cutoff, :]
@@ -162,7 +175,9 @@ class STFT(torch.nn.Module):
             real_part = []
             imag_part = []
             for y in x:
-                y_ = stft(y, self.filter_length, self.hop_length, self.win_length, self.window)
+                y_ = stft(
+                    y, self.filter_length, self.hop_length, self.win_length, self.window
+                )
                 real_part.append(y_.real[None, :, :])
                 imag_part.append(y_.imag[None, :, :])
             real_part = np.concatenate(real_part, 0)
@@ -178,44 +193,57 @@ class STFT(torch.nn.Module):
 
     def inverse(self, magnitude, phase):
         recombine_magnitude_phase = torch.cat(
-            [magnitude * torch.cos(phase), magnitude * torch.sin(phase)], dim=1)
+            [magnitude * torch.cos(phase), magnitude * torch.sin(phase)], dim=1
+        )
 
         if magnitude.device.type == "cuda":
             inverse_transform = F.conv_transpose1d(
                 recombine_magnitude_phase,
                 self.inverse_basis,
                 stride=self.hop_length,
-                padding=0)
+                padding=0,
+            )
 
             if self.window is not None:
                 window_sum = window_sumsquare(
-                    self.window, magnitude.size(-1), hop_length=self.hop_length,
-                    win_length=self.win_length, n_fft=self.filter_length,
-                    dtype=np.float32)
+                    self.window,
+                    magnitude.size(-1),
+                    hop_length=self.hop_length,
+                    win_length=self.win_length,
+                    n_fft=self.filter_length,
+                    dtype=np.float32,
+                )
                 # remove modulation effects
                 approx_nonzero_indices = torch.from_numpy(
-                    np.where(window_sum > tiny(window_sum))[0])
+                    np.where(window_sum > tiny(window_sum))[0]
+                )
                 window_sum = torch.from_numpy(window_sum).to(inverse_transform.device)
-                inverse_transform[:, :, approx_nonzero_indices] /= window_sum[approx_nonzero_indices]
+                inverse_transform[:, :, approx_nonzero_indices] /= window_sum[
+                    approx_nonzero_indices
+                ]
 
                 # scale by hop ratio
                 inverse_transform *= float(self.filter_length) / self.hop_length
 
-            inverse_transform = inverse_transform[:, :, int(self.filter_length / 2):]
-            inverse_transform = inverse_transform[:, :, :-int(self.filter_length / 2):]
+            inverse_transform = inverse_transform[:, :, int(self.filter_length / 2) :]
+            inverse_transform = inverse_transform[
+                :, :, : -int(self.filter_length / 2) :
+            ]
             inverse_transform = inverse_transform.squeeze(1)
         else:
             x_org = recombine_magnitude_phase.detach().numpy()
             n_b, n_f, n_t = x_org.shape
             x = np.empty([n_b, n_f // 2, n_t], dtype=np.complex64)
-            x.real = x_org[:, :n_f // 2]
-            x.imag = x_org[:, n_f // 2:]
+            x.real = x_org[:, : n_f // 2]
+            x.imag = x_org[:, n_f // 2 :]
             inverse_transform = []
             for y in x:
                 y_ = istft(y, self.hop_length, self.win_length, self.window)
                 inverse_transform.append(y_[None, :])
             inverse_transform = np.concatenate(inverse_transform, 0)
-            inverse_transform = torch.from_numpy(inverse_transform).to(recombine_magnitude_phase.dtype)
+            inverse_transform = torch.from_numpy(inverse_transform).to(
+                recombine_magnitude_phase.dtype
+            )
 
         return inverse_transform
 
@@ -226,28 +254,36 @@ class STFT(torch.nn.Module):
 
 
 class TacotronSTFT(nn.Module):
-  def __init__(self, filter_length=1024, hop_length=256, win_length=1024,
-                 n_mel_channels=80, sampling_rate=22050, mel_fmin=0.0,
-                 mel_fmax=8000.0):
-    super(TacotronSTFT, self).__init__()
-    self.n_mel_channels = n_mel_channels
-    self.sampling_rate = sampling_rate
-    self.stft_fn = STFT(filter_length, hop_length, win_length)
-    mel_basis = librosa_mel_fn(
-        sampling_rate, filter_length, n_mel_channels, mel_fmin, mel_fmax)
-    mel_basis = torch.from_numpy(mel_basis).float()
-    self.register_buffer('mel_basis', mel_basis)
+    def __init__(
+        self,
+        filter_length=1024,
+        hop_length=256,
+        win_length=1024,
+        n_mel_channels=80,
+        sampling_rate=22050,
+        mel_fmin=0.0,
+        mel_fmax=8000.0,
+    ):
+        super(TacotronSTFT, self).__init__()
+        self.n_mel_channels = n_mel_channels
+        self.sampling_rate = sampling_rate
+        self.stft_fn = STFT(filter_length, hop_length, win_length)
+        mel_basis = librosa_mel_fn(
+            sampling_rate, filter_length, n_mel_channels, mel_fmin, mel_fmax
+        )
+        mel_basis = torch.from_numpy(mel_basis).float()
+        self.register_buffer("mel_basis", mel_basis)
 
-  def spectral_normalize(self, magnitudes):
-    output = dynamic_range_compression(magnitudes)
-    return output
+    def spectral_normalize(self, magnitudes):
+        output = dynamic_range_compression(magnitudes)
+        return output
 
-  def spectral_de_normalize(self, magnitudes):
-    output = dynamic_range_decompression(magnitudes)
-    return output
+    def spectral_de_normalize(self, magnitudes):
+        output = dynamic_range_decompression(magnitudes)
+        return output
 
-  def mel_spectrogram(self, y):
-    """Computes mel-spectrograms from a batch of waves
+    def mel_spectrogram(self, y):
+        """Computes mel-spectrograms from a batch of waves
     PARAMS
     ------
     y: Variable(torch.FloatTensor) with shape (B, T) in range [-1, 1]
@@ -256,14 +292,15 @@ class TacotronSTFT(nn.Module):
     -------
     mel_output: torch.FloatTensor of shape (B, n_mel_channels, T)
     """
-    assert(torch.min(y.data) >= -1)
-    assert(torch.max(y.data) <= 1)
+        assert torch.min(y.data) >= -1
+        assert torch.max(y.data) <= 1
 
-    magnitudes, phases = self.stft_fn.transform(y)
-    magnitudes = magnitudes.data
-    mel_output = torch.matmul(self.mel_basis, magnitudes)
-    mel_output = self.spectral_normalize(mel_output)
-    return mel_output
+        magnitudes, phases = self.stft_fn.transform(y)
+        magnitudes = magnitudes.data
+        mel_output = torch.matmul(self.mel_basis, magnitudes)
+        mel_output = self.spectral_normalize(mel_output)
+        return mel_output
+
 
 class TextMelLoader(torch.utils.data.Dataset):
     """
@@ -271,7 +308,8 @@ class TextMelLoader(torch.utils.data.Dataset):
         2) normalizes text and converts them to sequences of one-hot vectors
         3) computes mel-spectrograms from audio files.
     """
-    def __init__(self, audiopaths_and_text, hparams):
+
+    def __init__(self, audiopaths_and_text, text_process, hparams):
         self.audiopaths_and_text = load_filepaths_and_text(audiopaths_and_text)
         self.text_cleaners = hparams.text_cleaners
         self.max_wav_value = hparams.max_wav_value
@@ -279,13 +317,17 @@ class TextMelLoader(torch.utils.data.Dataset):
         self.load_mel_from_disk = hparams.load_mel_from_disk
         self.add_noise = hparams.add_noise
         self.add_space = hparams.add_space
-        if getattr(hparams, "cmudict_path", None) is not None:
-          self.cmudict = cmudict.CMUDict(hparams.cmudict_path)
         self.stft = TacotronSTFT(
-            hparams.filter_length, hparams.hop_length, hparams.win_length,
-            hparams.n_mel_channels, hparams.sampling_rate, hparams.mel_fmin,
-            hparams.mel_fmax)
-        self.text_process = TextProcess()
+            hparams.filter_length,
+            hparams.hop_length,
+            hparams.win_length,
+            hparams.n_mel_channels,
+            hparams.sampling_rate,
+            hparams.mel_fmin,
+            hparams.mel_fmax,
+        )
+        self.text_process = text_process
+        self.cmu_dict = self.text_process.cmu_dict
         random.seed(1234)
         random.shuffle(self.audiopaths_and_text)
 
@@ -300,8 +342,11 @@ class TextMelLoader(torch.utils.data.Dataset):
         if not self.load_mel_from_disk:
             audio, sampling_rate = load_wav_to_torch(filename)
             if sampling_rate != self.stft.sampling_rate:
-                raise ValueError("{} {} SR doesn't match target {} SR".format(
-                    sampling_rate, self.stft.sampling_rate))
+                raise ValueError(
+                    "{} {} SR doesn't match target {} SR".format(
+                        sampling_rate, self.stft.sampling_rate
+                    )
+                )
             if self.add_noise:
                 audio = audio + torch.rand_like(audio)
             audio_norm = audio / self.max_wav_value
@@ -310,17 +355,22 @@ class TextMelLoader(torch.utils.data.Dataset):
             melspec = torch.squeeze(melspec, 0)
         else:
             melspec = torch.from_numpy(np.load(filename))
-            assert melspec.size(0) == self.stft.n_mel_channels, (
-                'Mel dimension mismatch: given {}, expected {}'.format(
-                    melspec.size(0), self.stft.n_mel_channels))
+            assert (
+                melspec.size(0) == self.stft.n_mel_channels
+            ), "Mel dimension mismatch: given {}, expected {}".format(
+                melspec.size(0), self.stft.n_mel_channels
+            )
 
         return melspec
 
     def get_text(self, text):
         if self.add_space:
-          text = " " + text.strip() + " "
+            text = " " + text.strip() + " "
         text_norm = torch.IntTensor(
-            self.text_process.text_to_sequence(text, self.text_cleaners, getattr(self, "cmudict", None)))
+            self.text_process.text_to_sequence(
+                text, self.text_cleaners, getattr(self, "cmudict", None)
+            )
+        )
         return text_norm
 
     def __getitem__(self, index):
@@ -329,9 +379,11 @@ class TextMelLoader(torch.utils.data.Dataset):
     def __len__(self):
         return len(self.audiopaths_and_text)
 
-class TextMelCollate():
+
+class TextMelCollate:
     """ Zero-pads model inputs and targets based on number of frames per step
     """
+
     def __init__(self, n_frames_per_step=1):
         self.n_frames_per_step = n_frames_per_step
 
@@ -343,21 +395,23 @@ class TextMelCollate():
         """
         # Right zero-pad all one-hot text sequences to max input length
         input_lengths, ids_sorted_decreasing = torch.sort(
-            torch.LongTensor([len(x[0]) for x in batch]),
-            dim=0, descending=True)
+            torch.LongTensor([len(x[0]) for x in batch]), dim=0, descending=True
+        )
         max_input_len = input_lengths[0]
 
         text_padded = torch.LongTensor(len(batch), max_input_len)
         text_padded.zero_()
         for i in range(len(ids_sorted_decreasing)):
             text = batch[ids_sorted_decreasing[i]][0]
-            text_padded[i, :text.size(0)] = text
+            text_padded[i, : text.size(0)] = text
 
         # Right zero-pad mel-spec
         num_mels = batch[0][1].size(0)
         max_target_len = max([x[1].size(1) for x in batch])
         if max_target_len % self.n_frames_per_step != 0:
-            max_target_len += self.n_frames_per_step - max_target_len % self.n_frames_per_step
+            max_target_len += (
+                self.n_frames_per_step - max_target_len % self.n_frames_per_step
+            )
             assert max_target_len % self.n_frames_per_step == 0
 
         # include mel padded
@@ -366,8 +420,7 @@ class TextMelCollate():
         output_lengths = torch.LongTensor(len(batch))
         for i in range(len(ids_sorted_decreasing)):
             mel = batch[ids_sorted_decreasing[i]][1]
-            mel_padded[i, :, :mel.size(1)] = mel
+            mel_padded[i, :, : mel.size(1)] = mel
             output_lengths[i] = mel.size(1)
 
         return text_padded, input_lengths, mel_padded, output_lengths
-

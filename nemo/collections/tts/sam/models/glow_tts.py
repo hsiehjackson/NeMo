@@ -17,18 +17,19 @@ import torch.utils.data
 import math
 import nemo.collections.tts.sam as nemo_tts_sam
 from nemo.core.classes import ModelPT
-from nemo.collections.tts.sam.data.symbols import symbols
 from typing import Dict, Optional
 
-class GlowTTSModel(ModelPT):
 
+class GlowTTSModel(ModelPT):
     def __init__(self, hps):
         super().__init__()
 
         self.hps = hps
 
+        self.text_process = nemo_tts_sam.data.text_process.TextProcess(hps.data)
+
         self.encoder = nemo_tts_sam.glow_tts.modules.TextEncoder(
-            len(symbols),
+            len(self.text_process.symbols),
             hps.data.n_mel_channels,
             hps.model.hidden_channels_enc or hps.model.hidden_channels,
             hps.model.filter_channels,
@@ -39,7 +40,8 @@ class GlowTTSModel(ModelPT):
             hps.model.p_dropout,
             window_size=hps.model.window_size,
             mean_only=hps.model.mean_only,
-            prenet=hps.model.prenet)
+            prenet=hps.model.prenet,
+        )
 
         self.decoder = nemo_tts_sam.glow_tts.modules.FlowSpecDecoder(
             hps.data.n_mel_channels,
@@ -51,7 +53,8 @@ class GlowTTSModel(ModelPT):
             p_dropout=hps.model.p_dropout_dec,
             n_sqz=hps.model.n_sqz,
             n_split=4,
-            sigmoid_scale=False)
+            sigmoid_scale=False,
+        )
 
         self.n_sqz = hps.model.n_sqz
         self.mel_channels = hps.data.n_mel_channels
@@ -62,15 +65,17 @@ class GlowTTSModel(ModelPT):
 
         # After defining all torch.modules, create optimizer and scheduler
         optimizer_params = {
-            'optimizer': hps.train.optimizer,
-            'lr': hps.train.lr,
+            "optimizer": hps.train.optimizer,
+            "lr": hps.train.lr,
             #'opt_args': hps.train.opt_args,
         }
 
         self.setup_optimization(optimizer_params)
-        #self.__scheduler = SquareAnnealing(self.__optimizer, max_steps=hps.train.train_steps, min_lr=1e-5)
+        # self.__scheduler = SquareAnnealing(self.__optimizer, max_steps=hps.train.train_steps, min_lr=1e-5)
 
-    def setup_optimization(self, optim_params: Optional[Dict] = None) -> torch.optim.Optimizer:
+    def setup_optimization(
+        self, optim_params: Optional[Dict] = None
+    ) -> torch.optim.Optimizer:
         self.__optimizer = super().setup_optimization(optim_params)
 
     def configure_optimizers(self):
@@ -89,7 +94,17 @@ class GlowTTSModel(ModelPT):
         y_lengths = (y_lengths // self.n_sqz) * self.n_sqz
         return y, y_lengths, y_max_length
 
-    def forward(self, x, x_lengths, y=None, y_lengths=None, g=None, gen=False, noise_scale=1., length_scale=1.):
+    def forward(
+        self,
+        x,
+        x_lengths,
+        y=None,
+        y_lengths=None,
+        g=None,
+        gen=False,
+        noise_scale=1.0,
+        length_scale=1.0,
+    ):
 
         if g is not None:
             g = F.normalize(self.emb_g(g)).unsqueeze(-1)  # [b, h]
@@ -105,15 +120,25 @@ class GlowTTSModel(ModelPT):
         else:
             y_max_length = y.size(2)
         y, y_lengths, y_max_length = self.preprocess(y, y_lengths, y_max_length)
-        y_mask = torch.unsqueeze(nemo_tts_sam.glow_tts.parts.sequence_mask(y_lengths, y_max_length), 1).to(x_mask.dtype)
+        y_mask = torch.unsqueeze(
+            nemo_tts_sam.glow_tts.parts.sequence_mask(y_lengths, y_max_length), 1
+        ).to(x_mask.dtype)
         attn_mask = torch.unsqueeze(x_mask, -1) * torch.unsqueeze(y_mask, 2)
 
         if gen:
-            attn = nemo_tts_sam.glow_tts.parts.generate_path(w_ceil.squeeze(1), attn_mask.squeeze(1)).unsqueeze(1)
-            y_m = torch.matmul(attn.squeeze(1).transpose(1, 2), x_m.transpose(1, 2)).transpose(1,
-                                                                                               2)  # [b, t', t], [b, t, d] -> [b, d, t']
-            y_logs = torch.matmul(attn.squeeze(1).transpose(1, 2), x_logs.transpose(1, 2)).transpose(1,
-                                                                                                     2)  # [b, t', t], [b, t, d] -> [b, d, t']
+            attn = nemo_tts_sam.glow_tts.parts.generate_path(
+                w_ceil.squeeze(1), attn_mask.squeeze(1)
+            ).unsqueeze(1)
+            y_m = torch.matmul(
+                attn.squeeze(1).transpose(1, 2), x_m.transpose(1, 2)
+            ).transpose(
+                1, 2
+            )  # [b, t', t], [b, t, d] -> [b, d, t']
+            y_logs = torch.matmul(
+                attn.squeeze(1).transpose(1, 2), x_logs.transpose(1, 2)
+            ).transpose(
+                1, 2
+            )  # [b, t', t], [b, t, d] -> [b, d, t']
             logw_ = torch.log(1e-8 + torch.sum(attn, -1)) * x_mask
 
             z = (y_m + torch.exp(y_logs) * torch.randn_like(y_m) * noise_scale) * y_mask
@@ -124,18 +149,36 @@ class GlowTTSModel(ModelPT):
 
             with torch.no_grad():
                 x_s_sq_r = torch.exp(-2 * x_logs)
-                logp1 = torch.sum(-0.5 * math.log(2 * math.pi) - x_logs, [1]).unsqueeze(-1)  # [b, t, 1]
-                logp2 = torch.matmul(x_s_sq_r.transpose(1, 2), -0.5 * (z ** 2))  # [b, t, d] x [b, d, t'] = [b, t, t']
-                logp3 = torch.matmul((x_m * x_s_sq_r).transpose(1, 2), z)  # [b, t, d] x [b, d, t'] = [b, t, t']
-                logp4 = torch.sum(-0.5 * (x_m ** 2) * x_s_sq_r, [1]).unsqueeze(-1)  # [b, t, 1]
+                logp1 = torch.sum(-0.5 * math.log(2 * math.pi) - x_logs, [1]).unsqueeze(
+                    -1
+                )  # [b, t, 1]
+                logp2 = torch.matmul(
+                    x_s_sq_r.transpose(1, 2), -0.5 * (z ** 2)
+                )  # [b, t, d] x [b, d, t'] = [b, t, t']
+                logp3 = torch.matmul(
+                    (x_m * x_s_sq_r).transpose(1, 2), z
+                )  # [b, t, d] x [b, d, t'] = [b, t, t']
+                logp4 = torch.sum(-0.5 * (x_m ** 2) * x_s_sq_r, [1]).unsqueeze(
+                    -1
+                )  # [b, t, 1]
                 logp = logp1 + logp2 + logp3 + logp4  # [b, t, t']
 
-                attn = nemo_tts_sam.glow_tts.parts.maximum_path(logp, attn_mask.squeeze(1)).unsqueeze(1).detach()
+                attn = (
+                    nemo_tts_sam.glow_tts.parts.maximum_path(logp, attn_mask.squeeze(1))
+                    .unsqueeze(1)
+                    .detach()
+                )
 
-            y_m = torch.matmul(attn.squeeze(1).transpose(1, 2), x_m.transpose(1, 2)).transpose(1,
-                                                                                               2)  # [b, t', t], [b, t, d] -> [b, d, t']
-            y_logs = torch.matmul(attn.squeeze(1).transpose(1, 2), x_logs.transpose(1, 2)).transpose(1,
-                                                                                                     2)  # [b, t', t], [b, t, d] -> [b, d, t']
+            y_m = torch.matmul(
+                attn.squeeze(1).transpose(1, 2), x_m.transpose(1, 2)
+            ).transpose(
+                1, 2
+            )  # [b, t', t], [b, t, d] -> [b, d, t']
+            y_logs = torch.matmul(
+                attn.squeeze(1).transpose(1, 2), x_logs.transpose(1, 2)
+            ).transpose(
+                1, 2
+            )  # [b, t', t], [b, t, d] -> [b, d, t']
             logw_ = torch.log(1e-8 + torch.sum(attn, -1)) * x_mask
             # logw_ is durations from monotonic alignment
 
@@ -145,16 +188,20 @@ class GlowTTSModel(ModelPT):
 
         x, x_lengths, y, y_lengths = batch
 
-        z, y_m, y_logs, logdet, logw, logw_ = self(x, x_lengths, y, y_lengths, gen=False)
+        z, y_m, y_logs, logdet, logw, logw_ = self(
+            x, x_lengths, y, y_lengths, gen=False
+        )
 
-        l_mle, l_length = self.loss(z, y_m, y_logs, logdet, logw, logw_, x_lengths, y_lengths)
+        l_mle, l_length = self.loss(
+            z, y_m, y_logs, logdet, logw, logw_, x_lengths, y_lengths
+        )
 
         loss = sum([l_mle, l_length])
 
         output = {
-            'loss': loss,  # required
-            'progress_bar': {'training_loss': loss},  # optional (MUST ALL BE TENSORS)
-            'log': {'loss': loss, 'l_mle': l_mle, 'l_length' : l_length}
+            "loss": loss,  # required
+            "progress_bar": {"training_loss": loss},  # optional (MUST ALL BE TENSORS)
+            "log": {"loss": loss, "l_mle": l_mle, "l_length": l_length},
         }
 
         return output
@@ -165,32 +212,40 @@ class GlowTTSModel(ModelPT):
 
     def loss(self, z, y_m, y_logs, logdet, logw, logw_, x_lengths, y_lengths):
         l_mle = 0.5 * math.log(2 * math.pi) + (
-                    torch.sum(y_logs) + 0.5 * torch.sum(torch.exp(-2 * y_logs) * (z - y_m) ** 2) - torch.sum(
-                logdet)) / (torch.sum(y_lengths // self.n_sqz) * self.n_sqz * self.mel_channels)
+            torch.sum(y_logs)
+            + 0.5 * torch.sum(torch.exp(-2 * y_logs) * (z - y_m) ** 2)
+            - torch.sum(logdet)
+        ) / (torch.sum(y_lengths // self.n_sqz) * self.n_sqz * self.mel_channels)
         l_length = torch.sum((logw - logw_) ** 2) / torch.sum(x_lengths)
         return l_mle, l_length
 
     def setup_training_data(self, files_list):
-        train_dataset = nemo_tts_sam.data.datalayers.TextMelLoader(files_list, self.hps.data)
-        """train_sampler = torch.utils.data.distributed.DistributedSampler(
-            train_dataset,
-            num_replicas=self.hps.train.n_gpus,
-            rank=rank,
-            shuffle=True)"""
+        train_dataset = nemo_tts_sam.data.datalayers.TextMelLoader(
+            files_list, self.text_process, self.hps.data
+        )
         collate_fn = nemo_tts_sam.data.datalayers.TextMelCollate(1)
-        return torch.utils.data.DataLoader(train_dataset, num_workers=8, shuffle=False,
-                                  batch_size=self.hps.train.batch_size, pin_memory=True,
-                                  drop_last=True, collate_fn=collate_fn)
+        return torch.utils.data.DataLoader(
+            train_dataset,
+            num_workers=8,
+            shuffle=False,
+            batch_size=self.hps.train.batch_size,
+            pin_memory=True,
+            drop_last=True,
+            collate_fn=collate_fn,
+        )
 
     def setup_validation_data(self, files_list):
 
-        val_dataset = nemo_tts_sam.data.datalayers.TextMelLoader(files_list, self.hps.data)
-        """val_sampler = torch.utils.data.distributed.DistributedSampler(
-            val_dataset,
-            num_replicas=self.hps.train.n_gpus,
-            rank=rank,
-            shuffle=True)"""
+        val_dataset = nemo_tts_sam.data.datalayers.TextMelLoader(
+            files_list, self.text_process, self.hps.data
+        )
         collate_fn = nemo_tts_sam.data.datalayers.TextMelCollate(1)
-        return torch.utils.data.DataLoader(val_dataset, num_workers=8, shuffle=False,
-                                  batch_size=self.hps.train.batch_size, pin_memory=True,
-                                  drop_last=True, collate_fn=collate_fn)
+        return torch.utils.data.DataLoader(
+            val_dataset,
+            num_workers=8,
+            shuffle=False,
+            batch_size=self.hps.train.batch_size,
+            pin_memory=True,
+            drop_last=True,
+            collate_fn=collate_fn,
+        )

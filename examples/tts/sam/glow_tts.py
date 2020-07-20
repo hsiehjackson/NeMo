@@ -6,6 +6,7 @@ from pytorch_lightning.callbacks import LearningRateLogger, ModelCheckpoint
 import os
 import sys
 
+
 @hydra.main(config_path="conf/glow_tts_config.yaml")
 def main(hps):
 
@@ -17,9 +18,11 @@ def main(hps):
     tb_logger = pl_loggers.TensorBoardLogger(hps.train.model_dir)
     lr_logger = LearningRateLogger()
     checkpoint_callback = ModelCheckpoint()
-    trainer = Trainer.from_argparse_args(hps.train, gpus=-1, logger=tb_logger, callbacks=[lr_logger, checkpoint_callback])
+    trainer = Trainer.from_argparse_args(
+        hps.train, gpus=-1, logger=tb_logger, callbacks=[lr_logger, checkpoint_callback]
+    )
     trainer.fit(model)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
