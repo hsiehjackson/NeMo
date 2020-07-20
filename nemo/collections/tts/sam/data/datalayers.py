@@ -20,7 +20,7 @@ from torch import nn
 import torch.utils.data
 
 from nemo.collections.tts.sam.data.utils import load_wav_to_torch, load_filepaths_and_text
-from nemo.collections.tts.sam.data.text_process import text_to_sequence
+from nemo.collections.tts.sam.data.text_process import TextProcess
 import nemo.collections.tts.sam.data.cmudict as cmudict
 
 from scipy.signal import get_window
@@ -285,6 +285,7 @@ class TextMelLoader(torch.utils.data.Dataset):
             hparams.filter_length, hparams.hop_length, hparams.win_length,
             hparams.n_mel_channels, hparams.sampling_rate, hparams.mel_fmin,
             hparams.mel_fmax)
+        self.text_process = TextProcess()
         random.seed(1234)
         random.shuffle(self.audiopaths_and_text)
 
@@ -319,7 +320,7 @@ class TextMelLoader(torch.utils.data.Dataset):
         if self.add_space:
           text = " " + text.strip() + " "
         text_norm = torch.IntTensor(
-            text_to_sequence(text, self.text_cleaners, getattr(self, "cmudict", None)))
+            self.text_process.text_to_sequence(text, self.text_cleaners, getattr(self, "cmudict", None)))
         return text_norm
 
     def __getitem__(self, index):
