@@ -14,3 +14,8 @@
 
 import nemo.collections.tts.sam.data.datalayers
 import nemo.collections.tts.sam.data.utils
+import nemo.collections.tts.sam.data.cleaners
+import nemo.collections.tts.sam.data.cmudict
+import nemo.collections.tts.sam.data.numbers
+import nemo.collections.tts.sam.data.symbols
+import nemo.collections.tts.sam.data.text_process
