@@ -1,15 +1,18 @@
+import nemo.collections.tts
 from nemo.collections.tts.sam.models import glow_tts
 from pytorch_lightning import Trainer
 import hydra
 from pytorch_lightning import loggers as pl_loggers
 from pytorch_lightning.callbacks import LearningRateLogger, ModelCheckpoint
 import os
+import sys
 
 @hydra.main(config_path="conf/glow_tts_config.yaml")
 def main(hps):
 
     print(hps.train)
     print(os.getcwd())
+    print(sys.path)
 
     model = glow_tts.GlowTTSModel(hps)
     tb_logger = pl_loggers.TensorBoardLogger(hps.train.model_dir)
