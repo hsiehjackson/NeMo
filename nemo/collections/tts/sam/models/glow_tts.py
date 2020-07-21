@@ -226,10 +226,9 @@ class GlowTTSModel(ModelPT):
         collate_fn = data.datalayers.TextMelCollate(1)
         return torch.utils.data.DataLoader(
             train_dataset,
-            num_workers=8,
+            num_workers=0,
             shuffle=False,
             batch_size=self.hps.train.batch_size,
-            pin_memory=True,
             drop_last=True,
             collate_fn=collate_fn,
         )
@@ -242,10 +241,9 @@ class GlowTTSModel(ModelPT):
         collate_fn = data.datalayers.TextMelCollate(1)
         return torch.utils.data.DataLoader(
             val_dataset,
-            num_workers=8,
+            num_workers=0,
             shuffle=False,
             batch_size=self.hps.train.batch_size,
-            pin_memory=True,
             drop_last=True,
             collate_fn=collate_fn,
         )
