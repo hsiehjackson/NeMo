@@ -23,7 +23,6 @@ from nemo.collections.tts.sam.data.utils import (
     load_wav_to_torch,
     load_filepaths_and_text,
 )
-import nemo.collections.tts.sam.data.cmudict as cmudict
 
 from scipy.signal import get_window
 from librosa.util import pad_center, tiny
