@@ -19,7 +19,7 @@ def main(hps):
     lr_logger = LearningRateLogger()
     checkpoint_callback = ModelCheckpoint()
     trainer = Trainer.from_argparse_args(
-        hps.train, gpus=-1, logger=tb_logger, callbacks=[lr_logger, checkpoint_callback]
+        hps.train, gpus=-1, distributed_backend='dp', logger=tb_logger, callbacks=[lr_logger, checkpoint_callback]
     )
     trainer.fit(model)
 
