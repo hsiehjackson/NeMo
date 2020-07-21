@@ -2,7 +2,7 @@ import math
 import torch
 from torch import nn
 
-import nemo.collections.tts.sam.glow_tts.parts as parts
+from . import parts
 
 
 class DurationPredictor(nn.Module):
