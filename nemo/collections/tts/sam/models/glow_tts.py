@@ -15,7 +15,7 @@
 import torch
 import torch.utils.data
 import math
-import nemo.collections.tts.sam as nemo_tts_sam
+from .. import data, glow_tts
 from nemo.core.classes import ModelPT
 from typing import Dict, Optional
 
@@ -26,9 +26,9 @@ class GlowTTSModel(ModelPT):
 
         self.hps = hps
 
-        self.text_process = nemo_tts_sam.data.text_process.TextProcess(hps.data)
+        self.text_process = data.text_process.TextProcess(hps.data)
 
-        self.encoder = nemo_tts_sam.glow_tts.modules.TextEncoder(
+        self.encoder = glow_tts.modules.TextEncoder(
             len(self.text_process.symbols),
             hps.data.n_mel_channels,
             hps.model.hidden_channels_enc or hps.model.hidden_channels,
@@ -43,7 +43,7 @@ class GlowTTSModel(ModelPT):
             prenet=hps.model.prenet,
         )
 
-        self.decoder = nemo_tts_sam.glow_tts.modules.FlowSpecDecoder(
+        self.decoder = glow_tts.modules.FlowSpecDecoder(
             hps.data.n_mel_channels,
             hps.model.hidden_channels_dec or hps.model.hidden_channels,
             hps.model.kernel_size_dec,
@@ -121,12 +121,12 @@ class GlowTTSModel(ModelPT):
             y_max_length = y.size(2)
         y, y_lengths, y_max_length = self.preprocess(y, y_lengths, y_max_length)
         y_mask = torch.unsqueeze(
-            nemo_tts_sam.glow_tts.parts.sequence_mask(y_lengths, y_max_length), 1
+            glow_tts.parts.sequence_mask(y_lengths, y_max_length), 1
         ).to(x_mask.dtype)
         attn_mask = torch.unsqueeze(x_mask, -1) * torch.unsqueeze(y_mask, 2)
 
         if gen:
-            attn = nemo_tts_sam.glow_tts.parts.generate_path(
+            attn = glow_tts.parts.generate_path(
                 w_ceil.squeeze(1), attn_mask.squeeze(1)
             ).unsqueeze(1)
             y_m = torch.matmul(
@@ -164,7 +164,7 @@ class GlowTTSModel(ModelPT):
                 logp = logp1 + logp2 + logp3 + logp4  # [b, t, t']
 
                 attn = (
-                    nemo_tts_sam.glow_tts.parts.maximum_path(logp, attn_mask.squeeze(1))
+                    glow_tts.parts.maximum_path(logp, attn_mask.squeeze(1))
                     .unsqueeze(1)
                     .detach()
                 )
@@ -220,10 +220,10 @@ class GlowTTSModel(ModelPT):
         return l_mle, l_length
 
     def setup_training_data(self, files_list):
-        train_dataset = nemo_tts_sam.data.datalayers.TextMelLoader(
+        train_dataset = data.datalayers.TextMelLoader(
             files_list, self.text_process, self.hps.data
         )
-        collate_fn = nemo_tts_sam.data.datalayers.TextMelCollate(1)
+        collate_fn = data.datalayers.TextMelCollate(1)
         return torch.utils.data.DataLoader(
             train_dataset,
             num_workers=8,
@@ -236,10 +236,10 @@ class GlowTTSModel(ModelPT):
 
     def setup_validation_data(self, files_list):
 
-        val_dataset = nemo_tts_sam.data.datalayers.TextMelLoader(
+        val_dataset = data.datalayers.TextMelLoader(
             files_list, self.text_process, self.hps.data
         )
-        collate_fn = nemo_tts_sam.data.datalayers.TextMelCollate(1)
+        collate_fn = data.datalayers.TextMelCollate(1)
         return torch.utils.data.DataLoader(
             val_dataset,
             num_workers=8,
