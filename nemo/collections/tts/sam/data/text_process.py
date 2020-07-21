@@ -1,7 +1,7 @@
 from unidecode import unidecode
 import inflect
 import re
-import nemo.collections.tts.sam.data.cmudict as cmudict
+from .cmudict import CMUDict
 
 
 def _remove_commas(m):
@@ -37,7 +37,7 @@ class TextProcess:
     def __init__(self, hps):
 
         if getattr(hps, "cmudict_path", None) is not None:
-            self.cmu_dict = cmudict.CMUDict(hps.cmudict_path)
+            self.cmu_dict = CMUDict(hps.cmudict_path)
 
         _pad = "_"
         _punctuation = "!'(),.:;? "

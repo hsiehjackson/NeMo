@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import nemo.collections.tts.sam.data.datalayers
 import nemo.collections.tts.sam.data.utils
 import nemo.collections.tts.sam.data.cmudict
 import nemo.collections.tts.sam.data.text_process
+import nemo.collections.tts.sam.data.datalayers
