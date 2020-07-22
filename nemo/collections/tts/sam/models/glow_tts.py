@@ -200,7 +200,7 @@ class GlowTTSModel(ModelPT):
 
         output = {
             "loss": loss,  # required
-            "progress_bar": {"training_loss": loss},  # optional (MUST ALL BE TENSORS)
+            "progress_bar": {"l_mle": l_mle, "l_length": l_length},  # optional (MUST ALL BE TENSORS)
             "log": {"loss": loss, "l_mle": l_mle, "l_length": l_length},
         }
 
