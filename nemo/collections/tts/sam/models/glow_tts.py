@@ -71,7 +71,7 @@ class GlowTTSModel(ModelPT):
         }
 
         self.setup_optimization(optimizer_params)
-        # self.__scheduler = SquareAnnealing(self.__optimizer, max_steps=hps.train.train_steps, min_lr=1e-5)
+        #self.__scheduler = SquareAnnealing(self.__optimizer, max_steps=hps.train.train_steps, min_lr=1e-5)
 
     def setup_optimization(
         self, optim_params: Optional[Dict] = None
@@ -192,7 +192,7 @@ class GlowTTSModel(ModelPT):
             x, x_lengths, y, y_lengths, gen=False
         )
 
-        l_mle, l_length = self.loss(
+        l_mle, l_length, logdet = self.loss(
             z, y_m, y_logs, logdet, logw, logw_, x_lengths, y_lengths
         )
 
@@ -200,24 +200,45 @@ class GlowTTSModel(ModelPT):
 
         output = {
             "loss": loss,  # required
-            "progress_bar": {"l_mle": l_mle, "l_length": l_length},  # optional (MUST ALL BE TENSORS)
-            "log": {"loss": loss, "l_mle": l_mle, "l_length": l_length},
+            "progress_bar": {"l_mle": l_mle, "l_length": l_length, "logdet": logdet},  # optional (MUST ALL BE TENSORS)
+            "log": {"loss": loss, "l_mle": l_mle, "l_length": l_length, "logdet": logdet},
         }
 
         return output
 
     def validation_step(self, batch, batch_idx):
 
-        return self.training_step(batch, batch_idx)
+        output = self.training_step(batch, batch_idx)
+
+        return output
+
+    """def validation_epoch_end(self, outputs):
+
+        l_mle, l_length = 0., 0.
+
+        for out in outputs:
+            l_mle += out['log']['l_mle']
+            l_length += out['log']['l_length']
+
+        l_mle /= len(outputs)
+        l_length /= len(outputs)
+
+        logs = {'l_mle': l_mle, 'l_length': l_length}
+        output = {
+            'val_loss': l_mle,  # for early stopping, model checkpoint
+            'log': logs,  # will be consumed by logger
+        }
+        return output"""
 
     def loss(self, z, y_m, y_logs, logdet, logw, logw_, x_lengths, y_lengths):
+        logdet = torch.sum(logdet)
         l_mle = 0.5 * math.log(2 * math.pi) + (
             torch.sum(y_logs)
             + 0.5 * torch.sum(torch.exp(-2 * y_logs) * (z - y_m) ** 2)
-            - torch.sum(logdet)
+            - logdet
         ) / (torch.sum(y_lengths // self.n_sqz) * self.n_sqz * self.mel_channels)
         l_length = torch.sum((logw - logw_) ** 2) / torch.sum(x_lengths)
-        return l_mle, l_length
+        return l_mle, l_length, logdet
 
     def setup_training_data(self, files_list):
         train_dataset = data.datalayers.TextMelLoader(
@@ -227,7 +248,7 @@ class GlowTTSModel(ModelPT):
         return torch.utils.data.DataLoader(
             train_dataset,
             num_workers=8,
-            shuffle=False,
+            shuffle=True,
             batch_size=self.hps.train.batch_size,
             drop_last=True,
             collate_fn=collate_fn,
@@ -242,7 +263,7 @@ class GlowTTSModel(ModelPT):
         return torch.utils.data.DataLoader(
             val_dataset,
             num_workers=8,
-            shuffle=False,
+            shuffle=True,
             batch_size=self.hps.train.batch_size,
             drop_last=True,
             collate_fn=collate_fn,

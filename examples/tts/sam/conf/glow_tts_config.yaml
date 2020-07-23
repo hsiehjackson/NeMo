@@ -11,7 +11,6 @@ train:
   warmup_steps: 4000
   scheduler: noam
   batch_size: 8
-  ddi: true
   fp16_run: true
   save_every: 200
   model_dir: work
@@ -53,3 +52,9 @@ model:
   hidden_channels_enc: 192
   hidden_channels_dec: 192
   window_size: 4
+hydra:
+  run:
+    dir: /tmp/model/
+  job_logging:
+    root:
+      handlers: null
