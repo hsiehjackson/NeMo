@@ -18,7 +18,8 @@ import math
 from .. import data, glow_tts
 from nemo.core.classes import ModelPT
 from typing import Dict, Optional
-
+from nemo.collections.asr.data.audio_to_text import AudioToTextDataset
+from nemo.core.optim.lr_scheduler import CosineAnnealing
 
 class GlowTTSModel(ModelPT):
     def __init__(self, hps):
@@ -71,7 +72,7 @@ class GlowTTSModel(ModelPT):
         }
 
         self.setup_optimization(optimizer_params)
-        #self.__scheduler = SquareAnnealing(self.__optimizer, max_steps=hps.train.train_steps, min_lr=1e-5)
+        self.__scheduler = CosineAnnealing(self.__optimizer, max_steps=hps.train.train_steps, min_lr=1e-5)
 
     def setup_optimization(
         self, optim_params: Optional[Dict] = None
@@ -79,7 +80,7 @@ class GlowTTSModel(ModelPT):
         self.__optimizer = super().setup_optimization(optim_params)
 
     def configure_optimizers(self):
-        return [self.__optimizer], []
+        return [self.__optimizer], [self.__scheduler]
 
     def train_dataloader(self):
         return self.__train_dl
