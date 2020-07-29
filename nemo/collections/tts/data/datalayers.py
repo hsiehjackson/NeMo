@@ -18,17 +18,25 @@ import numpy as np
 import torch
 from torch import nn
 import torch.utils.data
+from omegaconf import DictConfig
 
 from nemo.collections.tts.data.utils import (
     load_wav_to_torch,
     load_filepaths_and_text,
 )
+from nemo.collections.asr.data.audio_to_text import _AudioDataset
+from nemo.collections.asr.parts import features
+from nemo.collections.tts.data.text_process import TextProcess
+from nemo.utils.decorators import experimental
 
 from scipy.signal import get_window
 from librosa.util import pad_center, tiny
 from librosa import stft, istft
 from librosa.filters import mel as librosa_mel_fn
 
+from typing import Optional, Dict, Union
+from nemo.core.neural_types.elements import *
+from nemo.core.neural_types.neural_type import NeuralType
 
 def dynamic_range_compression(x, C=1, clip_val=1e-5):
     """
@@ -423,3 +431,48 @@ class TextMelCollate:
             output_lengths[i] = mel.size(1)
 
         return text_padded, input_lengths, mel_padded, output_lengths
+
+
+@experimental
+class AudioToPhonemesDataset(_AudioDataset):
+    @property
+    def output_types(self) -> Optional[Dict[str, NeuralType]]:
+        """Returns definitions of module output ports.
+               """
+        return {
+            'audio_signal': NeuralType(
+                ('B', 'T'),
+                AudioSignal(freq=self._sample_rate)
+                if self is not None and hasattr(self, '_sample_rate')
+                else AudioSignal(),
+            ),
+            'a_sig_length': NeuralType(tuple('B'), LengthsType()),
+            'transcripts': NeuralType(('B', 'T'), LabelsType()),
+            'transcript_length': NeuralType(tuple('B'), LengthsType()),
+        }
+
+    def __init__(
+        self,
+        manifest_filepath: str,
+        cmu_dict_path: str,
+        featurizer: Union[features.WaveformFeaturizer, features.FilterbankFeatures],
+        max_duration: Optional[int] = None,
+        min_duration: Optional[int] = None,
+        max_utts: int = 0,
+        trim: bool = False,
+        load_audio: bool = True,
+        add_misc: bool = False
+    ):
+        self.parser = TextProcess(cmu_dict_path)
+
+        super().__init__(
+            manifest_filepath=manifest_filepath,
+            featurizer=featurizer,
+            parser=self.parser,
+            max_duration=max_duration,
+            min_duration=min_duration,
+            max_utts=max_utts,
+            trim=trim,
+            load_audio=load_audio,
+            add_misc=add_misc,
+        )

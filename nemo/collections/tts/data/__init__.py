@@ -13,6 +13,5 @@
 # limitations under the License.
 
 import nemo.collections.tts.data.utils
-import nemo.collections.tts.data.cmudict
 import nemo.collections.tts.data.text_process
 import nemo.collections.tts.data.datalayers
