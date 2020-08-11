@@ -103,9 +103,9 @@ model:
     cls: nemo.collections.tts.modules.glow_tts.PitchPredictor
     params:
       in_channels: *n_mels
-      hidden_channels: 192
-      filter_channels: 768
-      kernel_size: 3
+      hidden_channels: 64
+      filter_channels: 256
+      kernel_size: 5
       p_dropout: 0.1
       n_layers: 6
       n_heads: 2
