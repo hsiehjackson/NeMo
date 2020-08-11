@@ -157,12 +157,14 @@ class GlowTTSModel(ModelPT):
         avg_loss = torch.stack([x['loss'] for x in outputs]).mean()
         avg_mle = torch.stack([x['l_mle'] for x in outputs]).mean()
         avg_length_loss = torch.stack([x['l_length'] for x in outputs]).mean()
+        avg_pitch_loss = torch.stack([x['l_pitch'] for x in outputs]).mean()
         avg_logdet = torch.stack([x['logdet'] for x in outputs]).mean()
         tensorboard_logs = {
             'val_loss': avg_loss,
             'val_mle': avg_mle,
             'val_length_loss': avg_length_loss,
             'val_logdet': avg_logdet,
+            'val_pitch_loss': avg_pitch_loss,
         }
         parser = self.val_dataloader().dataset.parser
         separated_phonemes = "|".join([parser.symbols[c] for c in outputs[0]['x'][0]])

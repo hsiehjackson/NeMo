@@ -102,7 +102,7 @@ model:
   pitch_predictor:
     cls: nemo.collections.tts.modules.glow_tts.PitchPredictor
     params:
-      in_channels: *n_mels
+      n_vocab: 148
       hidden_channels: 64
       filter_channels: 256
       kernel_size: 5

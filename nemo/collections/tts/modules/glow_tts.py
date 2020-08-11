@@ -355,7 +355,7 @@ class FlowSpecDecoder(NeuralModule):
 class PitchPredictor(NeuralModule):
     def __init__(
             self,
-            in_channels: int,
+            n_vocab: int,
             hidden_channels: int,
             filter_channels: int,
             n_heads: int,
@@ -368,9 +368,10 @@ class PitchPredictor(NeuralModule):
 
         super().__init__()
 
-        self.pre = glow_tts_submodules.ConvReluNorm(
-                in_channels, hidden_channels, hidden_channels, kernel_size=5, n_layers=3, p_dropout=0.1,
-            )
+        self.emb = nn.Embedding(n_vocab, hidden_channels)
+        nn.init.normal_(self.emb.weight, 0.0, hidden_channels ** -0.5)
+
+        self.hidden_channels = hidden_channels
 
         self.n_layers = n_layers
 
@@ -399,32 +400,33 @@ class PitchPredictor(NeuralModule):
     @typecheck()
     def forward(self, y, y_mask):
 
-        y = self.pre(y, y_mask)
+        y = self.emb(y) * math.sqrt(self.hidden_channels)
 
+        y = torch.transpose(y, 1, -1)
 
         attn_mask = y_mask.unsqueeze(2) * y_mask.unsqueeze(-1)
         for i in range(self.n_layers):
             y = y * y_mask
-            y = self.attn_layers[i](y, y, attn_mask)
-            y = self.drop(y)
-            y = self.norm_layers_1[i](y + y)
+            y0 = self.attn_layers[i](y, y, attn_mask)
+            y0 = self.drop(y0)
+            y = self.norm_layers_1[i](y + y0)
 
-            y = self.ffn_layers[i](y, y_mask)
-            y = self.drop(y)
-            y = self.norm_layers_2[i](y + y)
+            y0 = self.ffn_layers[i](y, y_mask)
+            y0 = self.drop(y0)
+            y = self.norm_layers_2[i](y + y0)
 
         y = y * y_mask
 
         y = self.proj_final(y) * y_mask
 
-        pitch = F.relu(y.squeeze(1)) * 100.
+        pitch = F.relu(y.squeeze(1))
 
         return pitch
 
     @property
     def input_types(self):
         return {
-            "y": NeuralType(('B', 'D', 'T'), NormalDistributionMeanType()),
+            "y": NeuralType(('B', 'T'), TokenIndex()),
             "y_mask": NeuralType(('B', 'D', 'T'), MaskType()),
         }
 
@@ -530,9 +532,11 @@ class GlowTTSModule(NeuralModule):
 
         y_m = torch.matmul(x_m, attn)
         y_logs = torch.matmul(x_logs, attn)
+
+        text_exp = torch.matmul(text.unsqueeze(1).float(), attn.float()).squeeze(1).long()
         
         if pitch is not None:
-            pitch_pred = self.pitch_predictor(y=y_m.detach(), y_mask=y_mask)
+            pitch_pred = self.pitch_predictor(y=text_exp, y_mask=y_mask)
         else:
             pitch_pred = None
 
@@ -568,8 +572,10 @@ class GlowTTSModule(NeuralModule):
             y_m = torch.matmul(x_m, attn)
             y_logs = torch.matmul(x_logs, attn)
 
-            if pitch:
-                pitch_pred = self.pitch_predictor(y=y_m, y_mask=y_mask)
+            text_exp = torch.matmul(text.unsqueeze(1).float(), attn.float()).squeeze(1).long()
+
+            if pitch is not None:
+                pitch_pred = self.pitch_predictor(y=text_exp, y_mask=y_mask)
             else:
                 pitch_pred = None
 
