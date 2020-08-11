@@ -399,7 +399,6 @@ class PitchPredictor(NeuralModule):
     @typecheck()
     def forward(self, y, y_mask):
 
-
         y = self.pre(y, y_mask)
 
 
@@ -531,10 +530,9 @@ class GlowTTSModule(NeuralModule):
 
         y_m = torch.matmul(x_m, attn)
         y_logs = torch.matmul(x_logs, attn)
-
         
         if pitch is not None:
-            pitch_pred = self.pitch_predictor(y=y_m, y_mask=y_mask)
+            pitch_pred = self.pitch_predictor(y=y_m.detach(), y_mask=y_mask)
         else:
             pitch_pred = None
 
@@ -545,39 +543,40 @@ class GlowTTSModule(NeuralModule):
 
     def generate_spect(self, text, text_lengths, speaker=None, noise_scale=0.3, length_scale=1.0, pitch=False):
 
-        if speaker is not None:
-            s_emb = F.normalize(self.speaker_embed(speaker)).unsqueeze(-1)
-        else:
-            s_emb = None
+        with torch.no_grad():
+            if speaker is not None:
+                s_emb = F.normalize(self.speaker_embed(speaker)).unsqueeze(-1)
+            else:
+                s_emb = None
 
-        x_m, x_logs, log_durs_predicted, x_mask = self.encoder(
-            text=text, text_lengths=text_lengths, speaker_embeddings=s_emb
-        )
+            x_m, x_logs, log_durs_predicted, x_mask = self.encoder(
+                text=text, text_lengths=text_lengths, speaker_embeddings=s_emb
+            )
 
-        w = torch.exp(log_durs_predicted) * x_mask.squeeze() * length_scale
-        w_ceil = torch.ceil(w)
-        spect_lengths = torch.clamp_min(torch.sum(w_ceil, [1]), 1).long()
-        y_max_length = None
+            w = torch.exp(log_durs_predicted) * x_mask.squeeze() * length_scale
+            w_ceil = torch.ceil(w)
+            spect_lengths = torch.clamp_min(torch.sum(w_ceil, [1]), 1).long()
+            y_max_length = None
 
-        spect_lengths = (spect_lengths // self.decoder.n_sqz) * self.decoder.n_sqz
+            spect_lengths = (spect_lengths // self.decoder.n_sqz) * self.decoder.n_sqz
 
-        y_mask = torch.unsqueeze(glow_tts_submodules.sequence_mask(spect_lengths, y_max_length), 1).to(x_mask.dtype)
-        attn_mask = torch.unsqueeze(x_mask, -1) * torch.unsqueeze(y_mask, 2)
+            y_mask = torch.unsqueeze(glow_tts_submodules.sequence_mask(spect_lengths, y_max_length), 1).to(x_mask.dtype)
+            attn_mask = torch.unsqueeze(x_mask, -1) * torch.unsqueeze(y_mask, 2)
 
-        attn = glow_tts_submodules.generate_path(w_ceil.squeeze(1), attn_mask.squeeze(1))
+            attn = glow_tts_submodules.generate_path(w_ceil.squeeze(1), attn_mask.squeeze(1))
 
-        y_m = torch.matmul(x_m, attn)
-        y_logs = torch.matmul(x_logs, attn)
+            y_m = torch.matmul(x_m, attn)
+            y_logs = torch.matmul(x_logs, attn)
 
-        if pitch:
-            pitch_pred = self.pitch_predictor(y=y_m, y_mask=y_mask)
-        else:
-            pitch_pred = None
+            if pitch:
+                pitch_pred = self.pitch_predictor(y=y_m, y_mask=y_mask)
+            else:
+                pitch_pred = None
 
-        z = (y_m + torch.exp(y_logs) * torch.randn_like(y_m) * noise_scale) * y_mask
-        y, _ = self.decoder(spect=z, spect_mask=y_mask, speaker_embeddings=s_emb, reverse=True, pitch=pitch_pred)
+            z = (y_m + torch.exp(y_logs) * torch.randn_like(y_m) * noise_scale) * y_mask
+            y, _ = self.decoder(spect=z, spect_mask=y_mask, speaker_embeddings=s_emb, reverse=True, pitch=pitch_pred)
 
-        return y, attn, pitch_pred
+            return y, attn, pitch_pred
 
     def save_to(self, save_path: str):
         """TODO: Implement"""

@@ -94,7 +94,7 @@ class GlowTTSLoss(Loss):
         l_length = torch.sum((logw - logw_) ** 2) / torch.sum(x_lengths)
 
         if pitch_pred is not None:
-            l_pitch = torch.sum((pitch_pred - pitch_real) ** 2) / torch.sum(x_lengths)
+            l_pitch = torch.sum((pitch_pred - pitch_real) ** 2) / torch.sum(y_lengths)
         else:
             l_pitch = 0.
 
