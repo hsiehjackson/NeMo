@@ -172,6 +172,7 @@ class _AudioTextDataset(Dataset):
             misc['text_raw'] = sample.text_raw
             misc['speaker'] = sample.speaker
             output = (output, misc)
+            output = (output, misc)
 
         return output
 

@@ -68,6 +68,8 @@ class GlowTTSLoss(Loss):
             "logw_": NeuralType(('B', 'T'), TokenLogDurationType()),
             "x_lengths": NeuralType(('B',), LengthsType()),
             "y_lengths": NeuralType(('B',), LengthsType()),
+            "pitch_pred": NeuralType(('B', 'T'), PitchType(), optional=True),
+            "pitch_real": NeuralType(('B', 'T'), PitchType(), optional=True),
         }
 
     @property
@@ -75,19 +77,25 @@ class GlowTTSLoss(Loss):
         return {
             "l_mle": NeuralType(elements_type=LossType()),
             "l_length": NeuralType(elements_type=LossType()),
-            "logdet": NeuralType(elements_type=VoidType()),
+            "logdet": NeuralType(elements_type=LogDeterminantType()),
+            "l_pitch": NeuralType(elements_type=LossType(), optional=True),
         }
 
     def __init__(self):
         super().__init__()
 
     @typecheck()
-    def forward(self, z, y_m, y_logs, logdet, logw, logw_, x_lengths, y_lengths):
+    def forward(self, z, y_m, y_logs, logdet, logw, logw_, x_lengths, y_lengths, pitch_pred=None, pitch_real=None):
 
         logdet = torch.sum(logdet)
         l_mle = 0.5 * math.log(2 * math.pi) + (
             torch.sum(y_logs) + 0.5 * torch.sum(torch.exp(-2 * y_logs) * (z - y_m) ** 2) - logdet
         ) / (torch.sum(y_lengths) * z.shape[1])
-
         l_length = torch.sum((logw - logw_) ** 2) / torch.sum(x_lengths)
-        return l_mle, l_length, logdet
+
+        if pitch_pred is not None:
+            l_pitch = torch.sum((pitch_pred - pitch_real) ** 2) / torch.sum(x_lengths)
+        else:
+            l_pitch = 0.
+
+        return l_mle, l_length, logdet, l_pitch

@@ -55,6 +55,7 @@ __all__ = [
     'TokenLogDurationType',
     'LogDeterminantType',
     'SequenceToSequenceAlignmentType',
+    'PitchType',
 ]
 
 
@@ -299,3 +300,7 @@ class TokenLogDurationType(ElementType):
 
 class LogDeterminantType(ElementType):
     """Element for representing log determinants usually used in flow models"""
+
+
+class PitchType(ElementType):
+    """Element containing audio pitch"""

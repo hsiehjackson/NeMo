@@ -133,6 +133,20 @@ def plot_alignment_to_numpy(alignment, info=None):
     return data
 
 
+def plot_pitch_to_numpy(pitch):
+    pitch = pitch.astype(np.float32)
+    fig, ax = plt.subplots(figsize=(12, 3))
+    plt.plot(pitch)
+    plt.xlabel("Frames")
+    plt.ylabel("Pitch")
+    plt.tight_layout()
+
+    fig.canvas.draw()
+    data = save_figure_to_numpy(fig)
+    plt.close()
+    return data
+
+
 def plot_spectrogram_to_numpy(spectrogram):
     spectrogram = spectrogram.astype(np.float32)
     fig, ax = plt.subplots(figsize=(12, 3))

@@ -18,7 +18,7 @@ from typing import Dict, Optional, Union
 import torch
 import torch.utils.data
 
-from nemo.collections.asr.data.audio_to_text import _AudioTextDataset
+from nemo.collections.asr.data.audio_to_text import _AudioTextDataset, _speech_collate_fn
 from nemo.collections.asr.parts import collections, parsers
 from nemo.collections.asr.parts.segment import AudioSegment
 from nemo.collections.tts.modules.glow_tts_parser import GlowTTSParser
@@ -26,6 +26,10 @@ from nemo.core.classes import Dataset
 from nemo.core.neural_types.elements import *
 from nemo.core.neural_types.neural_type import NeuralType
 from nemo.utils.decorators import experimental
+
+import numpy as np
+
+from nemo.collections.tts.data.yin import compute_yin
 
 
 class AudioDataset(Dataset):
@@ -126,6 +130,23 @@ class AudioDataset(Dataset):
         return len(self.collection)
 
 
+def _speech_collate_pitch_fn(batch, pad_id):
+
+    audio_signal, audio_lengths, tokens, tokens_lengths, pitch = zip(*batch)
+    batch_minus_pitch = list(zip(audio_signal, audio_lengths, tokens, tokens_lengths))
+    audio_signal, audio_lengths, tokens, tokens_lengths = _speech_collate_fn(batch_minus_pitch, pad_id=pad_id)
+
+    max_pitch_len = max([len(p) for p in pitch])
+    pitch_padded = []
+    for i, p in enumerate(pitch):
+        pad = (0, max_pitch_len - len(pitch[i]))
+        pitch_padded.append(torch.nn.functional.pad(pitch[i], pad, value=0))
+
+    pitch = torch.stack(pitch_padded)
+
+    return audio_signal, audio_lengths, tokens, tokens_lengths, pitch
+
+
 @experimental
 class AudioToPhonemesDataset(_AudioTextDataset):
     @property
@@ -142,6 +163,7 @@ class AudioToPhonemesDataset(_AudioTextDataset):
             "a_sig_length": NeuralType(tuple("B"), LengthsType()),
             "transcripts": NeuralType(("B", "T"), LabelsType()),
             "transcript_length": NeuralType(tuple("B"), LengthsType()),
+            "pitch":  NeuralType(("B", "T"), PitchType(), optional=True)
         }
 
     def __init__(
@@ -157,6 +179,7 @@ class AudioToPhonemesDataset(_AudioTextDataset):
         trim: bool = False,
         load_audio: bool = True,
         add_misc: bool = False,
+        add_pitch: bool = True
     ):
         """
         Dataset that loads tensors via a json file containing paths to audio files, transcripts, and
@@ -177,9 +200,11 @@ class AudioToPhonemesDataset(_AudioTextDataset):
             trim (bool): Boolean flag whether to trim the audio
             load_audio (bool): Boolean flag indicate whether do or not load audio
             add_misc (bool): True if add additional info dict.
+            add_pitch(bool): If true also calculates and returns the audio pitch
         """
 
         self.parser = GlowTTSParser(cmu_dict_path)
+        self.add_pitch = add_pitch
 
         super().__init__(
             manifest_filepath=manifest_filepath,
@@ -194,3 +219,42 @@ class AudioToPhonemesDataset(_AudioTextDataset):
             load_audio=load_audio,
             add_misc=add_misc,
         )
+
+    def get_pitch(self, audio, sampling_rate=22050, frame_length=1024,
+               hop_length=256, f0_min=100, f0_max=300, harm_thresh=0.1):
+
+        pitch, harmonic_rates, argmins, times = compute_yin(
+            audio, sampling_rate, frame_length, hop_length, f0_min, f0_max,
+            harm_thresh)
+        pad = int((frame_length / hop_length) / 2)
+        pitch = [0.0] * pad + pitch + [0.0] * pad
+
+        pitch = torch.Tensor(pitch)
+
+        return pitch
+
+    def __getitem__(self, index):
+
+        output = super().__getitem__(index)
+
+        if self.add_pitch:
+            if self._add_misc:
+                output, misc = output
+
+            f, fl, t, tl = output
+
+            pitch = self.get_pitch(f, self.featurizer.sample_rate)
+
+            output = f, fl, t, tl, pitch
+
+            if self._add_misc:
+                output = (output, misc)
+
+        return output
+
+    def _collate_fn(self, batch):
+
+        if self.add_pitch:
+            return _speech_collate_pitch_fn(batch, pad_id=self.pad_id)
+
+        return _speech_collate_fn(batch, pad_id=self.pad_id)

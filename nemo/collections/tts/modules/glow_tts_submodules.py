@@ -183,7 +183,9 @@ class ConvReluNorm(nn.Module):
             x = self.conv_layers[i](x * x_mask)
             x = self.norm_layers[i](x)
             x = self.relu_drop(x)
-        x = x_org + self.proj(x)
+        if self.in_channels == self.hidden_channels:
+            x = x + x_org
+        x = self.proj(x)
         return x * x_mask
 
 
@@ -201,7 +203,7 @@ class WN(torch.nn.Module):
         self.drop = nn.Dropout(p_dropout)
 
         if gin_channels != 0:
-            cond_layer = torch.nn.Conv1d(gin_channels, 2 * hidden_channels * n_layers, 1)
+            cond_layer = torch.nn.Conv1d(2 * gin_channels, 2 * hidden_channels * n_layers, 1)
             self.cond_layer = torch.nn.utils.weight_norm(cond_layer, name='weight')
 
         for i in range(n_layers):
@@ -384,7 +386,7 @@ class CouplingBlock(nn.Module):
         end.bias.data.zero_()
         self.end = end
 
-        self.wn = WN(hidden_channels, kernel_size, dilation_rate, n_layers)
+        self.wn = WN(hidden_channels, kernel_size, dilation_rate, n_layers, p_dropout, gin_channels)
 
     def forward(self, x, x_mask=None, reverse=False, g=None, **kwargs):
         if x_mask is None:
@@ -629,8 +631,8 @@ class DurationPredictor(nn.Module):
         self.norm_2 = LayerNorm(filter_channels)
         self.proj = nn.Conv1d(filter_channels, 1, 1)
 
-    def forward(self, spect, mask):
-        x = self.conv_1(spect * mask)
+    def forward(self, x, mask):
+        x = self.conv_1(x * mask)
         x = torch.relu(x)
         x = self.norm_1(x)
         x = self.drop(x)

@@ -84,13 +84,12 @@ class Typing(ABC):
                 [type_val for type_key, type_val in input_types.items() if not type_val.optional]
             )
 
-            if len(kwargs) != total_input_types:
-                if len(kwargs) != mandatory_input_types:
-                    raise TypeError(
-                        "Number of input arguments provided ({}) is not as expected ({})".format(
-                            len(kwargs), len(input_types)
-                        )
+            if len(kwargs) > total_input_types or len(kwargs) < mandatory_input_types:
+                raise TypeError(
+                    "Number of input arguments provided ({}) is not as expected ({})".format(
+                        len(kwargs), len(input_types)
                     )
+                )
 
             for key, value in kwargs.items():
                 # Check if keys exists in the defined input types

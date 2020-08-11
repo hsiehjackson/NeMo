@@ -4,39 +4,42 @@ n_fft: &n_fft 1024
 n_mels: &n_mels 80
 fmax: &fmax 8000
 pad_value: &pad_value -11.52
-gin_channels: &gin_channels 0
 
-train_dataset: ???
-validation_datasets: ???
-cmu_dict_path: null
+train_dataset: /home/samuel/Data/ljspeech/filelists/nvidia_ljspeech_train.json
+validation_datasets: /home/samuel/Data/ljspeech/filelists/nvidia_ljspeech_val.json
+cmu_dict_path: /home/samuel/Data/cmudict/cmu_dictionary
 
 model:
 
-  n_speakers: 1
-  gin_channels: *gin_channels
+  n_speakers: &n_speakers 0
+  speaker_channels: &speaker_channels 0
+
+  use_pitch: &use_pitch true
+  pitch_channels: &pitch_channels 32
 
   train_ds:
     manifest_filepath: ${train_dataset}
     sample_rate: *sr
-    batch_size: 8
+    batch_size: 4
     max_duration: null
     min_duration: 0.1
     trim: false
     shuffle: True
-    num_workers: 8
+    num_workers: 1
     cmu_dict_path: ${cmu_dict_path}
-
+    add_pitch: *use_pitch
 
   validation_ds:
     manifest_filepath: ${validation_datasets}
     sample_rate: *sr
-    batch_size: 8
+    batch_size: 1
     max_duration: null
     min_duration: 0.1
     trim: false
     shuffle: False
     num_workers: 8
     cmu_dict_path: ${cmu_dict_path}
+    add_pitch: *use_pitch
 
   preprocessor:
     cls: nemo.collections.asr.modules.AudioToMelSpectrogramPreprocessor
@@ -78,7 +81,7 @@ model:
       window_size: 4
       prenet: true
       mean_only: true
-      gin_channels: *gin_channels
+      speaker_channels: *speaker_channels
 
   decoder:
     cls: nemo.collections.tts.modules.glow_tts.FlowSpecDecoder
@@ -93,7 +96,20 @@ model:
       sigmoid_scale: false
       p_dropout: 0.05
       dilation_rate: 1
-      gin_channels: *gin_channels
+      speaker_channels: *speaker_channels
+      pitch_channels: *pitch_channels
+
+  pitch_predictor:
+    cls: nemo.collections.tts.modules.glow_tts.PitchPredictor
+    params:
+      in_channels: *n_mels
+      hidden_channels: 192
+      filter_channels: 768
+      kernel_size: 3
+      p_dropout: 0.1
+      n_layers: 6
+      n_heads: 2
+      window_size: 4
 
   optim:
     name: adam
