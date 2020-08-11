@@ -47,6 +47,7 @@ from nemo.core.neural_types.elements import *
 from nemo.core.neural_types.neural_type import NeuralType
 from nemo.utils.decorators import experimental
 
+from typing import List
 
 @experimental
 class TextEncoder(NeuralModule):
@@ -363,6 +364,7 @@ class PitchPredictor(NeuralModule):
             kernel_size: int,
             p_dropout: float,
             window_size: int,
+            zero_pitch_tokens: List[int],
     ):
         #TODO docstring
 
@@ -372,7 +374,7 @@ class PitchPredictor(NeuralModule):
         nn.init.normal_(self.emb.weight, 0.0, hidden_channels ** -0.5)
 
         self.hidden_channels = hidden_channels
-
+        self.zero_pitch_tokens = zero_pitch_tokens
         self.n_layers = n_layers
 
         self.drop = nn.Dropout(p_dropout)
@@ -396,11 +398,13 @@ class PitchPredictor(NeuralModule):
             self.norm_layers_2.append(glow_tts_submodules.LayerNorm(hidden_channels))
 
         self.proj_final = nn.Conv1d(hidden_channels, 1, 1)
+        self.proj_final.weight.data.zero_()
+        self.proj_final.bias.data = torch.Tensor([200.])
 
     @typecheck()
-    def forward(self, y, y_mask):
+    def forward(self, tokens, y_mask):
 
-        y = self.emb(y) * math.sqrt(self.hidden_channels)
+        y = self.emb(tokens) * math.sqrt(self.hidden_channels)
 
         y = torch.transpose(y, 1, -1)
 
@@ -421,12 +425,15 @@ class PitchPredictor(NeuralModule):
 
         pitch = F.relu(y.squeeze(1))
 
+        for i in self.zero_pitch_tokens:
+            pitch[tokens == i] = 0.
+
         return pitch
 
     @property
     def input_types(self):
         return {
-            "y": NeuralType(('B', 'T'), TokenIndex()),
+            "tokens": NeuralType(('B', 'T'), TokenIndex()),
             "y_mask": NeuralType(('B', 'D', 'T'), MaskType()),
         }
 
@@ -536,7 +543,7 @@ class GlowTTSModule(NeuralModule):
         text_exp = torch.matmul(text.unsqueeze(1).float(), attn.float()).squeeze(1).long()
         
         if pitch is not None:
-            pitch_pred = self.pitch_predictor(y=text_exp, y_mask=y_mask)
+            pitch_pred = self.pitch_predictor(tokens=text_exp, y_mask=y_mask)
         else:
             pitch_pred = None
 
@@ -575,7 +582,7 @@ class GlowTTSModule(NeuralModule):
             text_exp = torch.matmul(text.unsqueeze(1).float(), attn.float()).squeeze(1).long()
 
             if pitch is not None:
-                pitch_pred = self.pitch_predictor(y=text_exp, y_mask=y_mask)
+                pitch_pred = self.pitch_predictor(tokens=text_exp, y_mask=y_mask)
             else:
                 pitch_pred = None
 

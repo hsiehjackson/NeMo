@@ -110,6 +110,7 @@ model:
       n_layers: 6
       n_heads: 2
       window_size: 4
+      zero_pitch_tokens: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
 
   optim:
     name: adam
