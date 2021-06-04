@@ -150,6 +150,7 @@ class LegoFourierSubBlock(nn.Module):
         if self.patch_size != -1:
             if self.dim != -1:
                 x = x.transpose(-1, self.dim)
+            orig_shape = x.shape
             fft_dim = -1
 
             if x.shape[-1] < self.patch_size and self.shift > 0:
