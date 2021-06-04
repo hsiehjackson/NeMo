@@ -143,30 +143,33 @@ class LegoFourierSubBlock(nn.Module):
         self.shift = shift
 
     def forward(self, x, pad_mask=None):
-        if x.shape[self.dim] - self.shift < self.patch_size:
-            return x
-
         orig_shape = x.shape
         fft_dim = self.dim
-        extra = 0
+        pad_right = 0
 
         if self.patch_size != -1:
             if self.dim != -1:
                 x = x.transpose(-1, self.dim)
             fft_dim = -1
-            x = x[..., self.shift:]
-            extra = self.patch_size - x.shape[-1] % self.patch_size
-            x = x[..., :-extra]
+
+            if x.shape[-1] < self.patch_size and self.shift > 0:
+                return x
+
+            pad_right = self.patch_size - x.shape[-1] % self.patch_size
+            x = F.pad(x, [0, pad_right])
+
+            x = x[..., self.shift:-self.shift]
             x = x.reshape(x.shape[:-1] + (x.shape[-1] // self.patch_size, self.patch_size))
 
-        print(orig_shape)
-        print(x.shape, fft_dim, self.patch_size, self.dim, self.shift, extra)
+            print(orig_shape)
+            print(x.shape, fft_dim, self.patch_size, self.dim, self.shift, extra)
 
         x = torch.fft.fft(x, dim=fft_dim, norm=self.norm)
 
         if self.patch_size != -1:
             x = x.reshape(orig_shape[:-1], x.shape[-2] * x.shape[-1])
-            x = F.pad(x, [self.shift, extra])
+            x = F.pad(x, [self.shift, self.shift])
+            x = x[..., :-pad_right]
             if self.dim != -1:
                 x = x.transpose(-1, self.dim)
 
