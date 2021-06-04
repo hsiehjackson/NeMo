@@ -154,12 +154,12 @@ class LegoFourierSubBlock(nn.Module):
             x = x[..., self.shift:]
             extra = self.patch_size - x.shape[-1] % self.patch_size
             x = x[..., :-extra]
-            x = x.view(x.shape[:-1] + (x.shape[-1] // self.patch_size, self.patch_size))
+            x = x.reshape(x.shape[:-1] + (x.shape[-1] // self.patch_size, self.patch_size))
 
         x = torch.fft.fft(x, dim=fft_dim, norm=self.norm)
 
         if self.patch_size != -1:
-            x = x.view(orig_shape[:-1], x.shape[-2] * x.shape[-1])
+            x = x.reshape(orig_shape[:-1], x.shape[-2] * x.shape[-1])
             x = F.pad(x, [self.shift, extra])
             if self.dim != -1:
                 x = x.transpose(-1, self.dim)
