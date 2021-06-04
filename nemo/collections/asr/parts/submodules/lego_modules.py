@@ -158,7 +158,7 @@ class LegoFourierSubBlock(nn.Module):
             pad_right = self.patch_size - x.shape[-1] % self.patch_size
             x = F.pad(x, [0, pad_right])
 
-            x = x[..., self.shift:-self.shift]
+            x = x[..., self.shift:-(self.patch_size - self.shift)]
             x = x.reshape(x.shape[:-1] + (x.shape[-1] // self.patch_size, self.patch_size))
 
             print(orig_shape)
@@ -168,7 +168,7 @@ class LegoFourierSubBlock(nn.Module):
 
         if self.patch_size != -1:
             x = x.reshape(orig_shape[:-1], x.shape[-2] * x.shape[-1])
-            x = F.pad(x, [self.shift, self.shift])
+            x = F.pad(x, [self.shift, self.patch_size - self.shift])
             x = x[..., :-pad_right]
             if self.dim != -1:
                 x = x.transpose(-1, self.dim)
