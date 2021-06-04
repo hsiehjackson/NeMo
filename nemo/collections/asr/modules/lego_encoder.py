@@ -147,7 +147,7 @@ class LegoEncoder(NeuralModule, Exportable):
 
         self.blocks = nn.ModuleList()
         for i in range(n_blocks):
-            block = LegoBlock(sub_blocks)
+            block = LegoBlock(sub_blocks, d_model)
             self.blocks.append(block)
 
         self.out_proj = None
