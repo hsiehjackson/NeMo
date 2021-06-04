@@ -15,7 +15,7 @@
 #  | Large (121M)|   512   |    8   |    18     |     10     |
 #  +----------------------------------------------------------
 
-name: "Conformer-CTC-BPE"
+name: "Lego-Sep-Conv"
 
 model:
   sample_rate: 16000

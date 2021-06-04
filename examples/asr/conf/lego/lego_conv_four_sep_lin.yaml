@@ -15,7 +15,7 @@
 #  | Large (121M)|   512   |    8   |    18     |     10     |
 #  +----------------------------------------------------------
 
-name: "Lego-Fourier-Sep"
+name: "Lego-Conv-Fourier-Sep-Lin"
 
 model:
   sample_rate: 16000
@@ -95,11 +95,18 @@ model:
     subsampling_conv_channels: -1 # -1 sets it to d_model
 
     sub_blocks:
+    - _target_: nemo.collections.asr.parts.submodules.lego_modules.LegoConvSubBlock
+      d_model: ${model.encoder.d_model}
+      kernel_size: 17
+
     - _target_: nemo.collections.asr.parts.submodules.lego_modules.LegoFourierSubBlock
       dim: -2 #time
 
     - _target_: nemo.collections.asr.parts.submodules.lego_modules.LegoFourierSubBlock
       dim: -1 #channel
+
+    - _target_: nemo.collections.asr.parts.submodules.lego_modules.LegoLinearSubBlock
+      d_model: ${model.encoder.d_model}
 
 
   decoder:
