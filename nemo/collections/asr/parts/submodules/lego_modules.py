@@ -143,19 +143,19 @@ class LegoFourierSubBlock(nn.Module):
         self.shift = shift
 
     def forward(self, x, pad_mask=None):
+        if x.shape[self.dim] < self.patch_size and self.shift > 0:
+            return x
+
         orig_shape = x.shape
         fft_dim = self.dim
         pad_right = 0
 
         if self.patch_size != -1:
-            print(x.shape)
+            #print(x.shape)
             if self.dim != -1:
                 x = x.transpose(-1, self.dim)
             orig_shape = x.shape
             fft_dim = -1
-
-            if x.shape[-1] < self.patch_size and self.shift > 0:
-                return x
 
             if self.shift > 0:
                 x = x[..., self.shift:]
@@ -165,7 +165,7 @@ class LegoFourierSubBlock(nn.Module):
 
             x = x.reshape(x.shape[:-1] + (x.shape[-1] // self.patch_size, self.patch_size))
 
-            print(x.shape, fft_dim, self.patch_size, self.dim, self.shift, pad_right)
+            #print(x.shape, fft_dim, self.patch_size, self.dim, self.shift, pad_right)
 
         x = torch.fft.fft(x, dim=fft_dim, norm=self.norm)
 
@@ -175,7 +175,7 @@ class LegoFourierSubBlock(nn.Module):
             x = F.pad(x, [self.shift, 0])
             if self.dim != -1:
                 x = x.transpose(-1, self.dim)
-            print(x.shape)
+            #print(x.shape)
 
         return x.real
 
