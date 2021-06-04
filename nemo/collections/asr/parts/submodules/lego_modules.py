@@ -17,12 +17,8 @@
 import torch
 from torch import nn as nn
 from torch.nn import LayerNorm
+import torch.nn.functional as F
 
-from nemo.collections.asr.parts.submodules.multi_head_attention import (
-    MultiHeadAttention,
-    RelPositionMultiHeadAttention,
-)
-from nemo.collections.asr.parts.utils.activations import Swish
 from nemo.core.classes.module import NeuralModule
 
 # LegoBlock is initialized based on list of sub_block configs
@@ -56,13 +52,12 @@ class LegoBlock(NeuralModule):
 
         self.sub_blocks = nn.ModuleList()
         self.norms_pre = nn.ModuleList()
-        #self.norms_post = nn.ModuleList()
+        # self.norms_post = nn.ModuleList()
 
         for sub_cfg in sub_blocks:
             self.norms_pre.append(LayerNorm(d_model))
-            #self.norms_post.append(LayerNorm(d_model))
+            # self.norms_post.append(LayerNorm(d_model))
             self.sub_blocks.append(LegoBlock.from_config_dict(sub_cfg))
-
 
         self.dropout = nn.Dropout(dropout)
 
@@ -88,7 +83,7 @@ class LegoBlock(NeuralModule):
             residual = x
             x = norm_pre(x)
             x = sub_block(x)
-            #x = norm_post(x)
+            # x = norm_post(x)
             x = self.dropout(x)
             x = residual + x
 
@@ -137,21 +132,37 @@ class LegoConvSubBlock(nn.Module):
 
 
 class LegoFourierSubBlock(nn.Module):
-    # more stuff here later
 
-    def __init__(self, dim=-1, norm="ortho", use_fft2=False):
+    def __init__(self, dim=-1, norm="ortho", use_fft2=False, patch_size=-1, shift=0):
         super(LegoFourierSubBlock, self).__init__()
 
         self.dim = dim
         self.norm = norm
         self.use_fft2 = use_fft2
-
+        self.patch_size = patch_size
+        self.shift = shift
 
     def forward(self, x, pad_mask=None):
-        if self.use_fft2:
-            x = torch.fft.fft2(x, dim=self.dim, norm=self.norm)
-        else:
-            x = torch.fft.fft(x, dim=self.dim, norm=self.norm)
+        orig_shape = x.shape
+        fft_dim = self.dim
+        extra = 0
+
+        if self.patch_size != -1:
+            if self.dim != -1:
+                x = x.transpose(-1, self.dim)
+            fft_dim = -1
+            x = x[..., self.shift:]
+            extra = self.patch_size - x.shape[-1] % self.patch_size
+            x = x[..., :-extra]
+            x = x.view(x.shape[:-1] + (x.shape[-1] // self.patch_size, self.patch_size))
+
+        x = torch.fft.fft(x, dim=fft_dim, norm=self.norm)
+
+        if self.patch_size != -1:
+            x = x.view(orig_shape[:-1], x.shape[-2] * x.shape[-1])
+            x = F.pad(x, [self.shift, extra])
+            if self.dim != -1:
+                x = x.transpose(-1, self.dim)
 
         return x.real
 

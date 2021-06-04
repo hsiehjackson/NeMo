@@ -97,10 +97,16 @@ model:
     sub_blocks:
     - _target_: nemo.collections.asr.parts.submodules.lego_modules.LegoConvSubBlock
       d_model: ${model.encoder.d_model}
-      kernel_size: 17
+      kernel_size: 31
 
     - _target_: nemo.collections.asr.parts.submodules.lego_modules.LegoFourierSubBlock
       dim: -2 #time
+      patch_size: 1024
+
+    - _target_: nemo.collections.asr.parts.submodules.lego_modules.LegoFourierSubBlock
+      dim: -2 #time
+      patch_size: 1024
+      shift: 512
 
     - _target_: nemo.collections.asr.parts.submodules.lego_modules.LegoFourierSubBlock
       dim: -1 #channel
@@ -123,12 +129,13 @@ model:
 
     # scheduler setup
     sched:
-      name: NoamAnnealing
-      d_model: ${model.encoder.d_model}
+      name: CosineAnnealing
+
       # scheduler config override
-      warmup_steps: 10000
-      warmup_ratio: null
+      warmup_steps: null
+      warmup_ratio: 0.05
       min_lr: 1e-6
+      last_epoch: -1
 
 trainer:
   gpus: -1 # number of GPUs, -1 would use all available GPUs
