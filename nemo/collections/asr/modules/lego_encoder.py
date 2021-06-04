@@ -20,7 +20,6 @@ from collections import OrderedDict
 import torch
 import torch.nn as nn
 
-from nemo.collections.asr.parts.submodules.conformer_modules import ConformerLayer
 from nemo.collections.asr.parts.submodules.lego_modules import LegoBlock
 from nemo.collections.asr.parts.submodules.multi_head_attention import PositionalEncoding, RelPositionalEncoding
 from nemo.collections.asr.parts.submodules.subsampling import ConvSubsampling
@@ -135,14 +134,13 @@ class LegoEncoder(NeuralModule, Exportable):
                 d_model=d_model,
                 dropout_rate=dropout,
                 max_len=pos_emb_max_len,
-                xscale=self.xscale,
                 dropout_rate_emb=dropout,
             )
         elif pos_emb_mode == "abs_pos":
             pos_bias_u = None
             pos_bias_v = None
             self.pos_enc = PositionalEncoding(
-                d_model=d_model, dropout_rate=dropout, max_len=pos_emb_max_len, xscale=self.xscale
+                d_model=d_model, dropout_rate=dropout, max_len=pos_emb_max_len
             )
         else:
             raise ValueError(f"Not valid positional embedding mode: '{pos_emb_mode}'!")
@@ -152,12 +150,8 @@ class LegoEncoder(NeuralModule, Exportable):
             block = LegoBlock(sub_blocks)
             self.blocks.append(block)
 
-        if feat_out > 0 and feat_out != self.output_dim:
-            self.out_proj = nn.Linear(self.feat_out, feat_out)
-            self._feat_out = feat_out
-        else:
-            self.out_proj = None
-            self._feat_out = d_model
+        self.out_proj = None
+        self._feat_out = d_model
 
     @typecheck()
     def forward(self, audio_signal, length=None):
