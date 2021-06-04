@@ -143,6 +143,9 @@ class LegoFourierSubBlock(nn.Module):
         self.shift = shift
 
     def forward(self, x, pad_mask=None):
+        if x.shape[self.dim] - self.shift < self.patch_size:
+            return x
+
         orig_shape = x.shape
         fft_dim = self.dim
         extra = 0
@@ -156,7 +159,9 @@ class LegoFourierSubBlock(nn.Module):
             x = x[..., :-extra]
             x = x.reshape(x.shape[:-1] + (x.shape[-1] // self.patch_size, self.patch_size))
 
+        print(orig_shape)
         print(x.shape, fft_dim, self.patch_size, self.dim, self.shift, extra)
+
         x = torch.fft.fft(x, dim=fft_dim, norm=self.norm)
 
         if self.patch_size != -1:
