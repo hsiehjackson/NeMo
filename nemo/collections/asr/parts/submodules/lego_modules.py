@@ -148,6 +148,7 @@ class LegoFourierSubBlock(nn.Module):
         pad_right = 0
 
         if self.patch_size != -1:
+            print(x.shape)
             if self.dim != -1:
                 x = x.transpose(-1, self.dim)
             orig_shape = x.shape
@@ -164,7 +165,6 @@ class LegoFourierSubBlock(nn.Module):
 
             x = x.reshape(x.shape[:-1] + (x.shape[-1] // self.patch_size, self.patch_size))
 
-            print(orig_shape)
             print(x.shape, fft_dim, self.patch_size, self.dim, self.shift, pad_right)
 
         x = torch.fft.fft(x, dim=fft_dim, norm=self.norm)
@@ -175,6 +175,7 @@ class LegoFourierSubBlock(nn.Module):
             x = F.pad(x, [self.shift, 0])
             if self.dim != -1:
                 x = x.transpose(-1, self.dim)
+            print(x.shape)
 
         return x.real
 
