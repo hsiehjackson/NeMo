@@ -59,8 +59,8 @@ class LegoBlock(NeuralModule):
         self.norms_post = nn.ModuleList()
 
         for sub_cfg in sub_blocks:
-            self.norms.append(LayerNorm(d_model))
-            self.norms.append(LayerNorm(d_model))
+            self.norms_pre.append(LayerNorm(d_model))
+            self.norms_post.append(LayerNorm(d_model))
             self.sub_blocks.append(LegoBlock.from_config_dict(sub_cfg))
 
 
@@ -84,11 +84,11 @@ class LegoBlock(NeuralModule):
         if self.outer_residual:
             outer_residual = x
 
-        for norm, sub_block in zip(self.norms, self.sub_blocks):
+        for norm_pre, norm_post, sub_block in zip(self.norms_pre, self.norms_post, self.sub_blocks):
             residual = x
-            x = norm(x)
+            x = norm_pre(x)
             x = sub_block(x)
-            x = norm(x)
+            x = norm_post(x)
             x = self.dropout(x)
             x = residual + x
 
