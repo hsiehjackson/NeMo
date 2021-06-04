@@ -178,7 +178,7 @@ class LegoEncoder(NeuralModule, Exportable):
         att_mask = ~att_mask
         pad_mask = ~pad_mask"""
 
-        for lth, block in enumerate(self.block):
+        for lth, block in enumerate(self.blocks):
             audio_signal = block(x=audio_signal)
 
         if self.out_proj is not None:
