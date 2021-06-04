@@ -168,7 +168,7 @@ class LegoEncoder(NeuralModule, Exportable):
         bs, xmax, idim = audio_signal.size()
 
         # Create the self-attention and padding masks
-        pad_mask = self.make_pad_mask(length, max_time=xmax, device=audio_signal.device)
+        """pad_mask = self.make_pad_mask(length, max_time=xmax, device=audio_signal.device)
         att_mask = pad_mask.unsqueeze(1).repeat([1, xmax, 1])
         att_mask = att_mask & att_mask.transpose(1, 2)
         if self.att_context_size[0] >= 0:
@@ -176,7 +176,7 @@ class LegoEncoder(NeuralModule, Exportable):
         if self.att_context_size[1] >= 0:
             att_mask = att_mask.tril(diagonal=self.att_context_size[1])
         att_mask = ~att_mask
-        pad_mask = ~pad_mask
+        pad_mask = ~pad_mask"""
 
         for lth, layer in enumerate(self.layers):
             audio_signal = layer(x=audio_signal)
