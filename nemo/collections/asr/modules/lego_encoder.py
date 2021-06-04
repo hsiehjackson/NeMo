@@ -100,7 +100,7 @@ class LegoEncoder(NeuralModule, Exportable):
         subsampling='striding',
         subsampling_factor=4,
         subsampling_conv_channels=-1,
-        dropout=0.1,
+        dropout=0.,
         pos_emb_mode='rel_pos',
         pos_emb_max_len=5000,
     ):
