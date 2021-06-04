@@ -127,7 +127,6 @@ class LegoEncoder(NeuralModule, Exportable):
             self._feat_out = d_model
             self.pre_encode = nn.Linear(feat_in, d_model)
 
-        #should only leave rel pos embs?
         pos_bias_u = None
         pos_bias_v = None
 
