@@ -100,7 +100,7 @@ model:
       kernel_size: 31
 
     - _target_: nemo.collections.asr.parts.submodules.lego_modules.LegoFourierSubBlock
-        dim: -1 #channel
+      dim: -1 #channel
 
   decoder:
     _target_: nemo.collections.asr.modules.ConvASRDecoder
