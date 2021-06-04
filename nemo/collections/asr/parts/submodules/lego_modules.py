@@ -61,7 +61,6 @@ class LegoBlock(NeuralModule):
             self.norms.append(LayerNorm(d_model))
             self.sub_blocks.append(LegoBlock.from_config_dict(sub_cfg))
 
-            #if we want rel pos encoding, we should check here if attn is present
 
         self.dropout = nn.Dropout(dropout)
 
