@@ -46,7 +46,7 @@ class LegoBlock(NeuralModule):
             sub_blocks,
             d_model,#channels
             dropout=0.,
-            outer_residual=True
+            outer_residual=True,
     ):
         super(LegoBlock, self).__init__()
 

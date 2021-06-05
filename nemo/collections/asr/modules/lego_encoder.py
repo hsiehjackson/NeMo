@@ -27,6 +27,7 @@ from nemo.core.classes.common import typecheck
 from nemo.core.classes.exportable import Exportable
 from nemo.core.classes.module import NeuralModule
 from nemo.core.neural_types import AcousticEncodedRepresentation, LengthsType, NeuralType, SpectrogramType
+from nemo.collections.asr.parts.submodules.jasper import init_weights
 
 __all__ = ['LegoEncoder']
 
@@ -152,6 +153,8 @@ class LegoEncoder(NeuralModule, Exportable):
 
         self.out_proj = None
         self._feat_out = d_model
+
+        self.apply(lambda x: init_weights(x, mode='xavier_uniform'))
 
     @typecheck()
     def forward(self, audio_signal, length=None):
