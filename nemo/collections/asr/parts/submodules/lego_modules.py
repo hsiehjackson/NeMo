@@ -44,8 +44,8 @@ class LegoBlock(NeuralModule):
     def __init__(
             self,
             sub_blocks,
-            d_model,
-            dropout=0.1,
+            d_model,#channels
+            dropout=0.,
             outer_residual=True
     ):
         super(LegoBlock, self).__init__()
@@ -55,15 +55,18 @@ class LegoBlock(NeuralModule):
         # self.norms_post = nn.ModuleList()
 
         for sub_cfg in sub_blocks:
-            self.norms_pre.append(LayerNorm(d_model))
+            #self.norms_pre.append(LayerNorm(d_model))
+            self.norms_pre.append(nn.BatchNorm1d(d_model, eps=1e-3, momentum=0.1))
             # self.norms_post.append(LayerNorm(d_model))
             self.sub_blocks.append(LegoBlock.from_config_dict(sub_cfg))
 
         self.dropout = nn.Dropout(dropout)
 
-        self.final_norm = LayerNorm(d_model)
+        self.final_norm = nn.BatchNorm1d(d_model, eps=1e-3, momentum=0.1)
 
         self.outer_residual = outer_residual
+
+        self.activation = nn.GELU()
 
     def forward(self, x, att_mask=None, pos_emb=None, pad_mask=None):
         """
@@ -84,6 +87,7 @@ class LegoBlock(NeuralModule):
             x = norm_pre(x)
             x = sub_block(x)
             # x = norm_post(x)
+            x = self.activation(x)
             x = self.dropout(x)
             x = residual + x
 
@@ -112,8 +116,6 @@ class LegoConvSubBlock(nn.Module):
             bias=True,
         )
 
-        self.activation = nn.GELU()
-
         self.axis = axis
 
     def forward(self, x, pad_mask=None):
@@ -123,7 +125,6 @@ class LegoConvSubBlock(nn.Module):
                 x.masked_fill_(pad_mask.unsqueeze(1), 0.0)
 
         x = self.depthwise_conv(x)
-        x = self.activation(x)
 
         if self.axis == "time":
             x = x.transpose(-2, -1)

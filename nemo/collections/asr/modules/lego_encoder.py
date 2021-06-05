@@ -181,8 +181,11 @@ class LegoEncoder(NeuralModule, Exportable):
         for lth, block in enumerate(self.blocks):
             audio_signal = block(x=audio_signal)
 
+        #total_sum = audio_signal
+
         if self.out_proj is not None:
             audio_signal = self.out_proj(audio_signal)
+            #total_sum += audio_signal
 
         audio_signal = torch.transpose(audio_signal, 1, 2)
         return audio_signal, length
