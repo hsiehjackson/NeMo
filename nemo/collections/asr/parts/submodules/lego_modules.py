@@ -62,6 +62,7 @@ class LegoBlock(NeuralModule):
 
         self.dropout = nn.Dropout(dropout)
 
+        #self.final_norm = LayerNorm(d_model)
         self.final_norm = nn.BatchNorm1d(d_model, eps=1e-3, momentum=0.1)
 
         self.outer_residual = outer_residual
@@ -84,14 +85,14 @@ class LegoBlock(NeuralModule):
 
         for norm_pre, sub_block in zip(self.norms_pre, self.sub_blocks):
             residual = x
-            x = norm_pre(x)
+            x = norm_pre(x.transpose(-2, -1)).transpose(-2, -1)
             x = sub_block(x)
             # x = norm_post(x)
             x = self.activation(x)
             x = self.dropout(x)
             x = residual + x
 
-        x = self.final_norm(x)
+        x = self.final_norm(x.transpose(-2, -1)).transpose(-2, -1)
 
         if self.outer_residual:
             x = outer_residual + x
