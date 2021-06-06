@@ -45,7 +45,7 @@ class LegoBlock(NeuralModule):
     def __init__(
             self,
             sub_blocks,
-            d_model,#channels
+            d_model,  # channels
             dropout=0.,
             outer_residual=False,
     ):
@@ -57,14 +57,14 @@ class LegoBlock(NeuralModule):
 
         for sub_cfg in sub_blocks:
             self.norms_pre.append(LayerNorm(d_model))
-            #self.norms_pre.append(nn.BatchNorm1d(d_model, eps=1e-3, momentum=0.1))
+            # self.norms_pre.append(nn.BatchNorm1d(d_model, eps=1e-3, momentum=0.1))
             # self.norms_post.append(LayerNorm(d_model))
             self.sub_blocks.append(LegoBlock.from_config_dict(sub_cfg))
 
         self.dropout = nn.Dropout(dropout)
 
         self.final_norm = LayerNorm(d_model)
-        #self.final_norm = nn.BatchNorm1d(d_model, eps=1e-3, momentum=0.1)
+        # self.final_norm = nn.BatchNorm1d(d_model, eps=1e-3, momentum=0.1)
 
         self.outer_residual = outer_residual
 
@@ -86,7 +86,7 @@ class LegoBlock(NeuralModule):
 
         for norm_pre, sub_block in zip(self.norms_pre, self.sub_blocks):
             residual = x
-            #x = norm_pre(x.transpose(-2, -1)).transpose(-2, -1)
+            # x = norm_pre(x.transpose(-2, -1)).transpose(-2, -1)
             x = norm_pre(x)
             if isinstance(sub_block, LegoConvSubBlock):
                 x, lens = sub_block(x, lens)
@@ -98,7 +98,7 @@ class LegoBlock(NeuralModule):
             x = residual + x
 
         x = self.final_norm(x)
-        #x = self.final_norm(x.transpose(-2, -1)).transpose(-2, -1)
+        # x = self.final_norm(x.transpose(-2, -1)).transpose(-2, -1)
 
         if self.outer_residual:
             x = outer_residual + x
@@ -141,7 +141,9 @@ class LegoConvSubBlock(nn.Module):
 
 class LegoFourierSubBlock(nn.Module):
 
-    def __init__(self, dim=-1, norm="ortho", use_fft2=False, patch_size=-1, shift=0):
+    def __init__(self, dim=-1, norm="ortho", use_fft2=False, patch_size=-1, shift=0,
+                 shuffle_after=False, shuffle_groups=8):
+
         super(LegoFourierSubBlock, self).__init__()
 
         self.dim = dim
@@ -149,6 +151,10 @@ class LegoFourierSubBlock(nn.Module):
         self.use_fft2 = use_fft2
         self.patch_size = patch_size
         self.shift = shift
+
+        self.shuffle = shuffle_after
+        if self.shuffle:
+            self.shuffle_op = LegoChannelShuffle(shuffle_groups)
 
     def forward(self, x, pad_mask=None):
         if x.shape[self.dim] < self.patch_size and self.shift > 0:
@@ -159,7 +165,7 @@ class LegoFourierSubBlock(nn.Module):
         pad_right = 0
 
         if self.patch_size != -1:
-            #print(x.shape)
+            # print(x.shape)
             if self.dim != -1:
                 x = x.transpose(-1, self.dim)
             orig_shape = x.shape
@@ -173,9 +179,12 @@ class LegoFourierSubBlock(nn.Module):
 
             x = x.reshape(x.shape[:-1] + (x.shape[-1] // self.patch_size, self.patch_size))
 
-            #print(x.shape, fft_dim, self.patch_size, self.dim, self.shift, pad_right)
+            # print(x.shape, fft_dim, self.patch_size, self.dim, self.shift, pad_right)
 
         x = torch.fft.fft(x, dim=fft_dim, norm=self.norm)
+
+        if self.shuffle:
+            x = self.shuffle_op(x)
 
         if self.patch_size != -1:
             x = x.reshape(orig_shape[:-1] + (x.shape[-2] * x.shape[-1],))
@@ -183,7 +192,9 @@ class LegoFourierSubBlock(nn.Module):
             x = F.pad(x, [self.shift, 0])
             if self.dim != -1:
                 x = x.transpose(-1, self.dim)
-            #print(x.shape)
+            # print(x.shape)
+
+        x = x.real
 
         return x.real
 
@@ -206,5 +217,22 @@ class LegoLinearSubBlock(nn.Module):
         x = self.linear(x)
 
         x = x.view(original_shape)
+
+        return x
+
+
+class LegoChannelShuffle(nn.Module):
+
+    def __init__(self, groups=8):
+        super(LegoChannelShuffle, self).__init__()
+
+        self.groups = groups
+
+    def forward(self, x):
+        channels = x.shape[-1]
+
+        x = x.view(..., self.groups, channels / self.groups)
+        x = x.transpose(-2, -1).contiguous()
+        x = x.view(..., channels)
 
         return x
