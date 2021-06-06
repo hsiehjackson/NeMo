@@ -181,7 +181,7 @@ class LegoFourierSubBlock(nn.Module):
 
             # print(x.shape, fft_dim, self.patch_size, self.dim, self.shift, pad_right)
 
-        x = torch.fft.fft(x, dim=fft_dim, norm=self.norm)
+        x = torch.fft.fft(x, dim=fft_dim, norm=self.norm).real
 
         if self.shuffle:
             x = self.shuffle_op(x)
@@ -194,9 +194,7 @@ class LegoFourierSubBlock(nn.Module):
                 x = x.transpose(-1, self.dim)
             # print(x.shape)
 
-        x = x.real
-
-        return x.real
+        return x
 
 
 class LegoLinearSubBlock(nn.Module):
