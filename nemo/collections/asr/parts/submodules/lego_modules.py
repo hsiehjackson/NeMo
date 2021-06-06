@@ -249,7 +249,7 @@ class LegoPartialFourierMod(nn.Module):
 
         f = torch.fft.fft(x)
         f = torch.view_as_real(f).reshape(f.shape[0], f.shape[1], -1)
-        f = f[:self.mod_n]
+        f = f[..., :self.mod_n]
 
         f_lin = self.lin(f)
         f_lin = F.pad(f_lin, [0, h_dim - self.mod_n])
