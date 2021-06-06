@@ -95,9 +95,9 @@ class LegoEncoder(NeuralModule, Exportable):
         self,
         sub_blocks,
         feat_in,
-        n_blocks,
-        d_model,
-        feat_out=-1,
+        n_blocks=8,
+        d_model=256,
+        feat_out=256,
         subsampling='striding',
         subsampling_factor=4,
         subsampling_conv_channels=-1,
@@ -111,7 +111,7 @@ class LegoEncoder(NeuralModule, Exportable):
         self._feat_in = feat_in
         self.scale = math.sqrt(self.d_model)
 
-        if subsampling_conv_channels == -1:
+        """if subsampling_conv_channels == -1:
             subsampling_conv_channels = d_model
         if subsampling and subsampling_factor > 1:
             self.pre_encode = ConvSubsampling(
@@ -123,9 +123,8 @@ class LegoEncoder(NeuralModule, Exportable):
                 activation=nn.ReLU(),
             )
             self._feat_out = d_model
-        else:
-            self._feat_out = d_model
-            self.pre_encode = nn.Linear(feat_in, d_model)
+        else:"""
+        self.pre_encode = nn.Sequential(nn.Linear(feat_in, d_model), nn.ReLU())
 
         pos_bias_u = None
         pos_bias_v = None
@@ -151,8 +150,8 @@ class LegoEncoder(NeuralModule, Exportable):
             block = LegoBlock(sub_blocks, d_model)
             self.blocks.append(block)
 
-        self.out_proj = None
-        self._feat_out = d_model
+        self.out_proj = None#nn.Sequential(nn.Linear(d_model, feat_out), nn.ReLU())
+        self._feat_out = feat_out
 
         self.apply(lambda x: init_weights(x, mode='xavier_uniform'))
 
@@ -161,6 +160,8 @@ class LegoEncoder(NeuralModule, Exportable):
         if length is None:
             length = torch.tensor(audio_signal.size(-1)).repeat(audio_signal.size(0)).to(audio_signal)
         audio_signal = torch.transpose(audio_signal, 1, 2)
+
+        #b, t, d
 
         if isinstance(self.pre_encode, ConvSubsampling):
             audio_signal, length = self.pre_encode(audio_signal, length)
@@ -182,13 +183,11 @@ class LegoEncoder(NeuralModule, Exportable):
         pad_mask = ~pad_mask"""
 
         for lth, block in enumerate(self.blocks):
-            audio_signal = block(x=audio_signal)
-
-        #total_sum = audio_signal
+            audio_signal, length = block(x=audio_signal, lens=length)
 
         if self.out_proj is not None:
             audio_signal = self.out_proj(audio_signal)
-            #total_sum += audio_signal
+
 
         audio_signal = torch.transpose(audio_signal, 1, 2)
         return audio_signal, length

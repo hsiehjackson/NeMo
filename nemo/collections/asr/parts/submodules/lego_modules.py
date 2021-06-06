@@ -20,6 +20,7 @@ from torch.nn import LayerNorm
 import torch.nn.functional as F
 
 from nemo.core.classes.module import NeuralModule
+from nemo.collections.asr.parts.submodules.jasper import MaskedConv1d
 
 # LegoBlock is initialized based on list of sub_block configs
 
@@ -46,7 +47,7 @@ class LegoBlock(NeuralModule):
             sub_blocks,
             d_model,#channels
             dropout=0.,
-            outer_residual=True,
+            outer_residual=False,
     ):
         super(LegoBlock, self).__init__()
 
@@ -55,21 +56,21 @@ class LegoBlock(NeuralModule):
         # self.norms_post = nn.ModuleList()
 
         for sub_cfg in sub_blocks:
-            #self.norms_pre.append(LayerNorm(d_model))
-            self.norms_pre.append(nn.BatchNorm1d(d_model, eps=1e-3, momentum=0.1))
+            self.norms_pre.append(LayerNorm(d_model))
+            #self.norms_pre.append(nn.BatchNorm1d(d_model, eps=1e-3, momentum=0.1))
             # self.norms_post.append(LayerNorm(d_model))
             self.sub_blocks.append(LegoBlock.from_config_dict(sub_cfg))
 
         self.dropout = nn.Dropout(dropout)
 
-        #self.final_norm = LayerNorm(d_model)
-        self.final_norm = nn.BatchNorm1d(d_model, eps=1e-3, momentum=0.1)
+        self.final_norm = LayerNorm(d_model)
+        #self.final_norm = nn.BatchNorm1d(d_model, eps=1e-3, momentum=0.1)
 
         self.outer_residual = outer_residual
 
-        self.activation = nn.GELU()
+        self.activation = nn.ReLU()
 
-    def forward(self, x, att_mask=None, pos_emb=None, pad_mask=None):
+    def forward(self, x, lens, att_mask=None, pos_emb=None, pad_mask=None):
         """
         Args:
             x (torch.Tensor): input signals (B, T, d_model)
@@ -85,19 +86,24 @@ class LegoBlock(NeuralModule):
 
         for norm_pre, sub_block in zip(self.norms_pre, self.sub_blocks):
             residual = x
-            x = norm_pre(x.transpose(-2, -1)).transpose(-2, -1)
-            x = sub_block(x)
+            #x = norm_pre(x.transpose(-2, -1)).transpose(-2, -1)
+            x = norm_pre(x)
+            if isinstance(sub_block, LegoConvSubBlock):
+                x, lens = sub_block(x, lens)
+            else:
+                x = sub_block(x)
             # x = norm_post(x)
             x = self.activation(x)
             x = self.dropout(x)
             x = residual + x
 
-        x = self.final_norm(x.transpose(-2, -1)).transpose(-2, -1)
+        x = self.final_norm(x)
+        #x = self.final_norm(x.transpose(-2, -1)).transpose(-2, -1)
 
         if self.outer_residual:
             x = outer_residual + x
 
-        return x
+        return x, lens
 
 
 class LegoConvSubBlock(nn.Module):
@@ -107,7 +113,7 @@ class LegoConvSubBlock(nn.Module):
         assert (kernel_size - 1) % 2 == 0
         self.d_model = d_model
 
-        self.depthwise_conv = nn.Conv1d(
+        self.depthwise_conv = MaskedConv1d(
             in_channels=d_model,
             out_channels=d_model,
             kernel_size=kernel_size,
@@ -119,18 +125,18 @@ class LegoConvSubBlock(nn.Module):
 
         self.axis = axis
 
-    def forward(self, x, pad_mask=None):
+    def forward(self, x, lens, pad_mask=None):
         if self.axis == "time":
             x = x.transpose(-2, -1)
             if pad_mask is not None:
                 x.masked_fill_(pad_mask.unsqueeze(1), 0.0)
 
-        x = self.depthwise_conv(x)
+        x, lens = self.depthwise_conv(x, lens)
 
         if self.axis == "time":
             x = x.transpose(-2, -1)
 
-        return x
+        return x, lens
 
 
 class LegoFourierSubBlock(nn.Module):
