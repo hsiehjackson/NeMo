@@ -229,10 +229,10 @@ class LegoChannelShuffle(nn.Module):
         self.groups = groups
 
     def forward(self, x):
-        channels = x.shape[-1]
+        sh = x.shape
 
-        x = x.reshape([..., self.groups, channels / self.groups])
+        x = x.reshape(sh[0], sh[1], self.groups, sh[2] / self.groups)
         x = x.transpose(-2, -1)
-        x = x.reshape([..., channels])
+        x = x.reshape(sh)
 
         return x
