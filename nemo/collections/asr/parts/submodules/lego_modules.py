@@ -231,8 +231,8 @@ class LegoChannelShuffle(nn.Module):
     def forward(self, x):
         channels = x.shape[-1]
 
-        x = x.view(..., self.groups, channels / self.groups)
-        x = x.transpose(-2, -1).contiguous()
-        x = x.view(..., channels)
+        x = x.reshape([..., self.groups, channels / self.groups])
+        x = x.transpose(-2, -1)
+        x = x.reshape([..., channels])
 
         return x
