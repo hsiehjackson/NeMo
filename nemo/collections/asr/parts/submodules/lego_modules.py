@@ -234,3 +234,26 @@ class LegoChannelShuffle(nn.Module):
         x = x.reshape(sh)
 
         return x
+
+
+class LegoPartialFourierMod(nn.Module):
+
+    def __init__(self, dim=-1, mod_n=16):
+        super(LegoPartialFourierMod, self).__init__()
+
+        self.lin = nn.Linear(mod_n, mod_n)
+        self.mod_n = mod_n
+
+    def forward(self, x):
+        h_dim = x.shape[-1]
+
+        f = torch.fft.fft(x)
+        f = torch.view_as_real(f).reshape(f.shape[0], f.shape[1], -1)
+        f = f[:self.mod_n]
+
+        f_lin = self.lin(f)
+        f_lin = F.pad(f_lin, [0, h_dim - self.mod_n])
+
+        x_hat = torch.fft.ifft(torch.view_as_complex(f_lin.reshape(f.shape[0], f.shape[1], -1, 2)).real)
+
+        return x_hat
