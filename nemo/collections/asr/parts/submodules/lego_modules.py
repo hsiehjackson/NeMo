@@ -231,7 +231,7 @@ class LegoChannelShuffle(nn.Module):
     def forward(self, x):
         sh = x.shape
 
-        x = x.reshape(sh[0], sh[1], self.groups, sh[2] / self.groups)
+        x = x.reshape((sh[0], sh[1], self.groups, sh[2] / self.groups))
         x = x.transpose(-2, -1)
         x = x.reshape(sh)
 
