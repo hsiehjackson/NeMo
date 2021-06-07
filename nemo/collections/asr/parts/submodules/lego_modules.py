@@ -243,17 +243,24 @@ class LegoPartialFourierMod(nn.Module):
 
         self.lin = nn.Linear(mod_n, mod_n)
         self.mod_n = mod_n
+        self.dim = dim
 
     def forward(self, x):
+        if self.dim != -1:
+            x = x.transpose(-1, self.dim)
+
         h_dim = x.shape[-1]
 
         f = torch.fft.fft(x)
-        f = torch.view_as_real(f).reshape(f.shape[0], f.shape[1], -1)
+        f = torch.view_as_real(f).reshape(*f.shape[:-2], -1)
         f = f[..., :self.mod_n]
 
         f_lin = self.lin(f)
         f_lin = F.pad(f_lin, [0, h_dim * 2 - self.mod_n])
 
-        x_hat = torch.fft.ifft(torch.view_as_complex(f_lin.reshape(f.shape[0], f.shape[1], -1, 2))).real
+        x_hat = torch.fft.ifft(torch.view_as_complex(f_lin.reshape(*f.shape[:-1], -1, 2))).real
+
+        if self.dim != -1:
+            x_hat = x_hat.transpose(-1, self.dim)
 
         return x_hat
