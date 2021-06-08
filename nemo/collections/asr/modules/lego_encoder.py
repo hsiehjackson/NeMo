@@ -104,6 +104,7 @@ class LegoEncoder(NeuralModule, Exportable):
         dropout=0.,
         pos_emb_mode='abs_pos',
         pos_emb_max_len=5000,
+        outer_residual=False,
     ):
         super().__init__()
 
@@ -147,7 +148,7 @@ class LegoEncoder(NeuralModule, Exportable):
 
         self.blocks = nn.ModuleList()
         for i in range(n_blocks):
-            block = LegoBlock(sub_blocks, d_model)
+            block = LegoBlock(sub_blocks, d_model, outer_residual=outer_residual)
             self.blocks.append(block)
 
         self.out_proj = None#nn.Sequential(nn.Linear(d_model, feat_out), nn.ReLU())

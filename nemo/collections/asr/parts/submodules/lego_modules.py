@@ -95,7 +95,16 @@ class LegoBlock(NeuralModule):
             # x = norm_post(x)
             x = self.activation(x)
             x = self.dropout(x)
-            x = residual + x
+
+            #bad
+            if hasattr(sub_block, 'residual_type'):
+                if sub_block.residual_type == 'add':
+                    x = residual + x
+                elif sub_block.residual_type == 'multiply':
+                    x = residual * x
+            else:
+                x = residual + x
+                #residual add by default
 
         x = self.final_norm(x)
         # x = self.final_norm(x.transpose(-2, -1)).transpose(-2, -1)
@@ -238,10 +247,19 @@ class LegoChannelShuffle(nn.Module):
 
 class LegoPartialFourierMod(nn.Module):
 
-    def __init__(self, dim=-1, mod_n=16):
+    def __init__(self, dim=-1, mod_n=16, complex_linear=False):
         super(LegoPartialFourierMod, self).__init__()
 
-        self.lin = nn.Linear(mod_n, mod_n)
+        if complex_linear:
+            self.lin_r = nn.Linear(mod_n, mod_n)
+            #real weights in lin layer
+            self.lin_i = nn.Linear(mod_n, mod_n)
+            #imaginary weights in lin layer
+        else:
+            self.lin = nn.Linear(mod_n * 2, mod_n * 2)
+
+        self.complex_linear = complex_linear
+
         self.mod_n = mod_n
         self.dim = dim
 
@@ -252,13 +270,20 @@ class LegoPartialFourierMod(nn.Module):
         h_dim = x.shape[-1]
 
         f = torch.fft.fft(x)
-        f = torch.view_as_real(f).reshape(*x.shape[:-1], -1)
         f = f[..., :self.mod_n]
 
-        f_lin = self.lin(f)
-        f_lin = F.pad(f_lin, [0, h_dim * 2 - self.mod_n])
+        if self.complex_linear:
+            new_r = self.lin_r(f.real) - self.lin_i(f.imag)
+            new_i = 1j * (self.lin_r(f.imag) + self.lin_i(f.real))
+            f_lin = new_r + new_i
+            f_lin = F.pad(f_lin, [0, h_dim - self.mod_n])
+        else:
+            f = torch.view_as_real(f).reshape(*x.shape[:-1], -1)
+            f_lin = self.lin(f)
+            f_lin = F.pad(f_lin, [0, h_dim * 2 - self.mod_n * 2])
+            f_lin = torch.view_as_complex(f_lin.reshape(*f.shape[:-1], -1, 2))
 
-        x_hat = torch.fft.ifft(torch.view_as_complex(f_lin.reshape(*f.shape[:-1], -1, 2))).real
+        x_hat = torch.fft.ifft(f_lin).real
 
         if self.dim != -1:
             x_hat = x_hat.transpose(-1, self.dim)
