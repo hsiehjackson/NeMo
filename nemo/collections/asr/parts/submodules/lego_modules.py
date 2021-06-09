@@ -93,16 +93,19 @@ class LegoBlock(NeuralModule):
             else:
                 x = sub_block(x)
             # x = norm_post(x)
-            x = self.activation(x)
+            #x = self.activation(x)
             x = self.dropout(x)
 
             #bad
             if hasattr(sub_block, 'residual_type'):
                 if sub_block.residual_type == 'add':
+                    x = self.activation(x)
                     x = residual + x
                 elif sub_block.residual_type == 'multiply':
+                    x = F.sigmoid(x)
                     x = residual * x
             else:
+                x = self.activation(x)
                 x = residual + x
                 #residual add by default
 
@@ -247,8 +250,13 @@ class LegoChannelShuffle(nn.Module):
 
 class LegoPartialFourierMod(nn.Module):
 
-    def __init__(self, dim=-1, mod_n=16, complex_linear=False, residual_type='add'):
+    def __init__(self, dim=-1, mod_n=16, complex_linear=False, residual_type='add', pool=False):
         super(LegoPartialFourierMod, self).__init__()
+
+        if pool:
+            self.pool = nn.AdaptiveAvgPool1d(1)
+        else:
+            self.pool = None
 
         if complex_linear:
             self.lin_r = nn.Linear(mod_n, mod_n)
@@ -268,6 +276,9 @@ class LegoPartialFourierMod(nn.Module):
     def forward(self, x):
         if self.dim != -1:
             x = x.transpose(-1, self.dim)
+
+        if self.pool:
+            x = self.pool(x)
 
         h_dim = x.shape[-1]
 
