@@ -278,7 +278,7 @@ class LegoPartialFourierMod(nn.Module):
             x = x.transpose(-1, self.dim)
 
         if self.pool:
-            x = self.pool(x)
+            x = self.pool(x.transpose(-2, -1)).transpose(-2, -1)
 
         h_dim = x.shape[-1]
 
