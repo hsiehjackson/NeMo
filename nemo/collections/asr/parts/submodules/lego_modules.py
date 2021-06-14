@@ -24,7 +24,7 @@ from nemo.collections.asr.parts.submodules.jasper import MaskedConv1d
 
 # LegoBlock is initialized based on list of sub_block configs
 
-__all__ = ['LegoBlock', 'LegoConvSubBlock', 'LegoFourierSubBlock', 'LegoLinearSubBlock']
+__all__ = ['LegoBlock', 'LegoConvSubBlock', 'LegoFourierSubBlock', 'LegoLinearSubBlock', 'LegoPartialFourierMod']
 
 
 # Lego block and all the sub-block classes here
