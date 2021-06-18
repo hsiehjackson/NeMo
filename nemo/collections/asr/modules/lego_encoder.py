@@ -146,6 +146,8 @@ class LegoEncoder(NeuralModule, Exportable):
         else:
             raise ValueError(f"Not valid positional embedding mode: '{pos_emb_mode}'!")
 
+        print(sub_blocks)
+
         self.blocks = nn.ModuleList()
         for i in range(n_blocks):
             block = LegoBlock(sub_blocks, d_model, outer_residual=outer_residual)
