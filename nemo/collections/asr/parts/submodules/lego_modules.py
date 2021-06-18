@@ -55,11 +55,11 @@ class LegoBlock(NeuralModule):
         self.norms_pre = nn.ModuleList()
         # self.norms_post = nn.ModuleList()
 
-        for sub_cfg in sub_blocks:
+        for sub_block in sub_blocks:
             self.norms_pre.append(LayerNorm(d_model))
             # self.norms_pre.append(nn.BatchNorm1d(d_model, eps=1e-3, momentum=0.1))
             # self.norms_post.append(LayerNorm(d_model))
-            self.sub_blocks.append(LegoBlock.from_config_dict(sub_cfg))
+            self.sub_blocks.append(sub_block)
 
         self.dropout = nn.Dropout(dropout)
 

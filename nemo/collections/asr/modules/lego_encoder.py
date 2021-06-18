@@ -29,6 +29,8 @@ from nemo.core.classes.module import NeuralModule
 from nemo.core.neural_types import AcousticEncodedRepresentation, LengthsType, NeuralType, SpectrogramType
 from nemo.collections.asr.parts.submodules.jasper import init_weights
 
+from copy import deepcopy
+
 __all__ = ['LegoEncoder']
 
 
@@ -149,9 +151,13 @@ class LegoEncoder(NeuralModule, Exportable):
         print(sub_blocks)
 
         self.blocks = nn.ModuleList()
+        proto_block = LegoBlock(sub_blocks, d_model, outer_residual=outer_residual)
         for i in range(n_blocks):
-            block = LegoBlock(sub_blocks, d_model, outer_residual=outer_residual)
+            block = deepcopy(proto_block)#LegoBlock(sub_blocks, d_model, outer_residual=outer_residual)
             self.blocks.append(block)
+
+            if i < 5:
+                print(block.parameters())
 
         self.out_proj = None#nn.Sequential(nn.Linear(d_model, feat_out), nn.ReLU())
         self._feat_out = feat_out
