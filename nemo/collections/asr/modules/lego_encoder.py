@@ -159,8 +159,12 @@ class LegoEncoder(NeuralModule, Exportable):
             if i < 5:
                 print(block.parameters())
 
-        self.out_proj = None#nn.Sequential(nn.Linear(d_model, feat_out), nn.ReLU())
-        self._feat_out = feat_out
+        if feat_out > 0 and feat_out != self.output_dim:
+            self.out_proj = nn.Linear(d_model, feat_out)
+            self._feat_out = feat_out
+        else:
+            self.out_proj = None
+            self._feat_out = d_model
 
         self.apply(lambda x: init_weights(x, mode='xavier_uniform'))
 
