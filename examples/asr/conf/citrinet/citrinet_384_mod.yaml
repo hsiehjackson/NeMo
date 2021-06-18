@@ -84,7 +84,7 @@ model:
 
       - filters: 384
         repeat: ${model.model_defaults.repeat}
-        kernel: [31]
+        kernel: [11]
         stride: [1]
         dilation: [1]
         dropout: ${model.model_defaults.dropout}
@@ -95,18 +95,7 @@ model:
         kernel_size_factor: ${model.model_defaults.kernel_size_factor}
       - filters: 384
         repeat: ${model.model_defaults.repeat}
-        kernel: [31]
-        stride: [1]
-        dilation: [1]
-        dropout: ${model.model_defaults.dropout}
-        residual: true
-        separable: ${model.model_defaults.separable}
-        se: ${model.model_defaults.se}
-        se_context_size: ${model.model_defaults.se_context_size}
-        kernel_size_factor: ${model.model_defaults.kernel_size_factor}
-      - filters: 384
-        repeat: ${model.model_defaults.repeat}
-        kernel: [31]
+        kernel: [11]
         stride: [1]
         dilation: [1]
         dropout: ${model.model_defaults.dropout}
@@ -118,7 +107,7 @@ model:
 
       - filters: 384
         repeat: ${model.model_defaults.repeat}
-        kernel: [31]
+        kernel: [11]
         stride: [1]
         dilation: [1]
         dropout: ${model.model_defaults.dropout}
@@ -131,7 +120,7 @@ model:
 
       - filters: 384
         repeat: ${model.model_defaults.repeat}
-        kernel: [31]
+        kernel: [11]
         stride: [1]
         dilation: [1]
         dropout: ${model.model_defaults.dropout}
@@ -144,7 +133,7 @@ model:
 
       - filters: 384
         repeat: ${model.model_defaults.repeat}
-        kernel: [31]
+        kernel: [11]
         stride: [1]
         dilation: [1]
         dropout: ${model.model_defaults.dropout}
@@ -157,7 +146,7 @@ model:
 
       - filters: 384
         repeat: ${model.model_defaults.repeat}
-        kernel: [31]
+        kernel: [11]
         stride: [1]
         dilation: [1]
         dropout: ${model.model_defaults.dropout}
@@ -168,7 +157,7 @@ model:
         kernel_size_factor: ${model.model_defaults.kernel_size_factor}
       - filters: 384
         repeat: ${model.model_defaults.repeat}
-        kernel: [31]
+        kernel: [11]
         stride: [1]
         dilation: [1]
         dropout: ${model.model_defaults.dropout}
@@ -179,7 +168,7 @@ model:
         kernel_size_factor: ${model.model_defaults.kernel_size_factor}
       - filters: 384
         repeat: ${model.model_defaults.repeat}
-        kernel: [31]
+        kernel: [11]
         stride: [1]
         dilation: [1]
         dropout: ${model.model_defaults.dropout}
@@ -190,19 +179,7 @@ model:
         kernel_size_factor: ${model.model_defaults.kernel_size_factor}
       - filters: 384
         repeat: ${model.model_defaults.repeat}
-        kernel: [31]
-        stride: [1]
-        dilation: [1]
-        dropout: ${model.model_defaults.dropout}
-        residual: true
-        separable: ${model.model_defaults.separable}
-        se: ${model.model_defaults.se}
-        se_context_size: ${model.model_defaults.se_context_size}
-        kernel_size_factor: ${model.model_defaults.kernel_size_factor}
-
-      - filters: 384
-        repeat: ${model.model_defaults.repeat}
-        kernel: [31]
+        kernel: [11]
         stride: [1]
         dilation: [1]
         dropout: ${model.model_defaults.dropout}
@@ -212,10 +189,9 @@ model:
         se_context_size: ${model.model_defaults.se_context_size}
         kernel_size_factor: ${model.model_defaults.kernel_size_factor}
 
-
       - filters: 384
         repeat: ${model.model_defaults.repeat}
-        kernel: [31]
+        kernel: [11]
         stride: [1]
         dilation: [1]
         dropout: ${model.model_defaults.dropout}
@@ -228,7 +204,7 @@ model:
 
       - filters: 384
         repeat: ${model.model_defaults.repeat}
-        kernel: [31]
+        kernel: [11]
         stride: [1]
         dilation: [1]
         dropout: ${model.model_defaults.dropout}
@@ -241,52 +217,7 @@ model:
 
       - filters: 384
         repeat: ${model.model_defaults.repeat}
-        kernel: [31]
-        stride: [1]
-        dilation: [1]
-        dropout: ${model.model_defaults.dropout}
-        residual: true
-        separable: ${model.model_defaults.separable}
-        se: ${model.model_defaults.se}
-        se_context_size: ${model.model_defaults.se_context_size}
-        kernel_size_factor: ${model.model_defaults.kernel_size_factor}
-      - filters: 384
-        repeat: ${model.model_defaults.repeat}
-        kernel: [31]
-        stride: [1]
-        dilation: [1]
-        dropout: ${model.model_defaults.dropout}
-        residual: true
-        separable: ${model.model_defaults.separable}
-        se: ${model.model_defaults.se}
-        se_context_size: ${model.model_defaults.se_context_size}
-        kernel_size_factor: ${model.model_defaults.kernel_size_factor}
-      - filters: 384
-        repeat: ${model.model_defaults.repeat}
-        kernel: [31]
-        stride: [1]
-        dilation: [1]
-        dropout: ${model.model_defaults.dropout}
-        residual: true
-        separable: ${model.model_defaults.separable}
-        se: ${model.model_defaults.se}
-        se_context_size: ${model.model_defaults.se_context_size}
-        kernel_size_factor: ${model.model_defaults.kernel_size_factor}
-      - filters: 384
-        repeat: ${model.model_defaults.repeat}
-        kernel: [31]
-        stride: [1]
-        dilation: [1]
-        dropout: ${model.model_defaults.dropout}
-        residual: true
-        separable: ${model.model_defaults.separable}
-        se: ${model.model_defaults.se}
-        se_context_size: ${model.model_defaults.se_context_size}
-        kernel_size_factor: ${model.model_defaults.kernel_size_factor}
-
-      - filters: 384
-        repeat: ${model.model_defaults.repeat}
-        kernel: [31]
+        kernel: [11]
         stride: [1]
         dilation: [1]
         dropout: ${model.model_defaults.dropout}
@@ -299,7 +230,52 @@ model:
 
       - filters: 384
         repeat: ${model.model_defaults.repeat}
-        kernel: [31]
+        kernel: [11]
+        stride: [1]
+        dilation: [1]
+        dropout: ${model.model_defaults.dropout}
+        residual: true
+        separable: ${model.model_defaults.separable}
+        se: ${model.model_defaults.se}
+        se_context_size: ${model.model_defaults.se_context_size}
+        kernel_size_factor: ${model.model_defaults.kernel_size_factor}
+      - filters: 384
+        repeat: ${model.model_defaults.repeat}
+        kernel: [11]
+        stride: [1]
+        dilation: [1]
+        dropout: ${model.model_defaults.dropout}
+        residual: true
+        separable: ${model.model_defaults.separable}
+        se: ${model.model_defaults.se}
+        se_context_size: ${model.model_defaults.se_context_size}
+        kernel_size_factor: ${model.model_defaults.kernel_size_factor}
+      - filters: 384
+        repeat: ${model.model_defaults.repeat}
+        kernel: [11]
+        stride: [1]
+        dilation: [1]
+        dropout: ${model.model_defaults.dropout}
+        residual: true
+        separable: ${model.model_defaults.separable}
+        se: ${model.model_defaults.se}
+        se_context_size: ${model.model_defaults.se_context_size}
+        kernel_size_factor: ${model.model_defaults.kernel_size_factor}
+      - filters: 384
+        repeat: ${model.model_defaults.repeat}
+        kernel: [11]
+        stride: [1]
+        dilation: [1]
+        dropout: ${model.model_defaults.dropout}
+        residual: true
+        separable: ${model.model_defaults.separable}
+        se: ${model.model_defaults.se}
+        se_context_size: ${model.model_defaults.se_context_size}
+        kernel_size_factor: ${model.model_defaults.kernel_size_factor}
+
+      - filters: 384
+        repeat: ${model.model_defaults.repeat}
+        kernel: [11]
         stride: [1]
         dilation: [1]
         dropout: ${model.model_defaults.dropout}
@@ -312,7 +288,20 @@ model:
 
       - filters: 384
         repeat: ${model.model_defaults.repeat}
-        kernel: [31]
+        kernel: [11]
+        stride: [1]
+        dilation: [1]
+        dropout: ${model.model_defaults.dropout}
+        residual: true
+        separable: ${model.model_defaults.separable}
+        se: ${model.model_defaults.se}
+        se_context_size: ${model.model_defaults.se_context_size}
+        kernel_size_factor: ${model.model_defaults.kernel_size_factor}
+
+
+      - filters: 384
+        repeat: ${model.model_defaults.repeat}
+        kernel: [11]
         stride: [1]
         dilation: [1]
         dropout: ${model.model_defaults.dropout}
@@ -325,7 +314,7 @@ model:
 
       - filters: &enc_final 384
         repeat: ${model.model_defaults.repeat}
-        kernel: [31]
+        kernel: [11]
         stride: [1]
         dilation: [1]
         dropout: ${model.model_defaults.dropout}

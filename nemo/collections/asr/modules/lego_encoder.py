@@ -114,7 +114,7 @@ class LegoEncoder(NeuralModule, Exportable):
         self._feat_in = feat_in
         self.scale = math.sqrt(self.d_model)
 
-        """if subsampling_conv_channels == -1:
+        if subsampling_conv_channels == -1:
             subsampling_conv_channels = d_model
         if subsampling and subsampling_factor > 1:
             self.pre_encode = ConvSubsampling(
@@ -126,8 +126,8 @@ class LegoEncoder(NeuralModule, Exportable):
                 activation=nn.ReLU(),
             )
             self._feat_out = d_model
-        else:"""
-        self.pre_encode = nn.Sequential(nn.Linear(feat_in, d_model), nn.ReLU())
+        #else:"""
+        #self.pre_encode = nn.Sequential(nn.Linear(feat_in, d_model), nn.ReLU())
 
         pos_bias_u = None
         pos_bias_v = None
