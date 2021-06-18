@@ -59,7 +59,6 @@ model:
   encoder:
     _target_: nemo.collections.asr.modules.LegoEncoder
     feat_in: ${model.preprocessor.features}
-    feat_out: 512 # you may set it if you need different output size other than the default d_model
     n_blocks: 100
     d_model: 512
 

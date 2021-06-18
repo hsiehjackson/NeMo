@@ -97,7 +97,7 @@ class LegoEncoder(NeuralModule, Exportable):
         feat_in,
         n_blocks=8,
         d_model=256,
-        feat_out=256,
+        feat_out=-1,
         subsampling='striding',
         subsampling_factor=4,
         subsampling_conv_channels=-1,

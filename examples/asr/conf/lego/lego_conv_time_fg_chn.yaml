@@ -16,19 +16,19 @@ model:
     tarred_audio_filepaths: null
     use_start_end_token: false
 
-    validation_ds:
-      manifest_filepath: ???
-      sample_rate: *sample_rate
-      batch_size: 32
-      shuffle: false
-      use_start_end_token: false
+  validation_ds:
+    manifest_filepath: ???
+    sample_rate: *sample_rate
+    batch_size: 32
+    shuffle: false
+    use_start_end_token: false
 
-    test_ds:
-      manifest_filepath: null
-      sample_rate: *sample_rate
-      batch_size: 32
-      shuffle: false
-      use_start_end_token: false
+  test_ds:
+    manifest_filepath: null
+    sample_rate: *sample_rate
+    batch_size: 32
+    shuffle: false
+    use_start_end_token: false
 
   # recommend small vocab size of 128 or 256 with 4x sub-sampling
   tokenizer:
@@ -59,7 +59,6 @@ model:
   encoder:
     _target_: nemo.collections.asr.modules.LegoEncoder
     feat_in: ${model.preprocessor.features}
-    feat_out: 512 # you may set it if you need different output size other than the default d_model
     n_blocks: 100
     d_model: 512
 
