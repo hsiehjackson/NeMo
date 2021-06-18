@@ -65,12 +65,12 @@ model:
     pos_emb_mode: 'rel_pos'
 
     sub_blocks:
-    - _target_: nemo.collections.asr.parts.submodules.lego_modules.LegoConvSubBlock
-      d_model: ${model.encoder.d_model}
-      kernel_size: 31
+      - _target_: nemo.collections.asr.parts.submodules.lego_modules.LegoConvSubBlock
+        d_model: ${model.encoder.d_model}
+        kernel_size: 31
 
-    - _target_: nemo.collections.asr.parts.submodules.lego_modules.LegoLinearSubBlock
-      d_model: ${model.encoder.d_model}
+      - _target_: nemo.collections.asr.parts.submodules.lego_modules.LegoLinearSubBlock
+        d_model: ${model.encoder.d_model}
 
   decoder:
     _target_: nemo.collections.asr.modules.ConvASRDecoder

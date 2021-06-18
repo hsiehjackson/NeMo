@@ -65,14 +65,14 @@ model:
     pos_emb_mode: 'rel_pos'
 
     sub_blocks:
-    - _target_: nemo.collections.asr.parts.submodules.lego_modules.LegoConvSubBlock
-      d_model: ${model.encoder.d_model}
-      kernel_size: 31
+      - _target_: nemo.collections.asr.parts.submodules.lego_modules.LegoConvSubBlock
+        d_model: ${model.encoder.d_model}
+        kernel_size: 31
 
-    - _target_: nemo.collections.asr.parts.submodules.lego_modules.LegoPartialFourierMod
-      dim: -1
-      complex_linear: true
-      mod_n: 64
+      - _target_: nemo.collections.asr.parts.submodules.lego_modules.LegoPartialFourierMod
+        dim: -1
+        complex_linear: true
+        mod_n: 64
 
   decoder:
     _target_: nemo.collections.asr.modules.ConvASRDecoder
