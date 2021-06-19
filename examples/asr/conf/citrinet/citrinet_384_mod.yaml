@@ -45,7 +45,7 @@ model:
     repeat: 5
     dropout: 0.0
     separable: true
-    se: true
+    se: false
     se_context_size: -1
     kernel_size_factor: 1.0
 
@@ -78,7 +78,7 @@ model:
     _target_: nemo.collections.asr.modules.ConvASREncoder
     feat_in: *n_mels
     activation: relu
-    conv_mask: true
+    conv_mask: false
 
     jasper:
       - filters: 384
