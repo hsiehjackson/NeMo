@@ -129,23 +129,22 @@ model:
     vocabulary: []
 
   optim:
-    name: adamw
-    lr: 2.0
+    name: novograd
+    lr: 0.05
+
     # optimizer arguments
-    betas: [0.9, 0.98]
-    # less necessity for weight_decay as we already have large augmentations with SpecAug
-    # you may need weight_decay for large models, stable AMP training, small datasets, or when lower augmentations are used
-    # weight decay of 0.0 with lr of 2.0 also works fine
-    weight_decay: 1e-3
+    betas: [0.8, 0.25]
+    weight_decay: 0.001
 
     # scheduler setup
     sched:
-      name: NoamAnnealing
-      d_model: ${model.encoder.d_model}
+      name: CosineAnnealing
+
       # scheduler config override
-      warmup_steps: 10000
+      warmup_steps: 1000
       warmup_ratio: null
-      min_lr: 1e-6
+      min_lr: 1e-5
+      last_epoch: -1
 
 trainer:
   gpus: -1 # number of GPUs, -1 would use all available GPUs
