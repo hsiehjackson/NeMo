@@ -1,0 +1,140 @@
+name: "Lego-Conv-FG"
+
+model:
+  sample_rate: &sample_rate 16000
+  log_prediction: true # enables logging sample predictions in the output during training
+  ctc_reduction: 'mean_batch'
+
+  train_ds:
+    manifest_filepath: ???
+    sample_rate: *sample_rate
+    batch_size: 32
+    trim_silence: false
+    max_duration: 16.7
+    shuffle: true
+    is_tarred: false
+    tarred_audio_filepaths: null
+    use_start_end_token: false
+
+  validation_ds:
+    manifest_filepath: ???
+    sample_rate: *sample_rate
+    batch_size: 32
+    shuffle: false
+    use_start_end_token: false
+
+  test_ds:
+    manifest_filepath: null
+    sample_rate: *sample_rate
+    batch_size: 32
+    shuffle: false
+    use_start_end_token: false
+
+  # recommend small vocab size of 128 or 256 with 4x sub-sampling
+  tokenizer:
+    dir: ???  # path to directory which contains either tokenizer.model (bpe) or vocab.txt (wpe)
+    type: wpe  # Can be either bpe (sentencepiece tokenizer) or wpe (wordpiece tokenizer)
+
+  preprocessor:
+    _target_: nemo.collections.asr.modules.AudioToMelSpectrogramPreprocessor
+    sample_rate: *sample_rate
+    normalize: "per_feature"
+    window_size: 0.025
+    window_stride: 0.01
+    window: "hann"
+    features: &n_mels 80
+    n_fft: 512
+    frame_splicing: 1
+    dither: 0.00001
+    pad_to: 16
+    stft_conv: false
+
+  spec_augment:
+    _target_: nemo.collections.asr.modules.SpectrogramAugmentation
+    freq_masks: 2
+    time_masks: 2
+    freq_width: 27
+    time_width: 0.05
+
+  encoder:
+    _target_: nemo.collections.asr.modules.LegoEncoder
+    feat_in: ${model.preprocessor.features}
+    n_blocks: 15
+    d_model: 384
+
+    pos_emb_mode: 'rel_pos'
+
+    sub_blocks:
+      - _target_: nemo.collections.asr.parts.submodules.lego_modules.LegoConvSubBlock
+        d_model: ${model.encoder.d_model}
+        kernel_size: 11
+
+      - _target_: nemo.collections.asr.parts.submodules.lego_modules.LegoPartialFourierMod
+        dim: -1
+        complex_linear: true
+        mod_n: 32
+
+  decoder:
+    _target_: nemo.collections.asr.modules.ConvASRDecoder
+    feat_in: null
+    num_classes: -1
+    vocabulary: []
+
+  optim:
+    name: novograd
+    lr: 0.05
+
+    # optimizer arguments
+    betas: [0.8, 0.25]
+    weight_decay: 0.001
+
+    # scheduler setup
+    sched:
+      name: CosineAnnealing
+
+      # scheduler config override
+      warmup_steps: 1000
+      warmup_ratio: null
+      min_lr: 1e-5
+      last_epoch: -1
+
+trainer:
+  gpus: -1 # number of GPUs, -1 would use all available GPUs
+  num_nodes: 1
+  max_epochs: 1000
+  max_steps: null # computed at runtime if not set
+  val_check_interval: 1.0 # Set to 0.25 to check 4 times per epoch, or an int for number of iterations
+  accelerator: ddp
+  accumulate_grad_batches: 1
+  gradient_clip_val: 0.0
+  amp_level: O0 # O1/O2 for mixed precision
+  precision: 32 # Should be set to 16 for O1 and O2 to enable the AMP.
+  log_every_n_steps: 10  # Interval of logging.
+  progress_bar_refresh_rate: 10
+  resume_from_checkpoint: null # The path to a checkpoint file to continue the training, restores the whole state including the epoch, step, LR schedulers, apex, etc.
+  num_sanity_val_steps: 0 # number of steps to perform validation steps for sanity check the validation process before starting the training, setting to 0 disables it
+  check_val_every_n_epoch: 1 # number of evaluations on validation every n epochs
+  sync_batchnorm: true
+  checkpoint_callback: false  # Provided by exp_manager
+  logger: false  # Provided by exp_manager
+
+exp_manager:
+  exp_dir: null
+  name: ${name}
+  create_tensorboard_logger: true
+  create_checkpoint_callback: true
+  checkpoint_callback_params:
+    # in case of multiple validation sets, first one is used
+    monitor: "val_wer"
+    mode: "min"
+    save_top_k: 3
+
+  # you need to set these two to True to continue the training
+  resume_if_exists: false
+  resume_ignore_no_checkpoint: false
+
+  # You may use this section to create a W&B logger
+  create_wandb_logger: false
+  wandb_logger_kwargs:
+    name: null
+    project: null

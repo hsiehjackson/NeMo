@@ -52,15 +52,15 @@ model:
   spec_augment:
     _target_: nemo.collections.asr.modules.SpectrogramAugmentation
     freq_masks: 2
-    time_masks: 10
+    time_masks: 2
     freq_width: 27
     time_width: 0.05
 
   encoder:
     _target_: nemo.collections.asr.modules.LegoEncoder
     feat_in: ${model.preprocessor.features}
-    n_blocks: 100
-    d_model: 512
+    n_blocks: 15
+    d_model: 384
 
     pos_emb_mode: 'rel_pos'
 
@@ -70,9 +70,14 @@ model:
         kernel_size: 11
 
       - _target_: nemo.collections.asr.parts.submodules.lego_modules.LegoPartialFourierMod
-        dim: -1
+        dim: -2
         complex_linear: true
         mod_n: 64
+
+      - _target_: nemo.collections.asr.parts.submodules.lego_modules.LegoPartialFourierMod
+        dim: -1
+        complex_linear: true
+        mod_n: 32
 
   decoder:
     _target_: nemo.collections.asr.modules.ConvASRDecoder
