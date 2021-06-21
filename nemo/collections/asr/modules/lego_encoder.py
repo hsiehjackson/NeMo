@@ -107,12 +107,17 @@ class LegoEncoder(NeuralModule, Exportable):
         pos_emb_mode='abs_pos',
         pos_emb_max_len=5000,
         outer_residual=False,
+        multi_block_residual=False,
+        multi_block_residual_skip=5,
     ):
         super().__init__()
 
         self.d_model = d_model
         self._feat_in = feat_in
         self.scale = math.sqrt(self.d_model)
+
+        self.multi_block_residual = multi_block_residual
+        self.multi_block_residual_skip = multi_block_residual_skip
 
         if subsampling_conv_channels == -1:
             subsampling_conv_channels = d_model
@@ -195,8 +200,13 @@ class LegoEncoder(NeuralModule, Exportable):
         att_mask = ~att_mask
         pad_mask = ~pad_mask"""
 
+        prev_signal = audio_signal
+
         for lth, block in enumerate(self.blocks):
             audio_signal, length = block(x=audio_signal, lens=length)
+            if lth > 0 and self.multi_block_residual and lth % self.multi_block_residual_skip == 0:
+                audio_signal += prev_signal
+                prev_signal = audio_signal
 
         if self.out_proj is not None:
             audio_signal = self.out_proj(audio_signal)
