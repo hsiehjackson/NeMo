@@ -22,6 +22,8 @@ from nemo.collections.asr.parts.submodules.multi_head_attention import (
 )
 from nemo.collections.asr.parts.utils.activations import Swish
 
+from nemo.collections.asr.parts.submodules.lego_modules import LegoPartialFourierMod
+
 __all__ = ['ConformerConvolution', 'ConformerFeedForward', 'ConformerLayer']
 
 
@@ -53,7 +55,7 @@ class ConformerLayer(torch.nn.Module):
 
         self.self_attention_model = self_attention_model
         self.n_heads = n_heads
-        self.fc_factor = 0.5
+        self.fc_factor = 1.
 
         # first feed forward module
         self.norm_feed_forward1 = LayerNorm(d_model)
@@ -99,7 +101,7 @@ class ConformerLayer(torch.nn.Module):
         x = self.feed_forward1(x)
         x = self.fc_factor * self.dropout(x) + residual
 
-        residual = x
+        """residual = x
         x = self.norm_self_att(x)
         if self.self_attention_model == 'rel_pos':
             x = self.self_attn(query=x, key=x, value=x, mask=att_mask, pos_emb=pos_emb)
@@ -107,7 +109,7 @@ class ConformerLayer(torch.nn.Module):
             x = self.self_attn(query=x, key=x, value=x, mask=att_mask)
         else:
             x = None
-        x = self.dropout(x) + residual
+        x = self.dropout(x) + residual"""
 
         residual = x
         x = self.norm_conv(x)
@@ -138,6 +140,9 @@ class ConformerConvolution(nn.Module):
         self.pointwise_conv1 = nn.Conv1d(
             in_channels=d_model, out_channels=d_model * 2, kernel_size=1, stride=1, padding=0, bias=True
         )
+
+
+
         self.depthwise_conv = nn.Conv1d(
             in_channels=d_model,
             out_channels=d_model,
@@ -154,6 +159,7 @@ class ConformerConvolution(nn.Module):
             in_channels=d_model, out_channels=d_model, kernel_size=1, stride=1, padding=0, bias=True
         )
 
+
     def forward(self, x, pad_mask=None):
         x = x.transpose(1, 2)
         x = self.pointwise_conv1(x)
@@ -163,7 +169,7 @@ class ConformerConvolution(nn.Module):
             x.masked_fill_(pad_mask.unsqueeze(1), 0.0)
 
         x = self.depthwise_conv(x)
-        x = self.batch_norm(x)
+        #x = self.batch_norm(x)
         x = self.activation(x)
         x = self.pointwise_conv2(x)
         x = x.transpose(1, 2)
