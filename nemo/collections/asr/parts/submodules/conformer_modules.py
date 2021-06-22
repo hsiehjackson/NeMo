@@ -113,10 +113,10 @@ class ConformerLayer(torch.nn.Module):
             x = None
         x = self.dropout(x) + residual
 
-        residual = x
-        x = self.norm_conv(x)
-        x = self.conv(x, pad_mask)
-        x = self.dropout(x) + residual
+        #residual = x
+        #x = self.norm_conv(x)
+        #x = self.conv(x, pad_mask)
+        #x = self.dropout(x) + residual
 
         residual = x
         x = self.norm_feed_forward2(x)
