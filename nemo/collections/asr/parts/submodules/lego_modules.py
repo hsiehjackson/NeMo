@@ -120,7 +120,7 @@ class LegoBlock(NeuralModule):
 
 class LegoConvSubBlock(nn.Module):
 
-    def __init__(self, d_model, kernel_size=17, axis="time"):
+    def __init__(self, d_model, kernel_size=17, axis="time", residual_type="none"):
         super(LegoConvSubBlock, self).__init__()
         assert (kernel_size - 1) % 2 == 0
         self.d_model = d_model
@@ -136,6 +136,8 @@ class LegoConvSubBlock(nn.Module):
         )
 
         self.axis = axis
+
+        self.residual_type = residual_type
 
     def forward(self, x, lens, pad_mask=None):
         if self.axis == "time":
