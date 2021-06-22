@@ -60,7 +60,7 @@ class ConformerLayer(torch.nn.Module):
         # first feed forward module
         self.norm_feed_forward1 = LayerNorm(d_model)
         #self.feed_forward1 = ConformerFeedForward(d_model=d_model, d_ff=d_ff, dropout=dropout)
-        self.feed_forward1 = LegoPartialFourierMod(d_model=d_model, mod_n=d_ff)
+        self.feed_forward1 = LegoPartialFourierMod(dim=d_model, mod_n=d_ff)
 
         # convolution module
         self.norm_conv = LayerNorm(d_model)
@@ -83,7 +83,7 @@ class ConformerLayer(torch.nn.Module):
         # second feed forward module
         self.norm_feed_forward2 = LayerNorm(d_model)
         #self.feed_forward2 = ConformerFeedForward(d_model=d_model, d_ff=d_ff, dropout=dropout)
-        self.feed_forward2 = LegoPartialFourierMod(d_model=d_model, mod_n=d_ff)
+        self.feed_forward2 = LegoPartialFourierMod(dim=d_model, mod_n=d_ff)
 
         self.dropout = nn.Dropout(dropout)
         self.norm_out = LayerNorm(d_model)
