@@ -252,7 +252,7 @@ class LegoChannelShuffle(nn.Module):
 
 class LegoPartialFourierMod(nn.Module):
 
-    def __init__(self, dim=-1, mod_n=16, complex_linear=False, residual_type='add', pool=False):
+    def __init__(self, dim=-1, mod_n=16, complex_linear=True, residual_type='add', pool=False):
         super(LegoPartialFourierMod, self).__init__()
 
         if pool:
