@@ -80,7 +80,7 @@ class ConformerLayer(torch.nn.Module):
                 f"valid values can be from ['rel_pos', 'abs_pos']"
             )"""
 
-        self.attn_replacement = LegoPartialFourierMod(dim=-2, mod_n=256)
+        self.attn_replacement = LegoPartialFourierMod(dim=-2, mod_n=128)
 
         # second feed forward module
         self.norm_feed_forward2 = LayerNorm(d_model)

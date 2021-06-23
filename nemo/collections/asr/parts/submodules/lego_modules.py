@@ -99,7 +99,6 @@ class LegoBlock(NeuralModule):
             #bad
             if hasattr(sub_block, 'residual_type'):
                 if sub_block.residual_type == 'add':
-                    x = self.activation(x)
                     x = residual + x
                 elif sub_block.residual_type == 'multiply':
                     x = F.sigmoid(x)
