@@ -63,8 +63,8 @@ class ConformerLayer(torch.nn.Module):
         #self.feed_forward1 = LegoPartialFourierMod(dim=-1, mod_n=d_model)
 
         # convolution module
-        #self.norm_conv = LayerNorm(d_model)
-        #self.conv = ConformerConvolution(d_model=d_model, kernel_size=conv_kernel_size)
+        self.norm_conv = LayerNorm(d_model)
+        self.conv = ConformerConvolution(d_model=d_model, kernel_size=conv_kernel_size)
 
         # multi-headed self-attention module
         self.norm_self_att = LayerNorm(d_model)
@@ -116,10 +116,10 @@ class ConformerLayer(torch.nn.Module):
         x = self.attn_replacement(x)
         x = self.dropout(x) + residual
 
-        #residual = x
-        #x = self.norm_conv(x)
-        #x = self.conv(x, pad_mask)
-        #x = self.dropout(x) + residual
+        residual = x
+        x = self.norm_conv(x)
+        x = self.conv(x, pad_mask)
+        x = self.dropout(x) + residual
 
         residual = x
         x = self.norm_feed_forward2(x)
