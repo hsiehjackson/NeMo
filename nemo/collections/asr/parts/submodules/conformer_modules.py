@@ -58,8 +58,8 @@ class ConformerLayer(torch.nn.Module):
         self.fc_factor = 1.
 
         # first feed forward module
-        self.norm_feed_forward1 = LayerNorm(d_model)
-        self.feed_forward1 = ConformerFeedForward(d_model=d_model, d_ff=d_ff, dropout=dropout)
+        #self.norm_feed_forward1 = LayerNorm(d_model)
+        #self.feed_forward1 = ConformerFeedForward(d_model=d_model, d_ff=d_ff, dropout=dropout)
         #self.feed_forward1 = LegoPartialFourierMod(dim=-1, mod_n=d_model)
 
         # convolution module
@@ -68,7 +68,7 @@ class ConformerLayer(torch.nn.Module):
 
         # multi-headed self-attention module
         self.norm_self_att = LayerNorm(d_model)
-        """if self_attention_model == 'rel_pos':
+        if self_attention_model == 'rel_pos':
             self.self_attn = RelPositionMultiHeadAttention(
                 n_head=n_heads, n_feat=d_model, dropout_rate=dropout_att, pos_bias_u=pos_bias_u, pos_bias_v=pos_bias_v
             )
@@ -78,9 +78,10 @@ class ConformerLayer(torch.nn.Module):
             raise ValueError(
                 f"'{self_attention_model}' is not not a valid value for 'self_attention_model', "
                 f"valid values can be from ['rel_pos', 'abs_pos']"
-            )"""
+            )
 
-        self.attn_replacement = LegoPartialFourierMod(dim=-2, mod_n=128)
+        self.norm_fg = LayerNorm(d_model)
+        self.fg = LegoPartialFourierMod(dim=-2, mod_n=128)
 
         # second feed forward module
         self.norm_feed_forward2 = LayerNorm(d_model)
@@ -100,20 +101,24 @@ class ConformerLayer(torch.nn.Module):
         Returns:
             x (torch.Tensor): (B, T, d_model)
         """
-        residual = x
-        x = self.norm_feed_forward1(x)
-        x = self.feed_forward1(x)
-        x = self.fc_factor * self.dropout(x) + residual
+        #residual = x
+        #x = self.norm_feed_forward1(x)
+        #x = self.feed_forward1(x)
+        #x = self.fc_factor * self.dropout(x) + residual
 
         residual = x
         x = self.norm_self_att(x)
-        """if self.self_attention_model == 'rel_pos':
+        if self.self_attention_model == 'rel_pos':
             x = self.self_attn(query=x, key=x, value=x, mask=att_mask, pos_emb=pos_emb)
         elif self.self_attention_model == 'abs_pos':
             x = self.self_attn(query=x, key=x, value=x, mask=att_mask)
         else:
-            x = None"""
-        x = self.attn_replacement(x)
+            x = None
+        x = self.dropout(x) + residual
+
+        residual = x
+        x = self.norm_fg(x)
+        x = self.fg(x)
         x = self.dropout(x) + residual
 
         residual = x
