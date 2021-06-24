@@ -58,8 +58,8 @@ class ConformerLayer(torch.nn.Module):
         self.fc_factor = 1.
 
         # first feed forward module
-        #self.norm_feed_forward1 = LayerNorm(d_model)
-        #self.feed_forward1 = ConformerFeedForward(d_model=d_model, d_ff=d_ff, dropout=dropout)
+        self.norm_feed_forward1 = LayerNorm(d_model)
+        self.feed_forward1 = ConformerFeedForward(d_model=d_model, d_ff=d_ff, dropout=dropout)
         #self.feed_forward1 = LegoPartialFourierMod(dim=-1, mod_n=d_model)
 
         # convolution module
@@ -101,10 +101,10 @@ class ConformerLayer(torch.nn.Module):
         Returns:
             x (torch.Tensor): (B, T, d_model)
         """
-        #residual = x
-        #x = self.norm_feed_forward1(x)
-        #x = self.feed_forward1(x)
-        #x = self.fc_factor * self.dropout(x) + residual
+        residual = x
+        x = self.norm_feed_forward1(x)
+        x = self.feed_forward1(x)
+        x = self.fc_factor * self.dropout(x) + residual
 
         residual = x
         x = self.norm_self_att(x)
