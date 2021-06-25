@@ -212,14 +212,16 @@ class LegoFourierSubBlock(nn.Module):
 
 class LegoLinearSubBlock(nn.Module):
 
-    def __init__(self, d_model, shared_weight_groups=1):
+    def __init__(self, d_model, shared_weight_groups=1, f_exp=1):
         super(LegoLinearSubBlock, self).__init__()
 
         assert d_model % shared_weight_groups == 0
 
         self.group_size = d_model // shared_weight_groups
 
-        self.linear = nn.Linear(self.group_size, self.group_size)
+        self.linear = nn.Sequential(nn.Linear(self.group_size, self.group_size * f_exp),
+                                    nn.ReLU(),
+                                    nn.Linear(self.group_size * f_exp, self.group_size))
 
     def forward(self, x):
         original_shape = x.shape
