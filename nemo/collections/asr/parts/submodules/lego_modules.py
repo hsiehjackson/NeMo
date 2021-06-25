@@ -295,10 +295,10 @@ class LegoPartialFourierMod(nn.Module):
             new_i = 1j * (self.lin_r(f.imag) + self.lin_i(f.real))
             f_lin = new_r + new_i
 
-            f_lin[f_lin.abs() < 0.5] = 0.
+            f_lin[f_lin.abs() < 1.] /= f_lin.abs()
 
-            new_r = self.lin_r_2(f.real) - self.lin_i_2(f.imag)
-            new_i = 1j * (self.lin_r(f.imag) + self.lin_i(f.real))
+            new_r = self.lin_r_2(f_lin.real) - self.lin_i_2(f_lin.imag)
+            new_i = 1j * (self.lin_r(f_lin.imag) + self.lin_i(f_lin.real))
             f_lin = new_r + new_i
 
             f_lin = F.pad(f_lin, [0, h_dim - self.mod_n])
