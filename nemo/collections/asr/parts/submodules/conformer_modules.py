@@ -22,7 +22,7 @@ from nemo.collections.asr.parts.submodules.multi_head_attention import (
 )
 from nemo.collections.asr.parts.utils.activations import Swish
 
-from nemo.collections.asr.parts.submodules.lego_modules import LegoPartialFourierMod
+from nemo.collections.asr.parts.submodules.lego_modules import LegoPartialFourierMod, LegoFourierSubBlock
 
 __all__ = ['ConformerConvolution', 'ConformerFeedForward', 'ConformerLayer']
 
@@ -67,7 +67,7 @@ class ConformerLayer(torch.nn.Module):
         self.conv = ConformerConvolution(d_model=d_model, kernel_size=conv_kernel_size)
 
         # multi-headed self-attention module
-        self.norm_self_att = LayerNorm(d_model)
+        """self.norm_self_att = LayerNorm(d_model)
         if self_attention_model == 'rel_pos':
             self.self_attn = RelPositionMultiHeadAttention(
                 n_head=n_heads, n_feat=d_model, dropout_rate=dropout_att, pos_bias_u=pos_bias_u, pos_bias_v=pos_bias_v
@@ -79,9 +79,13 @@ class ConformerLayer(torch.nn.Module):
                 f"'{self_attention_model}' is not not a valid value for 'self_attention_model', "
                 f"valid values can be from ['rel_pos', 'abs_pos']"
             )
+        """
 
         self.norm_fg = LayerNorm(d_model)
-        self.fg = LegoPartialFourierMod(dim=-2, mod_n=128)
+        self.fourier = LegoFourierSubBlock(d_model, dim=-2)
+        #self.fg = LegoPartialFourierMod(dim=-2, mod_n=128)
+
+
 
         # second feed forward module
         self.norm_feed_forward2 = LayerNorm(d_model)
@@ -106,7 +110,7 @@ class ConformerLayer(torch.nn.Module):
         x = self.feed_forward1(x)
         x = self.fc_factor * self.dropout(x) + residual
 
-        residual = x
+        """residual = x
         x = self.norm_self_att(x)
         if self.self_attention_model == 'rel_pos':
             x = self.self_attn(query=x, key=x, value=x, mask=att_mask, pos_emb=pos_emb)
@@ -114,11 +118,11 @@ class ConformerLayer(torch.nn.Module):
             x = self.self_attn(query=x, key=x, value=x, mask=att_mask)
         else:
             x = None
-        x = self.dropout(x) + residual
+        x = self.dropout(x) + residual"""
 
         residual = x
         x = self.norm_fg(x)
-        x = self.fg(x)
+        x = self.fourier(x)
         x = self.dropout(x) + residual
 
         residual = x

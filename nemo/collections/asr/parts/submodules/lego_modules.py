@@ -249,6 +249,16 @@ class LegoChannelShuffle(nn.Module):
         return x
 
 
+"""def complex_cond_div(x, cond, val):
+    x_as_real = torch.view_as_real(x)
+    cond = torch.repeat_interleave(cond)
+    #0, 1, 2 -> 0, 0, 1, 1, 2, 2
+
+    x_select = x_as_real[cond]
+    x_select_complex = torch.view_as_complex(x_select)
+
+    return x_select_complex"""
+
 class LegoPartialFourierMod(nn.Module):
 
     def __init__(self, dim=-1, mod_n=16, complex_linear=True, residual_type='add', pool=False, f_exp=1):
@@ -295,7 +305,7 @@ class LegoPartialFourierMod(nn.Module):
             new_i = 1j * (self.lin_r(f.imag) + self.lin_i(f.real))
             f_lin = new_r + new_i
 
-            f_lin[f_lin.abs() < 1.] /= f_lin.abs()
+            f_lin = (1 + torch.cos(f_lin.angle())) * f_lin * 0.5
 
             new_r = self.lin_r_2(f_lin.real) - self.lin_i_2(f_lin.imag)
             new_i = 1j * (self.lin_r(f_lin.imag) + self.lin_i(f_lin.real))
