@@ -71,8 +71,12 @@ model:
 
       - _target_: nemo.collections.asr.parts.submodules.lego_modules.LegoPartialFourierMod
         dim: -2
-        complex_linear: true
-        mod_n: 64
+        complex_linear: false
+        mod_n: 128
+        f_exp: 2
+
+      - _target_: nemo.collections.asr.parts.submodules.lego_modules.LegoLinearSubBlock
+        d_model: ${model.encoder.d_model}
 
       - _target_: nemo.collections.asr.parts.submodules.lego_modules.LegoLinearSubBlock
         d_model: ${model.encoder.d_model}
