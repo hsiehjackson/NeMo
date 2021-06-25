@@ -82,7 +82,7 @@ class ConformerLayer(torch.nn.Module):
         """
 
         self.norm_fg = LayerNorm(d_model)
-        self.fourier = LegoFourierSubBlock(d_model, dim=-2)
+        self.fourier = LegoFourierSubBlock(dim=-2)
         #self.fg = LegoPartialFourierMod(dim=-2, mod_n=128)
 
 
