@@ -251,7 +251,7 @@ class LegoChannelShuffle(nn.Module):
 
 class LegoPartialFourierMod(nn.Module):
 
-    def __init__(self, dim=-1, mod_n=16, complex_linear=True, residual_type='add', pool=False):
+    def __init__(self, dim=-1, mod_n=16, complex_linear=False, residual_type='add', pool=False, f_exp=1):
         super(LegoPartialFourierMod, self).__init__()
 
         if pool:
@@ -265,7 +265,10 @@ class LegoPartialFourierMod(nn.Module):
             self.lin_i = nn.Linear(mod_n, mod_n)
             #imaginary weights in lin layer
         else:
-            self.lin = nn.Linear(mod_n * 2, mod_n * 2)
+            #self.lin = nn.Linear(mod_n * 2, mod_n * 2)
+            self.lin = nn.Sequential(nn.Linear(mod_n * 2, mod_n * 2 * f_exp),
+                                     nn.ReLU(),
+                                     nn.Linear(mod_n * 2 * f_exp, mod_n))
 
         self.complex_linear = complex_linear
 
