@@ -308,7 +308,7 @@ class LegoPartialFourierMod(nn.Module):
             f_lin = (1 + torch.cos(f_lin.angle())) * f_lin * 0.5
 
             new_r = self.lin_r_2(f_lin.real) - self.lin_i_2(f_lin.imag)
-            new_i = 1j * (self.lin_r(f_lin.imag) + self.lin_i(f_lin.real))
+            new_i = 1j * (self.lin_r_2(f_lin.imag) + self.lin_i_2(f_lin.real))
             f_lin = new_r + new_i
 
             f_lin = F.pad(f_lin, [0, h_dim - self.mod_n])
