@@ -251,7 +251,7 @@ class LegoChannelShuffle(nn.Module):
 
 class LegoPartialFourierMod(nn.Module):
 
-    def __init__(self, dim=-1, mod_n=16, complex_linear=False, residual_type='add', pool=False, f_exp=1):
+    def __init__(self, dim=-1, mod_n=16, complex_linear=True, residual_type='add', pool=False, f_exp=1):
         super(LegoPartialFourierMod, self).__init__()
 
         if pool:
@@ -260,10 +260,11 @@ class LegoPartialFourierMod(nn.Module):
             self.pool = None
 
         if complex_linear:
-            self.lin_r = nn.Linear(mod_n, mod_n)
-            #real weights in lin layer
-            self.lin_i = nn.Linear(mod_n, mod_n)
-            #imaginary weights in lin layer
+            self.lin_r = nn.Linear(mod_n, mod_n * f_exp)
+            self.lin_i = nn.Linear(mod_n, mod_n * f_exp)
+
+            self.lin_r_2 = nn.Linear(mod_n * f_exp, mod_n)
+            self.lin_i_2 = nn.Linear(mod_n * f_exp, mod_n)
         else:
             #self.lin = nn.Linear(mod_n * 2, mod_n * 2)
             self.lin = nn.Sequential(nn.Linear(mod_n * 2, mod_n * 2 * f_exp),
@@ -293,6 +294,13 @@ class LegoPartialFourierMod(nn.Module):
             new_r = self.lin_r(f.real) - self.lin_i(f.imag)
             new_i = 1j * (self.lin_r(f.imag) + self.lin_i(f.real))
             f_lin = new_r + new_i
+
+            f_lin[f_lin.abs() < 0.5] = 0.
+
+            new_r = self.lin_r_2(f.real) - self.lin_i_2(f.imag)
+            new_i = 1j * (self.lin_r(f.imag) + self.lin_i(f.real))
+            f_lin = new_r + new_i
+
             f_lin = F.pad(f_lin, [0, h_dim - self.mod_n])
         else:
             f = torch.view_as_real(f).reshape(*x.shape[:-1], -1)
