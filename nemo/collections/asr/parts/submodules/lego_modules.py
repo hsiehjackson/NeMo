@@ -119,7 +119,7 @@ class LegoBlock(NeuralModule):
 
 class LegoConvSubBlock(nn.Module):
 
-    def __init__(self, d_model, kernel_size=17, axis="time", residual_type="none"):
+    def __init__(self, d_model, kernel_size=17, axis="time", residual_type="add"):
         super(LegoConvSubBlock, self).__init__()
         assert (kernel_size - 1) % 2 == 0
         self.d_model = d_model
