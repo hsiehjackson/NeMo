@@ -60,7 +60,7 @@ model:
     _target_: nemo.collections.asr.modules.LegoEncoder
     feat_in: ${model.preprocessor.features}
     n_blocks: 15
-    d_model: 384
+    d_model: 176
 
     pos_emb_mode: 'rel_pos'
 
