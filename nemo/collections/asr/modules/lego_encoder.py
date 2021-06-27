@@ -156,13 +156,10 @@ class LegoEncoder(NeuralModule, Exportable):
         print(sub_blocks)
 
         self.blocks = nn.ModuleList()
-        proto_block = LegoBlock(sub_blocks, d_model, outer_residual=outer_residual)
+        proto_block = LegoBlock(sub_blocks, d_model, outer_residual=outer_residual, dropout=dropout)
         for i in range(n_blocks):
             block = deepcopy(proto_block)#LegoBlock(sub_blocks, d_model, outer_residual=outer_residual)
             self.blocks.append(block)
-
-            if i < 5:
-                print(block.parameters())
 
         if feat_out > 0 and feat_out != self.output_dim:
             self.out_proj = nn.Linear(d_model, feat_out)
