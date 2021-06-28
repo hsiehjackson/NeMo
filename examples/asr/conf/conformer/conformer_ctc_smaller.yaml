@@ -86,7 +86,7 @@ model:
     _target_: nemo.collections.asr.modules.SpectrogramAugmentation
     freq_masks: 2 # set to zero to disable it
     # you may use lower time_masks for smaller models to have a faster convergence
-    time_masks: 2 # set to zero to disable it
+    time_masks: 5 # set to zero to disable it
     freq_width: 27
     time_width: 0.05
 
@@ -94,7 +94,7 @@ model:
     _target_: nemo.collections.asr.modules.ConformerEncoder
     feat_in: ${model.preprocessor.features}
     feat_out: -1 # you may set it if you need different output size other than the default d_model
-    n_layers: 15
+    n_layers: 16
     d_model: 176
 
     # Sub-sampling params
@@ -129,22 +129,24 @@ model:
     vocabulary: []
 
   optim:
-    name: novograd
-    lr: 0.05
-
+    name: adamw
+    lr: 5.0
     # optimizer arguments
-    betas: [0.8, 0.25]
-    weight_decay: 0.001
+    betas: [0.9, 0.98]
+    # less necessity for weight_decay as we already have large augmentations with SpecAug
+    # you may need weight_decay for large models, stable AMP training, small datasets, or when lower augmentations are used
+    # weight decay of 0.0 with lr of 2.0 also works fine
+    weight_decay: 1e-3
 
     # scheduler setup
     sched:
-      name: CosineAnnealing
-
+      name: NoamAnnealing
+      d_model: ${model.encoder.d_model}
       # scheduler config override
-      warmup_steps: 1000
+      warmup_steps: 10000
       warmup_ratio: null
-      min_lr: 1e-5
-      last_epoch: -1
+      min_lr: 1e-6
+
 
 trainer:
   gpus: -1 # number of GPUs, -1 would use all available GPUs
