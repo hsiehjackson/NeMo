@@ -59,8 +59,9 @@ model:
   encoder:
     _target_: nemo.collections.asr.modules.LegoEncoder
     feat_in: ${model.preprocessor.features}
-    n_blocks: 18
+    n_blocks: 12
     d_model: 512
+    outer_residual: true
     multi_block_residual: true
     multi_block_residual_skip: 3
 
@@ -70,17 +71,17 @@ model:
 
       - _target_: nemo.collections.asr.parts.submodules.lego_modules.LegoConvSubBlock
         d_model: ${model.encoder.d_model}
-        kernel_size: 17
+        kernel_size: 31
 
       - _target_: nemo.collections.asr.parts.submodules.lego_modules.LegoPartialFourierMod
         dim: -2
         mod_n: 128
-        f_exp: 2
+        f_exp: 8
 
       - _target_: nemo.collections.asr.parts.submodules.lego_modules.LegoPartialFourierMod
         dim: -1
         mod_n: 64
-        f_exp: 4
+        f_exp: 8
 
 
   decoder:
