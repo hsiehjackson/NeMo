@@ -218,7 +218,7 @@ class LegoEncoder(NeuralModule, Exportable):
                 audio_signal, length = self.stride_blocks[strides_done](audio_signal, length)
                 strides_done += 1
             audio_signal, length = block(x=audio_signal, lens=length)
-            if lth > 0 and self.multi_block_residual and lth % self.multi_block_residual_skip == 0:
+            if self.multi_block_residual and lth % self.multi_block_residual_skip == 0:
                 prev_signal = audio_signal
 
         if self.out_proj is not None:
