@@ -211,19 +211,14 @@ class LegoEncoder(NeuralModule, Exportable):
 
         strides_done = 0
 
-        print("---s")
-        print("length:", length)
-
         for lth, block in enumerate(self.blocks):
             if lth % self.conv_stride_every == 0 and strides_done < self.conv_stride_total:
                 audio_signal, length = self.stride_blocks[strides_done](audio_signal, length)
                 strides_done += 1
-                print("length:", length)
             audio_signal, length = block(x=audio_signal, lens=length)
             if lth > 0 and self.multi_block_residual and lth % self.multi_block_residual_skip == 0:
                 audio_signal += prev_signal
                 prev_signal = audio_signal
-        print("---e")
 
         if self.out_proj is not None:
             audio_signal = self.out_proj(audio_signal)
