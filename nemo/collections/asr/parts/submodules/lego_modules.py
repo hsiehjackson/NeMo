@@ -119,7 +119,7 @@ class LegoBlock(NeuralModule):
 
 class LegoConvSubBlock(nn.Module):
 
-    def __init__(self, d_model, kernel_size=17, axis="time", residual_type="add"):
+    def __init__(self, d_model, kernel_size=31, axis="time", residual_type="add", stride=1):
         super(LegoConvSubBlock, self).__init__()
         assert (kernel_size - 1) % 2 == 0
         self.d_model = d_model
@@ -128,7 +128,7 @@ class LegoConvSubBlock(nn.Module):
             in_channels=d_model,
             out_channels=d_model,
             kernel_size=kernel_size,
-            stride=1,
+            stride=stride,
             padding=(kernel_size - 1) // 2,
             groups=d_model,
             bias=True,
@@ -191,8 +191,6 @@ class LegoFourierSubBlock(nn.Module):
             x = F.pad(x, [0, pad_right])
 
             x = x.reshape(x.shape[:-1] + (x.shape[-1] // self.patch_size, self.patch_size))
-
-            # print(x.shape, fft_dim, self.patch_size, self.dim, self.shift, pad_right)
 
         x = torch.fft.fft(x, dim=fft_dim, norm=self.norm).real
 
@@ -299,6 +297,9 @@ class LegoPartialFourierMod(nn.Module):
 
         h_dim = x.shape[-1]
 
+        if h_dim < self.mod_n:
+            x = F.pad(x, [0, self.mod_n - h_dim])
+
         f = torch.fft.fft(x)
         f = f[..., :self.mod_n]
 
@@ -321,6 +322,8 @@ class LegoPartialFourierMod(nn.Module):
             f_lin = torch.view_as_complex(f_lin.reshape(*f.shape[:-1], -1, 2))
 
         x_hat = torch.fft.ifft(f_lin).real
+
+        x_hat = x_hat[..., :h_dim]
 
         if self.dim != -1:
             x_hat = x_hat.transpose(-1, self.dim)

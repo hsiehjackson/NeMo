@@ -1,4 +1,4 @@
-#encoder link conformer but accepts list of Lego layer configs
+# encoder link conformer but accepts list of Lego layer configs
 
 # Copyright (c) 2020, NVIDIA CORPORATION.  All rights reserved.
 #
@@ -20,7 +20,7 @@ from collections import OrderedDict
 import torch
 import torch.nn as nn
 
-from nemo.collections.asr.parts.submodules.lego_modules import LegoBlock
+from nemo.collections.asr.parts.submodules.lego_modules import LegoBlock, LegoConvSubBlock
 from nemo.collections.asr.parts.submodules.multi_head_attention import PositionalEncoding, RelPositionalEncoding
 from nemo.collections.asr.parts.submodules.subsampling import ConvSubsampling
 from nemo.core.classes.common import typecheck
@@ -94,21 +94,23 @@ class LegoEncoder(NeuralModule, Exportable):
         )
 
     def __init__(
-        self,
-        sub_blocks,
-        feat_in,
-        n_blocks=8,
-        d_model=256,
-        feat_out=-1,
-        subsampling='striding',
-        subsampling_factor=4,
-        subsampling_conv_channels=-1,
-        dropout=0.1,
-        pos_emb_mode='abs_pos',
-        pos_emb_max_len=5000,
-        outer_residual=False,
-        multi_block_residual=False,
-        multi_block_residual_skip=5,
+            self,
+            sub_blocks,
+            feat_in,
+            n_blocks=8,
+            d_model=256,
+            feat_out=-1,
+            subsampling='striding',
+            subsampling_factor=4,
+            subsampling_conv_channels=-1,
+            dropout=0.1,
+            pos_emb_mode='abs_pos',
+            pos_emb_max_len=5000,
+            outer_residual=False,
+            multi_block_residual=False,
+            multi_block_residual_skip=3,
+            conv_stride_every=3,
+            conv_stride_total=3,
     ):
         super().__init__()
 
@@ -119,7 +121,10 @@ class LegoEncoder(NeuralModule, Exportable):
         self.multi_block_residual = multi_block_residual
         self.multi_block_residual_skip = multi_block_residual_skip
 
-        if subsampling_conv_channels == -1:
+        self.conv_stride_every = conv_stride_every
+        self.conv_stride_total = conv_stride_total
+
+        """if subsampling_conv_channels == -1:
             subsampling_conv_channels = d_model
         if subsampling and subsampling_factor > 1:
             self.pre_encode = ConvSubsampling(
@@ -132,7 +137,7 @@ class LegoEncoder(NeuralModule, Exportable):
             )
             self._feat_out = d_model
         #else:"""
-        #self.pre_encode = nn.Sequential(nn.Linear(feat_in, d_model), nn.ReLU())
+        self.pre_encode = nn.Linear(feat_in, d_model)
 
         pos_bias_u = None
         pos_bias_v = None
@@ -158,7 +163,7 @@ class LegoEncoder(NeuralModule, Exportable):
         self.blocks = nn.ModuleList()
         proto_block = LegoBlock(sub_blocks, d_model, outer_residual=outer_residual, dropout=dropout)
         for i in range(n_blocks):
-            block = deepcopy(proto_block)#LegoBlock(sub_blocks, d_model, outer_residual=outer_residual)
+            block = deepcopy(proto_block)  # LegoBlock(sub_blocks, d_model, outer_residual=outer_residual)
             self.blocks.append(block)
 
         if feat_out > 0 and feat_out != self.output_dim:
@@ -168,6 +173,11 @@ class LegoEncoder(NeuralModule, Exportable):
             self.out_proj = None
             self._feat_out = d_model
 
+        self.stride_blocks = nn.ModuleList()
+        for i in range(conv_stride_total):
+            block = LegoConvSubBlock(d_model, stride=2)
+            self.stride_blocks.append(block)
+
         self.apply(lambda x: init_weights(x, mode='xavier_uniform'))
 
     @typecheck()
@@ -176,7 +186,7 @@ class LegoEncoder(NeuralModule, Exportable):
             length = torch.tensor(audio_signal.size(-1)).repeat(audio_signal.size(0)).to(audio_signal)
         audio_signal = torch.transpose(audio_signal, 1, 2)
 
-        #b, t, d
+        # b, t, d
 
         if isinstance(self.pre_encode, ConvSubsampling):
             audio_signal, length = self.pre_encode(audio_signal, length)
@@ -199,15 +209,24 @@ class LegoEncoder(NeuralModule, Exportable):
 
         prev_signal = audio_signal
 
+        strides_done = 0
+
+        print("---s")
+        print("length:", length)
+
         for lth, block in enumerate(self.blocks):
+            if lth % self.conv_stride_every == 0 and strides_done < self.conv_stride_total:
+                audio_signal, length = self.stride_blocks[strides_done](audio_signal, length)
+                strides_done += 1
+                print("length:", length)
             audio_signal, length = block(x=audio_signal, lens=length)
             if lth > 0 and self.multi_block_residual and lth % self.multi_block_residual_skip == 0:
                 audio_signal += prev_signal
                 prev_signal = audio_signal
+        print("---e")
 
         if self.out_proj is not None:
             audio_signal = self.out_proj(audio_signal)
-
 
         audio_signal = torch.transpose(audio_signal, 1, 2)
         return audio_signal, length
