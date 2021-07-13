@@ -261,7 +261,8 @@ class LegoChannelShuffle(nn.Module):
 
 class LegoPartialFourierMod(nn.Module):
 
-    def __init__(self, dim=-1, mod_n=16, complex_linear=True, residual_type='add', pool=False, f_exp=1):
+    def __init__(self, dim=-1, mod_n=16, complex_linear=True, residual_type='add', pool=False, f_exp=1,
+                 proj_type=1, dim_final=-1, ln_around_freq=False):
         super(LegoPartialFourierMod, self).__init__()
 
         if pool:
@@ -269,18 +270,28 @@ class LegoPartialFourierMod(nn.Module):
         else:
             self.pool = None
 
-        self.norm1_r = nn.LayerNorm(mod_n)
-        self.norm1_i = nn.LayerNorm(mod_n)
-        self.norm2_r = nn.LayerNorm(mod_n)
-        self.norm2_i = nn.LayerNorm(mod_n)
+        self.ln_around_freq = ln_around_freq
+
+        if ln_around_freq:
+            self.norm1_r = nn.LayerNorm(mod_n)
+            self.norm1_i = nn.LayerNorm(mod_n)
+            self.norm2_r = nn.LayerNorm(mod_n)
+            self.norm2_i = nn.LayerNorm(mod_n)
 
         #if complex_linear:
 
         self.lin_r = nn.Linear(mod_n, mod_n * f_exp)
         self.lin_i = nn.Linear(mod_n, mod_n * f_exp)
 
-        self.lin_r_2 = nn.Linear(mod_n * f_exp, mod_n)
-        self.lin_i_2 = nn.Linear(mod_n * f_exp, mod_n)
+        self.proj_type = proj_type
+
+        if proj_type == 1:
+            self.lin_r_2 = nn.Linear(mod_n * f_exp, mod_n)
+            self.lin_i_2 = nn.Linear(mod_n * f_exp, mod_n)
+        else:
+            self.lin_r_2 = nn.Linear(mod_n * f_exp, dim_final)
+            self.lin_i_2 = nn.Linear(mod_n * f_exp, dim_final)
+
         """else:
             #self.lin = nn.Linear(mod_n * 2, mod_n * 2)
             self.lin = nn.Sequential(nn.Linear(mod_n * 2, mod_n * 2 * f_exp),
@@ -309,29 +320,36 @@ class LegoPartialFourierMod(nn.Module):
         f = torch.fft.fft(x)
         f = f[..., :self.mod_n]
 
-        #if self.complex_linear:
-        f_real = self.norm1_r(f.real)
-        f_imag = self.norm1_r(f.imag)
+        f_real = f.real
+        f_imag = f.imag
+
+        if self.ln_around_freq:
+            f_real = self.norm1_r(f_real)
+            f_imag = self.norm1_r(f_imag)
+
         new_r = self.lin_r(f_real) - self.lin_i(f_imag)
         new_i = 1j * (self.lin_r(f_imag) + self.lin_i(f_real))
         f_lin = new_r + new_i
 
         f_lin = (1 + torch.cos(f_lin.angle())) * f_lin * 0.5
 
-        new_r = self.lin_r_2(f_lin.real) - self.lin_i_2(f_lin.imag)
-        new_i = 1j * self.norm2_i(self.lin_r_2(f_lin.imag) + self.lin_i_2(f_lin.real))
-        f_lin = self.norm2_r(new_r) + new_i
+        if self.proj_type == 1:
+            new_r = self.lin_r_2(f_lin.real) - self.lin_i_2(f_lin.imag)
+            new_i = self.lin_r_2(f_lin.imag) + self.lin_i_2(f_lin.real)
 
-        f_lin = F.pad(f_lin, [0, h_dim - self.mod_n])
-        #else:
-        """
-        f = torch.view_as_real(f).reshape(*x.shape[:-1], -1)
-        f_lin = self.lin(f)
-        f_lin = F.pad(f_lin, [0, h_dim * 2 - self.mod_n * 2])
-        f_lin = torch.view_as_complex(f_lin.reshape(*f.shape[:-1], -1, 2))
-        """
+            if self.ln_around_freq:
+                new_r = self.norm2_r(new_r)
+                new_i = self.norm2_i(new_i)
 
-        x_hat = torch.fft.ifft(f_lin).real
+            f_lin = new_r + 1j * new_i
+            f_lin = F.pad(f_lin, [0, h_dim - self.mod_n])
+
+            x_hat = torch.fft.ifft(f_lin).real
+
+        else:
+            x_hat = self.lin_r_2(f_lin.real) + self.lin_i_2(f_lin.imag)
+            if x_hat.shape[-1] < h_dim:
+                x_hat = F.pad(x_hat, [0, h_dim - x_hat.shape[-1]])
 
         x_hat = x_hat[..., :h_dim]
 
@@ -339,3 +357,5 @@ class LegoPartialFourierMod(nn.Module):
             x_hat = x_hat.transpose(-1, self.dim)
 
         return x_hat
+
+

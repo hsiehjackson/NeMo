@@ -78,7 +78,8 @@ model:
       - _target_: nemo.collections.asr.parts.submodules.lego_modules.LegoPartialFourierMod
         dim: -1
         mod_n: 128
-        f_exp: 4
+        proj_type: 2
+        dim_final: ${model.encoder.d_model}
 
       - _target_: nemo.collections.asr.parts.submodules.lego_modules.LegoConvSubBlock
         d_model: ${model.encoder.d_model}
@@ -87,7 +88,8 @@ model:
       - _target_: nemo.collections.asr.parts.submodules.lego_modules.LegoPartialFourierMod
         dim: -1
         mod_n: 128
-        f_exp: 4
+        proj_type: 2
+        dim_final: ${model.encoder.d_model}
 
 
   decoder:
