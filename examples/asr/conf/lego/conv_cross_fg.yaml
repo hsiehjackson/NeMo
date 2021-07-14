@@ -89,15 +89,15 @@ model:
       - _target_: nemo.collections.asr.parts.submodules.lego_modules.LegoPartialFourierMod
         dim: -2
         mod_n: 32
-        patch_size: 128
+        patch_size: 256
         proj_type: 2
         dim_final: ${model.encoder.d_model}
         f_exp: 4
 
       - _target_: nemo.collections.asr.parts.submodules.lego_modules.LegoPartialFourierMod
         dim: -2
-        mod_n: 32
-        patch_size: 128
+        mod_n: ${model.encoder.sub_blocks.2.mod_n}
+        patch_size: ${model.encoder.sub_blocks.2.patch_size}
         proj_type: 2
         dim_final: ${model.encoder.d_model}
         f_exp: ${model.encoder.sub_blocks.2.f_exp}
