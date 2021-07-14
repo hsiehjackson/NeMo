@@ -262,7 +262,7 @@ class LegoChannelShuffle(nn.Module):
 class LegoPartialFourierMod(nn.Module):
 
     def __init__(self, dim=-1, mod_n=16, complex_linear=True, residual_type='add', pool=False, f_exp=1,
-                 proj_type=1, dim_final=-1, ln_around_freq=False):
+                 proj_type=1, dim_final=-1, ln_around_freq=False, patch_size=-1, shift=0):
         super(LegoPartialFourierMod, self).__init__()
 
         if pool:
@@ -278,8 +278,6 @@ class LegoPartialFourierMod(nn.Module):
             self.norm2_r = nn.LayerNorm(mod_n)
             self.norm2_i = nn.LayerNorm(mod_n)
 
-        #if complex_linear:
-
         self.lin_r = nn.Linear(mod_n, mod_n * f_exp)
         self.lin_i = nn.Linear(mod_n, mod_n * f_exp)
 
@@ -291,12 +289,6 @@ class LegoPartialFourierMod(nn.Module):
         else:
             self.lin_r_2 = nn.Linear(mod_n * f_exp, dim_final)
             self.lin_i_2 = nn.Linear(mod_n * f_exp, dim_final)
-
-        """else:
-            #self.lin = nn.Linear(mod_n * 2, mod_n * 2)
-            self.lin = nn.Sequential(nn.Linear(mod_n * 2, mod_n * 2 * f_exp),
-                                     nn.ReLU(),
-                                     nn.Linear(mod_n * 2 * f_exp, mod_n))"""
 
         self.complex_linear = complex_linear
 
@@ -316,6 +308,19 @@ class LegoPartialFourierMod(nn.Module):
 
         if h_dim < self.mod_n:
             x = F.pad(x, [0, self.mod_n - h_dim])
+
+        orig_shape = x.shape
+        pad_right = 0
+
+        if self.patch_size != -1:
+
+            if self.shift > 0:
+                x = x[..., self.shift:]
+
+            pad_right = self.patch_size - x.shape[-1] % self.patch_size
+            x = F.pad(x, [0, pad_right])
+
+            x = x.reshape(x.shape[:-1] + (x.shape[-1] // self.patch_size, self.patch_size))
 
         f = torch.fft.fft(x)
         f = f[..., :self.mod_n]
@@ -352,6 +357,11 @@ class LegoPartialFourierMod(nn.Module):
                 x_hat = F.pad(x_hat, [0, h_dim - x_hat.shape[-1]])
 
         x_hat = x_hat[..., :h_dim]
+
+        if self.patch_size != -1:
+            x_hat = x_hat.reshape(orig_shape[:-1] + (x.shape[-2] * x.shape[-1],))
+            x_hat = x_hat[..., :-pad_right]
+            x_hat = F.pad(x_hat, [self.shift, 0])
 
         if self.dim != -1:
             x_hat = x_hat.transpose(-1, self.dim)

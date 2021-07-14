@@ -66,8 +66,8 @@ model:
     d_model: 512
     outer_residual: true
     multi_block_residual: false
-    conv_stride_every: 5
-    conv_stride_total: 3
+    conv_stride_every: 1
+    conv_stride_total: 2
     multi_block_residual_skip: ${model.encoder.conv_stride_every}
     dropout: 0.
 
