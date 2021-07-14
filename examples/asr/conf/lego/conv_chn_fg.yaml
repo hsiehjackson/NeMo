@@ -80,6 +80,7 @@ model:
         mod_n: 128
         proj_type: 2
         dim_final: ${model.encoder.d_model}
+        f_exp: 2
 
       - _target_: nemo.collections.asr.parts.submodules.lego_modules.LegoConvSubBlock
         d_model: ${model.encoder.d_model}
@@ -90,6 +91,7 @@ model:
         mod_n: 128
         proj_type: 2
         dim_final: ${model.encoder.d_model}
+        f_exp: ${model.encoder.sub_blocks.0.f_exp}
 
 
   decoder:
