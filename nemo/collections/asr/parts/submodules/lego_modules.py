@@ -294,8 +294,11 @@ class LegoPartialFourierMod(nn.Module):
 
         self.mod_n = mod_n
         self.dim = dim
+        self.patch_size = patch_size
+        self.shift = shift
 
         self.residual_type = residual_type
+
 
     def forward(self, x):
         if self.dim != -1:
