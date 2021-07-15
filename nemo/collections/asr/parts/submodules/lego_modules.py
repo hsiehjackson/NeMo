@@ -309,8 +309,10 @@ class LegoPartialFourierMod(nn.Module):
 
         h_dim = x.shape[-1]
 
-        if h_dim < self.mod_n:
+        if h_dim < self.mod_n and self.patch_size == -1:
             x = F.pad(x, [0, self.mod_n - h_dim])
+            #if using patches will pad regardless
+
 
         orig_shape = x.shape
         pad_right = 0
