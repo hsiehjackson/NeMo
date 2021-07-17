@@ -173,7 +173,6 @@ class LegoFourierSubBlock(nn.Module):
         if x.shape[self.dim] < self.patch_size and self.shift > 0:
             return x
 
-        orig_shape = x.shape
         fft_dim = self.dim
         pad_right = 0
 
@@ -189,6 +188,8 @@ class LegoFourierSubBlock(nn.Module):
 
             pad_right = self.patch_size - x.shape[-1] % self.patch_size
             x = F.pad(x, [0, pad_right])
+
+            orig_shape = x.shape
 
             x = x.reshape(x.shape[:-1] + (x.shape[-1] // self.patch_size, self.patch_size))
 
@@ -314,7 +315,6 @@ class LegoPartialFourierMod(nn.Module):
             #if using patches will pad regardless
 
 
-        orig_shape = x.shape
         pad_right = 0
 
         if self.patch_size != -1:
