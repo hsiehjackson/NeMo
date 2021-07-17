@@ -366,7 +366,7 @@ class LegoPartialFourierMod(nn.Module):
         x_hat = x_hat[..., :h_dim]
 
         if self.patch_size != -1:
-            x_hat = x_hat.reshape(orig_shape[:-1] + (x.shape[-2] * x.shape[-1],))
+            x_hat = x_hat.reshape(orig_shape[:-1] + (x_hat.shape[-2] * x_hat.shape[-1],))
             x_hat = x_hat[..., :-pad_right]
             x_hat = F.pad(x_hat, [self.shift, 0])
 
