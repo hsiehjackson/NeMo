@@ -285,7 +285,7 @@ class LegoPartialFourierMod(nn.Module):
 
         self.proj_type = proj_type
 
-        if patch_size == -1:
+        if patch_size != -1:
             dim_final = patch_size
 
         if proj_type == 1:
