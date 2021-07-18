@@ -48,6 +48,7 @@ class LegoBlock(NeuralModule):
             d_model,  # channels
             dropout=0.,
             outer_residual=False,
+            id=0,
     ):
         super(LegoBlock, self).__init__()
 
@@ -55,10 +56,11 @@ class LegoBlock(NeuralModule):
         self.norms_pre = nn.ModuleList()
         # self.norms_post = nn.ModuleList()
 
-        for sub_block in sub_blocks:
+        for i, sub_block in enumerate(sub_blocks):
             self.norms_pre.append(LayerNorm(d_model))
             # self.norms_pre.append(nn.BatchNorm1d(d_model, eps=1e-3, momentum=0.1))
             # self.norms_post.append(LayerNorm(d_model))
+            sub_block.block_id = id
             self.sub_blocks.append(sub_block)
 
         self.dropout = nn.Dropout(dropout)
@@ -300,6 +302,7 @@ class LegoPartialFourierMod(nn.Module):
         self.mod_n = mod_n
         self.dim = dim
         self.patch_size = patch_size
+
         self.shift = shift
 
         self.residual_type = residual_type
@@ -319,12 +322,14 @@ class LegoPartialFourierMod(nn.Module):
 
         pad_right = 0
 
-        #print()
-        #print(x.shape)
+        # print()
+        # print(x.shape)
 
         if self.patch_size != -1:
 
-            if self.shift > 0:
+            shift = self.shift + self.patch_size // 2 * (self.block_id % 2)
+
+            if shift > 0:
                 x = x[..., self.shift:]
 
             pad_right = self.patch_size - x.shape[-1] % self.patch_size
@@ -332,20 +337,25 @@ class LegoPartialFourierMod(nn.Module):
 
             orig_shape = x.shape
 
-            #print("or", x.shape)
+            # print("or", x.shape)
 
             x = x.reshape(x.shape[:-1] + (x.shape[-1] // self.patch_size, self.patch_size))
             h_dim = x.shape[-1]
 
-            #print(x.shape)
+            # print(x.shape)
 
         f = torch.fft.fft(x)
+        #f = f[..., :self.mod_n]
+        #default
+
+        freq_step = self.block_id % 4
+        f = f[..., ::freq_step]
         f = f[..., :self.mod_n]
 
         f_real = f.real
         f_imag = f.imag
 
-        #print(f.shape)
+        # print(f.shape)
 
         if self.ln_around_freq:
             f_real = self.norm1_r(f_real)
@@ -370,7 +380,7 @@ class LegoPartialFourierMod(nn.Module):
 
             x_hat = torch.fft.ifft(f_lin).real
 
-            #print(x_hat.shape)
+            # print(x_hat.shape)
 
         else:
             x_hat = self.lin_r_2(f_lin.real) + self.lin_i_2(f_lin.imag)
@@ -379,19 +389,19 @@ class LegoPartialFourierMod(nn.Module):
 
         x_hat = x_hat[..., :h_dim]
 
-        #print(x_hat.shape)
+        # print(x_hat.shape)
 
         if self.patch_size != -1:
             x_hat = x_hat.reshape(orig_shape[:-1] + (x_hat.shape[-2] * x_hat.shape[-1],))
             x_hat = x_hat[..., :-pad_right]
             x_hat = F.pad(x_hat, [self.shift, 0])
 
-            #print(x_hat.shape)
+            # print(x_hat.shape)
 
         if self.dim != -1:
             x_hat = x_hat.transpose(-1, self.dim)
 
-        #print(x_hat.shape)
-        #print()
+        # print(x_hat.shape)
+        # print()
 
         return x_hat
