@@ -317,6 +317,9 @@ class LegoPartialFourierMod(nn.Module):
 
         pad_right = 0
 
+        print()
+        print(x.shape)
+
         if self.patch_size != -1:
 
             if self.shift > 0:
@@ -327,13 +330,19 @@ class LegoPartialFourierMod(nn.Module):
 
             orig_shape = x.shape
 
+            print("or", x.shape)
+
             x = x.reshape(x.shape[:-1] + (x.shape[-1] // self.patch_size, self.patch_size))
+
+            print(x.shape)
 
         f = torch.fft.fft(x)
         f = f[..., :self.mod_n]
 
         f_real = f.real
         f_imag = f.imag
+
+        print(f.shape)
 
         if self.ln_around_freq:
             f_real = self.norm1_r(f_real)
@@ -358,6 +367,8 @@ class LegoPartialFourierMod(nn.Module):
 
             x_hat = torch.fft.ifft(f_lin).real
 
+            print(x_hat.shape)
+
         else:
             x_hat = self.lin_r_2(f_lin.real) + self.lin_i_2(f_lin.imag)
             if x_hat.shape[-1] < h_dim:
@@ -365,13 +376,20 @@ class LegoPartialFourierMod(nn.Module):
 
         x_hat = x_hat[..., :h_dim]
 
+        print(x_hat.shape)
+
         if self.patch_size != -1:
             x_hat = x_hat.reshape(orig_shape[:-1] + (x_hat.shape[-2] * x_hat.shape[-1],))
             x_hat = x_hat[..., :-pad_right]
             x_hat = F.pad(x_hat, [self.shift, 0])
 
+            print(x_hat.shape)
+
         if self.dim != -1:
             x_hat = x_hat.transpose(-1, self.dim)
+
+        print(x_hat.shape)
+        print()
 
         return x_hat
 
