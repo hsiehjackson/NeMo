@@ -331,11 +331,11 @@ class LegoPartialFourierMod(nn.Module):
             x = F.pad(x, [0, pad_right])
 
             orig_shape = x.shape
-            h_dim = x.shape[-1]
 
             print("or", x.shape)
 
             x = x.reshape(x.shape[:-1] + (x.shape[-1] // self.patch_size, self.patch_size))
+            h_dim = x.shape[-1]
 
             print(x.shape)
 
