@@ -93,10 +93,10 @@ class LegoBlock(NeuralModule):
             else:
                 x = sub_block(x)
             # x = norm_post(x)
-            #x = self.activation(x)
+            # x = self.activation(x)
             x = self.dropout(x)
 
-            #bad
+            # bad
             if hasattr(sub_block, 'residual_type'):
                 if sub_block.residual_type == 'add':
                     x = residual + x
@@ -106,7 +106,7 @@ class LegoBlock(NeuralModule):
             else:
                 x = self.activation(x)
                 x = residual + x
-                #residual add by default
+                # residual add by default
 
         x = self.final_norm(x)
         # x = self.final_norm(x.transpose(-2, -1)).transpose(-2, -1)
@@ -260,6 +260,7 @@ class LegoChannelShuffle(nn.Module):
 
     return x_select_complex"""
 
+
 class LegoPartialFourierMod(nn.Module):
 
     def __init__(self, dim=-1, mod_n=16, complex_linear=True, residual_type='add', pool=False, f_exp=1,
@@ -284,6 +285,9 @@ class LegoPartialFourierMod(nn.Module):
 
         self.proj_type = proj_type
 
+        if patch_size == -1:
+            dim_final = patch_size
+
         if proj_type == 1:
             self.lin_r_2 = nn.Linear(mod_n * f_exp, mod_n)
             self.lin_i_2 = nn.Linear(mod_n * f_exp, mod_n)
@@ -300,7 +304,6 @@ class LegoPartialFourierMod(nn.Module):
 
         self.residual_type = residual_type
 
-
     def forward(self, x):
         if self.dim != -1:
             x = x.transpose(-1, self.dim)
@@ -312,8 +315,7 @@ class LegoPartialFourierMod(nn.Module):
 
         if h_dim < self.mod_n and self.patch_size == -1:
             x = F.pad(x, [0, self.mod_n - h_dim])
-            #if using patches will pad regardless
-
+            # if using patches will pad regardless
 
         pad_right = 0
 
@@ -329,6 +331,7 @@ class LegoPartialFourierMod(nn.Module):
             x = F.pad(x, [0, pad_right])
 
             orig_shape = x.shape
+            h_dim = x.shape[-1]
 
             print("or", x.shape)
 
@@ -392,5 +395,3 @@ class LegoPartialFourierMod(nn.Module):
         print()
 
         return x_hat
-
-
