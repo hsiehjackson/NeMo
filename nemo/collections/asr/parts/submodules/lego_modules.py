@@ -177,7 +177,7 @@ class LegoFourierSubBlock(nn.Module):
         pad_right = 0
 
         if self.patch_size != -1:
-            # print(x.shape)
+            # #print(x.shape)
             if self.dim != -1:
                 x = x.transpose(-1, self.dim)
             orig_shape = x.shape
@@ -204,7 +204,7 @@ class LegoFourierSubBlock(nn.Module):
             x = F.pad(x, [self.shift, 0])
             if self.dim != -1:
                 x = x.transpose(-1, self.dim)
-            # print(x.shape)
+            # #print(x.shape)
 
         return x
 
@@ -319,8 +319,8 @@ class LegoPartialFourierMod(nn.Module):
 
         pad_right = 0
 
-        print()
-        print(x.shape)
+        #print()
+        #print(x.shape)
 
         if self.patch_size != -1:
 
@@ -332,12 +332,12 @@ class LegoPartialFourierMod(nn.Module):
 
             orig_shape = x.shape
 
-            print("or", x.shape)
+            #print("or", x.shape)
 
             x = x.reshape(x.shape[:-1] + (x.shape[-1] // self.patch_size, self.patch_size))
             h_dim = x.shape[-1]
 
-            print(x.shape)
+            #print(x.shape)
 
         f = torch.fft.fft(x)
         f = f[..., :self.mod_n]
@@ -345,7 +345,7 @@ class LegoPartialFourierMod(nn.Module):
         f_real = f.real
         f_imag = f.imag
 
-        print(f.shape)
+        #print(f.shape)
 
         if self.ln_around_freq:
             f_real = self.norm1_r(f_real)
@@ -370,7 +370,7 @@ class LegoPartialFourierMod(nn.Module):
 
             x_hat = torch.fft.ifft(f_lin).real
 
-            print(x_hat.shape)
+            #print(x_hat.shape)
 
         else:
             x_hat = self.lin_r_2(f_lin.real) + self.lin_i_2(f_lin.imag)
@@ -379,19 +379,19 @@ class LegoPartialFourierMod(nn.Module):
 
         x_hat = x_hat[..., :h_dim]
 
-        print(x_hat.shape)
+        #print(x_hat.shape)
 
         if self.patch_size != -1:
             x_hat = x_hat.reshape(orig_shape[:-1] + (x_hat.shape[-2] * x_hat.shape[-1],))
             x_hat = x_hat[..., :-pad_right]
             x_hat = F.pad(x_hat, [self.shift, 0])
 
-            print(x_hat.shape)
+            #print(x_hat.shape)
 
         if self.dim != -1:
             x_hat = x_hat.transpose(-1, self.dim)
 
-        print(x_hat.shape)
-        print()
+        #print(x_hat.shape)
+        #print()
 
         return x_hat
