@@ -348,7 +348,7 @@ class LegoPartialFourierMod(nn.Module):
         #f = f[..., :self.mod_n]
         #default
 
-        freq_step = self.block_id % 4
+        freq_step = 1 + self.block_id % 4
         f = f[..., ::freq_step]
         f = f[..., :self.mod_n]
 
