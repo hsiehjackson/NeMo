@@ -345,11 +345,9 @@ class LegoPartialFourierMod(nn.Module):
             # print(x.shape)
 
         f = torch.fft.fft(x)
-        #f = f[..., :self.mod_n]
-        #default
 
-        freq_step = 1 + self.block_id % 4
-        f = f[..., ::freq_step]
+        #freq_step = 1 + self.block_id % 4
+        #f = f[..., ::freq_step]
         f = f[..., :self.mod_n]
 
         f_real = f.real
