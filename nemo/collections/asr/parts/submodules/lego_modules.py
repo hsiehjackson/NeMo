@@ -195,7 +195,7 @@ class LegoFourierSubBlock(nn.Module):
 
             x = x.reshape(x.shape[:-1] + (x.shape[-1] // self.patch_size, self.patch_size))
 
-        x = torch.fft.fft(x, dim=fft_dim, norm=self.norm).real
+        x = torch.fft.rfft(x, dim=fft_dim, norm=self.norm).real
 
         if self.shuffle:
             x = self.shuffle_op(x)
@@ -344,7 +344,7 @@ class LegoPartialFourierMod(nn.Module):
 
             # print(x.shape)
 
-        f = torch.fft.fft(x)
+        f = torch.fft.rfft(x)
 
         #freq_step = 1 + self.block_id % 4
         #f = f[..., ::freq_step]
