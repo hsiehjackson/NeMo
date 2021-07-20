@@ -52,6 +52,7 @@ model:
     se: true
     se_context_size: -1
     kernel_size_factor: 1.0
+    normalization: "batch"
 
   tokenizer:
     dir: ???  # path to directory which contains either tokenizer.model (bpe) or vocab.txt (for wpe)
@@ -95,6 +96,7 @@ model:
         separable: ${model.model_defaults.separable}
         se: ${model.model_defaults.se}
         se_context_size: ${model.model_defaults.se_context_size}
+        normalization: ${model.model_defaults.normalization}
 
       - filters: 512
         repeat: ${model.model_defaults.repeat}
