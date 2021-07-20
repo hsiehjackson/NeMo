@@ -252,7 +252,7 @@ class LegoLinearSubBlock(nn.Module):
 
     def create_fourier_matrix(self, n):
         i, j = torch.meshgrid(torch.arange(n), torch.arange(n))
-        omega = torch.exp(-2 * math.pi * 1j / n)
+        omega = (-2 * math.pi * 1j / n).exp()
         W = torch.power(omega, i * j) / torch.sqrt(n)
         return W
 
