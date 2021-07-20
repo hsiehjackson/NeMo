@@ -83,16 +83,17 @@ def tds_normal_(tensor, mode='fan_in'):
         return tensor.normal_(0.0, bound)
 
 
-def create_fourier_matrix(n):
+"""def create_fourier_matrix(n):
     i, j = torch.meshgrid(torch.arange(n), torch.arange(n))
     omega = torch.exp(-2*math.pi*1j/n)
     W = torch.power(omega, i * j) / torch.sqrt(n)
-    return W
+    return W"""
 
 
 def init_weights(m, mode: Optional[str] = 'xavier_uniform', use_dft=True):
-    if use_dft and isinstance(m, nn.Linear) and m.weight.shape[-2] == m.weight.shape[-1]:
-        m.weight = create_fourier_matrix(m.weight.shape[-1]).to(m.weight.device)
+    #if use_dft and isinstance(m, nn.Linear) and m.weight.shape[-2] == m.weight.shape[-1]:
+    #    m.weight = create_fourier_matrix(m.weight.shape[-1]).to(m.weight.device)
+    #can't just do that cause it will be complex
 
     if isinstance(m, MaskedConv1d):
         init_weights(m.conv, mode)

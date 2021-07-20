@@ -22,6 +22,8 @@ import torch.nn.functional as F
 from nemo.core.classes.module import NeuralModule
 from nemo.collections.asr.parts.submodules.jasper import MaskedConv1d
 
+import math
+
 # LegoBlock is initialized based on list of sub_block configs
 
 __all__ = ['LegoBlock', 'LegoConvSubBlock', 'LegoFourierSubBlock', 'LegoLinearSubBlock', 'LegoPartialFourierMod']
@@ -211,28 +213,48 @@ class LegoFourierSubBlock(nn.Module):
         return x
 
 
+
 class LegoLinearSubBlock(nn.Module):
 
-    def __init__(self, d_model, shared_weight_groups=1, f_exp=1):
+    def __init__(self, d_model, shared_weight_groups=1, f_exp=1, fourier_init=False):
         super(LegoLinearSubBlock, self).__init__()
 
         assert d_model % shared_weight_groups == 0
 
         self.group_size = d_model // shared_weight_groups
 
-        self.linear = nn.Sequential(nn.Linear(self.group_size, self.group_size * f_exp),
+        if fourier_init == False:
+            self.linear = nn.Sequential(nn.Linear(self.group_size, self.group_size * f_exp),
                                     nn.ReLU(),
                                     nn.Linear(self.group_size * f_exp, self.group_size))
+        else:
+            self.lin_w = nn.Parameter(self.create_fourier_matrix(d_model))
+            self.linear_1 = nn.Linear(d_model, d_model)
+            self.linear_2 = nn.Linear(d_model, d_model)
+
+        self.fourier_init = fourier_init
+
 
     def forward(self, x):
         original_shape = x.shape
         x = x.view(x.shape[:-1] + (-1, self.group_size))
 
-        x = self.linear(x)
+        if self.fourier_init:
+            x = self.lin_w @ x
+            x = (1 + torch.cos(x.angle())) * x * 0.5
+            x = self.linear_1(x.real) + self.linear_2(x.imag)
+        else:
+            x = self.linear(x)
 
         x = x.view(original_shape)
 
         return x
+
+    def create_fourier_matrix(self, n):
+        i, j = torch.meshgrid(torch.arange(n), torch.arange(n))
+        omega = torch.exp(-2 * math.pi * 1j / n)
+        W = torch.power(omega, i * j) / torch.sqrt(n)
+        return W
 
 
 class LegoChannelShuffle(nn.Module):
