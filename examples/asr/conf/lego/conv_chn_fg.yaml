@@ -54,8 +54,8 @@ model:
 
   spec_augment:
     _target_: nemo.collections.asr.modules.SpectrogramAugmentation
-    freq_masks: 2
-    time_masks: 2
+    freq_masks: 0
+    time_masks: 0
     freq_width: 27
     time_width: 0.05
 
@@ -67,20 +67,13 @@ model:
     outer_residual: true
     multi_block_residual: false
     conv_stride_every: 1
-    conv_stride_total: 2
+    conv_stride_total: 3
     multi_block_residual_skip: ${model.encoder.conv_stride_every}
     dropout: 0.
 
     pos_emb_mode: 'rel_pos'
 
     sub_blocks:
-
-      - _target_: nemo.collections.asr.parts.submodules.lego_modules.LegoPartialFourierMod
-        dim: -1
-        mod_n: 128
-        proj_type: 2
-        dim_final: ${model.encoder.d_model}
-        f_exp: 2
 
       - _target_: nemo.collections.asr.parts.submodules.lego_modules.LegoConvSubBlock
         d_model: ${model.encoder.d_model}
@@ -91,7 +84,7 @@ model:
         mod_n: 128
         proj_type: 2
         dim_final: ${model.encoder.d_model}
-        f_exp: ${model.encoder.sub_blocks.0.f_exp}
+        f_exp: 4
 
 
   decoder:
@@ -121,7 +114,7 @@ model:
 trainer:
   gpus: -1 # number of GPUs, -1 would use all available GPUs
   num_nodes: 1
-  max_epochs: 100
+  max_epochs: 200
   max_steps: null # computed at runtime if not set
   val_check_interval: 1.0 # Set to 0.25 to check 4 times per epoch, or an int for number of iterations
   accelerator: ddp
