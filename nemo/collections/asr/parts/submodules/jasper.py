@@ -342,7 +342,7 @@ class SpecialLinear(nn.Module):
             use_subset=-1,
             use_fourier=False
             ):
-        super(SpecialLinear).__init__()
+        super(SpecialLinear, self).__init__()
 
         if use_subset != -1:
             in_channels = use_subset
