@@ -434,6 +434,11 @@ def dct1(x):
     x_shape = x.shape
     x = x.view(-1, x_shape[-1])
 
+    print(x_shape)
+    print(x.shape)
+    print(torch.cat([x, x.flip([1])[..., 1:-1]], dim=1).shape)
+    print(torch.fft.rfft(torch.cat([x, x.flip([1])[..., 1:-1]], dim=1), 1).shape)
+
     return torch.fft.rfft(torch.cat([x, x.flip([1])[..., 1:-1]], dim=1), 1).view(*x_shape)
 
 
@@ -471,7 +476,7 @@ class LegoPartialDCTMod(nn.Module):
         if h_dim < self.mod_n:
             x = F.pad(x, [0, self.mod_n - h_dim])
 
-        f = idct1(x)
+        f = dct1(x)
 
         f = f[..., :self.mod_n]
 
