@@ -92,7 +92,7 @@ def dct1(x):
     x_shape = x.shape
     x = x.view(-1, x_shape[-1])
 
-    return torch.fft.rfft(torch.cat([x, x.flip([1])[:, 1:-1]], dim=1), 1)[:, :, 0].view(*x_shape)
+    return torch.fft.rfft(torch.cat([x, x.flip([1])[..., 1:-1]], dim=1), 1).view(*x_shape)
 
 def create_dct_matrix(n):
     id = torch.eye(n)
@@ -101,7 +101,7 @@ def create_dct_matrix(n):
     return W
 
 
-def init_weights(m, mode: Optional[str] = 'xavier_uniform', use_dft=True):
+def init_weights(m, mode: Optional[str] = 'xavier_uniform', use_dft=False):
     if use_dft and isinstance(m, nn.Linear) and m.weight.shape[-2] == m.weight.shape[-1]:
         m.weight = create_dct_matrix(m.weight.shape[-1]).to(m.weight.device)
         return
