@@ -91,9 +91,9 @@ def tds_normal_(tensor, mode='fan_in'):
 
 
 def init_weights(m, mode: Optional[str] = 'xavier_uniform', use_dft=True):
-    #if use_dft and isinstance(m, nn.Linear) and m.weight.shape[-2] == m.weight.shape[-1]:
+    # if use_dft and isinstance(m, nn.Linear) and m.weight.shape[-2] == m.weight.shape[-1]:
     #    m.weight = create_fourier_matrix(m.weight.shape[-1]).to(m.weight.device)
-    #can't just do that cause it will be complex
+    # can't just do that cause it will be complex
 
     if isinstance(m, MaskedConv1d):
         init_weights(m.conv, mode)
@@ -224,18 +224,18 @@ class MaskedConv1d(nn.Module):
     __constants__ = ["use_conv_mask", "real_out_channels", "heads"]
 
     def __init__(
-        self,
-        in_channels,
-        out_channels,
-        kernel_size,
-        stride=1,
-        padding=0,
-        dilation=1,
-        groups=1,
-        heads=-1,
-        bias=False,
-        use_mask=True,
-        quantize=False,
+            self,
+            in_channels,
+            out_channels,
+            kernel_size,
+            stride=1,
+            padding=0,
+            dilation=1,
+            groups=1,
+            heads=-1,
+            bias=False,
+            use_mask=True,
+            quantize=False,
     ):
         super(MaskedConv1d, self).__init__()
 
@@ -291,13 +291,13 @@ class MaskedConv1d(nn.Module):
 
         # Calculations for "same" padding cache
         self.same_padding = (self.conv.stride[0] == 1) and (
-            2 * self.conv.padding[0] == self.conv.dilation[0] * (self.conv.kernel_size[0] - 1)
+                2 * self.conv.padding[0] == self.conv.dilation[0] * (self.conv.kernel_size[0] - 1)
         )
         if self.pad_layer is None:
             self.same_padding_asymmetric = False
         else:
             self.same_padding_asymmetric = (self.conv.stride[0] == 1) and (
-                sum(self._padding) == self.conv.dilation[0] * (self.conv.kernel_size[0] - 1)
+                    sum(self._padding) == self.conv.dilation[0] * (self.conv.kernel_size[0] - 1)
             )
 
         # `self.lens` caches consecutive integers from 0 to `self.max_len` that are used to compute the mask for a
@@ -312,12 +312,12 @@ class MaskedConv1d(nn.Module):
 
         if self.pad_layer is None:
             return (
-                lens + 2 * self.conv.padding[0] - self.conv.dilation[0] * (self.conv.kernel_size[0] - 1) - 1
-            ) // self.conv.stride[0] + 1
+                           lens + 2 * self.conv.padding[0] - self.conv.dilation[0] * (self.conv.kernel_size[0] - 1) - 1
+                   ) // self.conv.stride[0] + 1
         else:
             return (
-                lens + sum(self._padding) - self.conv.dilation[0] * (self.conv.kernel_size[0] - 1) - 1
-            ) // self.conv.stride[0] + 1
+                           lens + sum(self._padding) - self.conv.dilation[0] * (self.conv.kernel_size[0] - 1) - 1
+                   ) // self.conv.stride[0] + 1
 
     def forward(self, x, lens):
         if self.use_mask:
@@ -347,6 +347,25 @@ class MaskedConv1d(nn.Module):
         return out, lens
 
 
+class SpecialLinear(nn.Module):
+    def __init__(
+            self,
+            in_channels,
+            out_channels):
+        super(SpecialLinear).__init__()
+
+        self.lin = nn.Linear(in_channels, out_channels)
+
+    def forward(self, x, lens):
+        x = x.transpose(-2, -1)
+
+        x = self.lin(x)
+
+        x = x.transpose(-2, -1)
+
+        return x, lens
+
+
 class GroupShuffle(nn.Module):
     def __init__(self, groups, channels):
         super(GroupShuffle, self).__init__()
@@ -368,13 +387,13 @@ class GroupShuffle(nn.Module):
 
 class SqueezeExcite(nn.Module):
     def __init__(
-        self,
-        channels: int,
-        reduction_ratio: int,
-        context_window: int = -1,
-        interpolation_mode: str = 'nearest',
-        activation: Optional[Callable] = None,
-        quantize: bool = False,
+            self,
+            channels: int,
+            reduction_ratio: int,
+            context_window: int = -1,
+            interpolation_mode: str = 'nearest',
+            activation: Optional[Callable] = None,
+            quantize: bool = False,
     ):
         """
         Squeeze-and-Excitation sub-module.
@@ -613,33 +632,33 @@ class JasperBlock(nn.Module):
     __constants__ = ["conv_mask", "separable", "residual_mode", "res", "mconv"]
 
     def __init__(
-        self,
-        inplanes,
-        planes,
-        repeat=3,
-        kernel_size=11,
-        kernel_size_factor=1,
-        stride=1,
-        dilation=1,
-        padding='same',
-        dropout=0.2,
-        activation=None,
-        residual=True,
-        groups=1,
-        separable=False,
-        heads=-1,
-        normalization="batch",
-        norm_groups=1,
-        residual_mode='add',
-        residual_panes=[],
-        conv_mask=False,
-        se=False,
-        se_reduction_ratio=16,
-        se_context_window=-1,
-        se_interpolation_mode='nearest',
-        stride_last=False,
-        future_context: int = -1,
-        quantize=False,
+            self,
+            inplanes,
+            planes,
+            repeat=3,
+            kernel_size=11,
+            kernel_size_factor=1,
+            stride=1,
+            dilation=1,
+            padding='same',
+            dropout=0.2,
+            activation=None,
+            residual=True,
+            groups=1,
+            separable=False,
+            heads=-1,
+            normalization="batch",
+            norm_groups=1,
+            residual_mode='add',
+            residual_panes=[],
+            conv_mask=False,
+            se=False,
+            se_reduction_ratio=16,
+            se_context_window=-1,
+            se_interpolation_mode='nearest',
+            stride_last=False,
+            future_context: int = -1,
+            quantize=False,
     ):
         super(JasperBlock, self).__init__()
 
@@ -768,18 +787,18 @@ class JasperBlock(nn.Module):
         self.mout = nn.Sequential(*self._get_act_dropout_layer(drop_prob=dropout, activation=activation))
 
     def _get_conv(
-        self,
-        in_channels,
-        out_channels,
-        kernel_size=11,
-        stride=1,
-        dilation=1,
-        padding=0,
-        bias=False,
-        groups=1,
-        heads=-1,
-        separable=False,
-        quantize=False,
+            self,
+            in_channels,
+            out_channels,
+            kernel_size=11,
+            stride=1,
+            dilation=1,
+            padding=0,
+            bias=False,
+            groups=1,
+            heads=-1,
+            separable=False,
+            quantize=False,
     ):
         use_mask = self.conv_mask
         if use_mask:
@@ -826,20 +845,20 @@ class JasperBlock(nn.Module):
                 )
 
     def _get_conv_bn_layer(
-        self,
-        in_channels,
-        out_channels,
-        kernel_size=11,
-        stride=1,
-        dilation=1,
-        padding=0,
-        bias=False,
-        groups=1,
-        heads=-1,
-        separable=False,
-        normalization="batch",
-        norm_groups=1,
-        quantize=False,
+            self,
+            in_channels,
+            out_channels,
+            kernel_size=11,
+            stride=1,
+            dilation=1,
+            padding=0,
+            bias=False,
+            groups=1,
+            heads=-1,
+            separable=False,
+            normalization="batch",
+            norm_groups=1,
+            quantize=False,
     ):
         if norm_groups == -1:
             norm_groups = out_channels
@@ -858,7 +877,8 @@ class JasperBlock(nn.Module):
                     heads=heads,
                     quantize=quantize,
                 ),
-                self._get_conv(
+                SpecialLinear(in_channels, out_channels),
+                """self._get_conv(
                     in_channels,
                     out_channels,
                     kernel_size=1,
@@ -868,7 +888,7 @@ class JasperBlock(nn.Module):
                     bias=bias,
                     groups=groups,
                     quantize=quantize,
-                ),
+                ),"""
             ]
         else:
             layers = [
