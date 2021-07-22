@@ -450,10 +450,15 @@ def idct1(X):
 
 class LegoPartialDCTMod(nn.Module):
 
-    def __init__(self, dim_final, dim=-1, mod_n=128):
+    def __init__(self, proj=2, dim_final=-1, dim=-1, mod_n=128):
         super(LegoPartialDCTMod, self).__init__()
 
-        self.lin = nn.Linear(mod_n, dim_final)
+        if proj == 2:
+            self.lin = nn.Linear(mod_n, dim_final)
+        else:
+            self.lin = nn.Linear(mod_n, mod_n)
+
+        self.proj = proj
 
     def forward(self, x):
         if self.dim != -1:
@@ -469,6 +474,9 @@ class LegoPartialDCTMod(nn.Module):
         f = f[..., :self.mod_n]
 
         x_hat = self.lin(f)
+
+        if self.proj == 1:
+            x_hat = idct1(F.pad(x_hat, [0, h_dim - self.mod_n]))
 
         if self.dim != -1:
             x_hat = x_hat.transpose(-1, self.dim)
