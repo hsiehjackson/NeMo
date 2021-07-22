@@ -459,6 +459,8 @@ class LegoPartialDCTMod(nn.Module):
             self.lin = nn.Linear(mod_n, mod_n)
 
         self.proj = proj
+        self.mod_n = mod_n
+        self.dim = dim
 
     def forward(self, x):
         if self.dim != -1:
