@@ -17,10 +17,8 @@ from argparse import ArgumentParser
 from collections import OrderedDict
 from typing import List
 
-from nemo_text_processing.text_normalization.data_loader_utils import post_process_punctuation
-from nemo_text_processing.text_normalization.taggers.tokenize_and_classify import ClassifyFst
+from nemo_text_processing.text_normalization.data_loader_utils import post_process_punctuation, pre_process
 from nemo_text_processing.text_normalization.token_parser import PRESERVE_ORDER_KEY, TokenParser
-from nemo_text_processing.text_normalization.verbalizers.verbalize_final import VerbalizeFinalFst
 from tqdm import tqdm
 
 try:
@@ -38,11 +36,15 @@ class Normalizer:
 
     Args:
         input_case: expected input capitalization
+        lang: language specifying the TN rules, by default: English
     """
 
-    def __init__(self, input_case: str):
+    def __init__(self, input_case: str, lang: str = 'en'):
         assert input_case in ["lower_cased", "cased"]
 
+        if lang == 'en':
+            from nemo_text_processing.text_normalization.en.taggers.tokenize_and_classify import ClassifyFst
+            from nemo_text_processing.text_normalization.en.verbalizers.verbalize_final import VerbalizeFinalFst
         self.tagger = ClassifyFst(input_case=input_case, deterministic=True)
         self.verbalizer = VerbalizeFinalFst(deterministic=True)
         self.parser = TokenParser()
@@ -67,7 +69,9 @@ class Normalizer:
             res.append(text)
         return res
 
-    def normalize(self, text: str, verbose: bool, punct_post_process: bool = False) -> str:
+    def normalize(
+        self, text: str, verbose: bool, punct_pre_process: bool = False, punct_post_process: bool = False
+    ) -> str:
         """
         Main function. Normalizes tokens from written to spoken form
             e.g. 12 kg -> twelve kilograms
@@ -75,10 +79,13 @@ class Normalizer:
         Args:
             text: string that may include semiotic classes
             verbose: whether to print intermediate meta information
-            punct_post_process: set to True to normalize punctuation
+            punct_pre_process: whether to perform punctuation pre-processing, for example, [25] -> [ 25 ]
+            punct_post_process: whether to normalize punctuation
 
         Returns: spoken form
         """
+        if punct_pre_process:
+            text = pre_process(text)
         text = text.strip()
         if not text:
             if verbose:
@@ -215,6 +222,7 @@ class Normalizer:
 def parse_args():
     parser = ArgumentParser()
     parser.add_argument("input_string", help="input string", type=str)
+    parser.add_argument("--language", help="language", choices=["en"], default="en", type=str)
     parser.add_argument(
         "--input_case", help="input capitalization", choices=["lower_cased", "cased"], default="cased", type=str
     )
@@ -222,10 +230,20 @@ def parse_args():
     parser.add_argument(
         "--punct_post_process", help="set to True to enable punctuation post processing", action="store_true"
     )
+    parser.add_argument(
+        "--punct_pre_process", help="set to True to enable punctuation pre processing", action="store_true"
+    )
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     args = parse_args()
     normalizer = Normalizer(input_case=args.input_case)
-    print(normalizer.normalize(args.input_string, verbose=args.verbose, punct_post_process=args.punct_post_process))
+    print(
+        normalizer.normalize(
+            args.input_string,
+            verbose=args.verbose,
+            punct_pre_process=args.punct_pre_process,
+            punct_post_process=args.punct_post_process,
+        )
+    )
