@@ -434,10 +434,10 @@ def dct1(x):
     x_shape = x.shape
     x = x.view(-1, x_shape[-1])
 
-    print(x_shape)
-    print(x.shape)
-    print(torch.cat([x, x.flip([1])[..., 1:-1]], dim=1).shape)
-    print(torch.fft.rfft(torch.cat([x, x.flip([1])[..., 1:-1]], dim=1), 1).shape)
+    #print(x_shape)
+    #print(x.shape)
+    #print(torch.cat([x, x.flip([1])[..., 1:-1]], dim=1).shape)
+    #print(torch.fft.rfft(torch.cat([x, x.flip([1])[..., 1:-1]], dim=1)).shape)
 
     return torch.fft.rfft(torch.cat([x, x.flip([1])[..., 1:-1]], dim=1), 1).view(*x_shape)
 

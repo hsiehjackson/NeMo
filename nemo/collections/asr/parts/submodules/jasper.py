@@ -94,6 +94,7 @@ def dct1(x):
 
     return torch.fft.rfft(torch.cat([x, x.flip([1])[..., 1:-1]], dim=1), 1).view(*x_shape)
 
+
 def create_dct_matrix(n):
     id = torch.eye(n)
     W = dct1(id)
