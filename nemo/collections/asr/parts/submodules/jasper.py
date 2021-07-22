@@ -83,18 +83,28 @@ def tds_normal_(tensor, mode='fan_in'):
     with torch.no_grad():
         return tensor.normal_(0.0, bound)
 
+def dct1(x):
+    """
+    Discrete Cosine Transform, Type I
+    :param x: the input signal
+    :return: the DCT-I of the signal over the last dimension
+    """
+    x_shape = x.shape
+    x = x.view(-1, x_shape[-1])
 
-"""def create_fourier_matrix(n):
-    i, j = torch.meshgrid(torch.arange(n), torch.arange(n))
-    omega = torch.exp(-2*math.pi*1j/n)
-    W = torch.power(omega, i * j) / torch.sqrt(n)
-    return W"""
+    return torch.fft.rfft(torch.cat([x, x.flip([1])[:, 1:-1]], dim=1), 1)[:, :, 0].view(*x_shape)
+
+def create_dct_matrix(n):
+    id = torch.eye(n)
+    W = dct1(id)
+    print(W)
+    return W
 
 
 def init_weights(m, mode: Optional[str] = 'xavier_uniform', use_dft=True):
-    # if use_dft and isinstance(m, nn.Linear) and m.weight.shape[-2] == m.weight.shape[-1]:
-    #    m.weight = create_fourier_matrix(m.weight.shape[-1]).to(m.weight.device)
-    # can't just do that cause it will be complex
+    if use_dft and isinstance(m, nn.Linear) and m.weight.shape[-2] == m.weight.shape[-1]:
+        m.weight = create_dct_matrix(m.weight.shape[-1]).to(m.weight.device)
+        return
 
     if isinstance(m, MaskedConv1d):
         init_weights(m.conv, mode)
