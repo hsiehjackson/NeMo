@@ -351,15 +351,40 @@ class SpecialLinear(nn.Module):
     def __init__(
             self,
             in_channels,
-            out_channels):
+            out_channels,
+            use_double=False,
+            expand_factor=1,
+            use_subset=-1,
+            use_fourier=False
+            ):
         super(SpecialLinear).__init__()
 
-        self.lin = nn.Linear(in_channels, out_channels)
+        if use_subset != -1:
+            in_channels = use_subset
+
+        if not use_double:
+            self.lin = nn.Linear(in_channels, out_channels)
+        else:
+            self.lin1 = nn.Linear(in_channels, in_channels * expand_factor)
+            self.lin2 = nn.Linear(in_channels * expand_factor, out_channels)
+
+            self.nonlin = nn.ReLU()
+
+        self.use_double = use_double
+        self.use_subset = use_subset
 
     def forward(self, x, lens):
         x = x.transpose(-2, -1)
 
-        x = self.lin(x)
+        if self.use_subset != -1:
+            x = x[..., :self.use_subset]
+
+        if self.use_double:
+            x = self.lin1(x)
+            x = self.nonlin(x)
+            x = self.lin2(x)
+        else:
+            x = self.lin(x)
 
         x = x.transpose(-2, -1)
 
@@ -918,8 +943,7 @@ class JasperBlock(nn.Module):
                 f"Normalization method ({normalization}) does not match" f" one of [batch, layer, group, instance]."
             )
 
-        if groups > 1:
-            layers.append(GroupShuffle(groups, out_channels))
+        layers.append(GroupShuffle(groups, out_channels))
         return layers
 
     def _get_act_dropout_layer(self, drop_prob=0.2, activation=None):

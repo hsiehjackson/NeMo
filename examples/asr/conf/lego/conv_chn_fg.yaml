@@ -54,8 +54,8 @@ model:
 
   spec_augment:
     _target_: nemo.collections.asr.modules.SpectrogramAugmentation
-    freq_masks: 0
-    time_masks: 0
+    freq_masks: 2
+    time_masks: 2
     freq_width: 27
     time_width: 0.05
 
@@ -79,12 +79,10 @@ model:
         d_model: ${model.encoder.d_model}
         kernel_size: 31
 
-      - _target_: nemo.collections.asr.parts.submodules.lego_modules.LegoPartialFourierMod
+      - _target_: nemo.collections.asr.parts.submodules.lego_modules.LegoPartialDCTMod
         dim: -1
         mod_n: 128
-        proj_type: 2
         dim_final: ${model.encoder.d_model}
-        f_exp: 4
 
 
   decoder:
@@ -114,7 +112,7 @@ model:
 trainer:
   gpus: -1 # number of GPUs, -1 would use all available GPUs
   num_nodes: 1
-  max_epochs: 200
+  max_epochs: 100
   max_steps: null # computed at runtime if not set
   val_check_interval: 1.0 # Set to 0.25 to check 4 times per epoch, or an int for number of iterations
   accelerator: ddp

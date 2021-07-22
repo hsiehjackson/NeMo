@@ -213,7 +213,6 @@ class LegoFourierSubBlock(nn.Module):
         return x
 
 
-
 class LegoLinearSubBlock(nn.Module):
 
     def __init__(self, d_model, shared_weight_groups=1, f_exp=1, fourier_init=False):
@@ -225,15 +224,14 @@ class LegoLinearSubBlock(nn.Module):
 
         if fourier_init == False:
             self.linear = nn.Sequential(nn.Linear(self.group_size, self.group_size * f_exp),
-                                    nn.ReLU(),
-                                    nn.Linear(self.group_size * f_exp, self.group_size))
+                                        nn.ReLU(),
+                                        nn.Linear(self.group_size * f_exp, self.group_size))
         else:
             self.lin_w = nn.Parameter(self.create_fourier_matrix(d_model))
             self.linear_1 = nn.Linear(d_model, d_model)
             self.linear_2 = nn.Linear(d_model, d_model)
 
         self.fourier_init = fourier_init
-
 
     def forward(self, x):
         original_shape = x.shape
@@ -368,8 +366,8 @@ class LegoPartialFourierMod(nn.Module):
 
         f = torch.fft.rfft(x)
 
-        #freq_step = 1 + self.block_id % 4
-        #f = f[..., ::freq_step]
+        # freq_step = 1 + self.block_id % 4
+        # f = f[..., ::freq_step]
         f = f[..., :self.mod_n]
 
         f_real = f.real
@@ -423,5 +421,56 @@ class LegoPartialFourierMod(nn.Module):
 
         # print(x_hat.shape)
         # print()
+
+        return x_hat
+
+
+def dct1(x):
+    """
+    Discrete Cosine Transform, Type I
+    :param x: the input signal
+    :return: the DCT-I of the signal over the last dimension
+    """
+    x_shape = x.shape
+    x = x.view(-1, x_shape[-1])
+
+    return torch.fft.rfft(torch.cat([x, x.flip([1])[:, 1:-1]], dim=1), 1)[:, :, 0].view(*x_shape)
+
+
+def idct1(X):
+    """
+    The inverse of DCT-I, which is just a scaled DCT-I
+    Our definition if idct1 is such that idct1(dct1(x)) == x
+    :param X: the input signal
+    :return: the inverse DCT-I of the signal over the last dimension
+    """
+    n = X.shape[-1]
+    return dct1(X) / (2 * (n - 1))
+
+
+class LegoPartialDCTMod(nn.Module):
+
+    def __init__(self, dim_final, dim=-1, mod_n=128):
+        super(LegoPartialDCTMod, self).__init__()
+
+        self.lin = nn.Linear(mod_n, dim_final)
+
+    def forward(self, x):
+        if self.dim != -1:
+            x = x.transpose(-1, self.dim)
+
+        h_dim = x.shape[-1]
+
+        if h_dim < self.mod_n:
+            x = F.pad(x, [0, self.mod_n - h_dim])
+
+        f = idct1(x)
+
+        f = f[..., :self.mod_n]
+
+        x_hat = self.lin(f)
+
+        if self.dim != -1:
+            x_hat = x_hat.transpose(-1, self.dim)
 
         return x_hat
