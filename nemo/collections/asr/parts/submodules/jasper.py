@@ -102,7 +102,7 @@ def create_dct_matrix(n):
     return W
 
 
-def init_weights(m, mode: Optional[str] = 'xavier_uniform', use_dft=True):
+def init_weights(m, mode: Optional[str] = 'xavier_uniform', use_dft=False):
     if use_dft and isinstance(m, nn.Linear) and m.weight.shape[-2] == m.weight.shape[-1]:
         m.weight = nn.Parameter(create_dct_matrix(m.weight.shape[-1])).to(m.weight.device)
         print(m.name)
@@ -356,8 +356,8 @@ class SpecialLinear(nn.Module):
             out_channels,
             use_double=False,
             expand_factor=1,
-            use_subset=-1,
-            use_dct=False,
+            use_subset=128,
+            use_dct=True,
     ):
 
         super(SpecialLinear, self).__init__()
