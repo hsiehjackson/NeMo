@@ -91,9 +91,8 @@ def dct1(x):
     :return: the DCT-I of the signal over the last dimension
     """
     x_shape = x.shape
-    x = x.view(-1, x_shape[-1])
 
-    return torch.fft.rfft(torch.cat([x, x.flip([1])[..., 1:-1]], dim=-1)).real.view(*x_shape)
+    return torch.fft.rfft(torch.cat([x, x.flip([-1])[..., 1:-1]], dim=-1)).real.view(*x_shape)
 
 
 def create_dct_matrix(n):
