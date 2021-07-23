@@ -99,13 +99,12 @@ def dct1(x):
 def create_dct_matrix(n):
     id = torch.eye(n)
     W = dct1(id)
-    print(W)
     return W
 
 
 def init_weights(m, mode: Optional[str] = 'xavier_uniform', use_dft=True):
     if use_dft and isinstance(m, nn.Linear) and m.weight.shape[-2] == m.weight.shape[-1]:
-        m.weight = create_dct_matrix(m.weight.shape[-1]).to(m.weight.device)
+        m.weight = nn.Parameter(create_dct_matrix(m.weight.shape[-1])).to(m.weight.device)
         return
 
     if isinstance(m, MaskedConv1d):
