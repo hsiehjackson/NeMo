@@ -105,7 +105,7 @@ def create_dct_matrix(n):
 def init_weights(m, mode: Optional[str] = 'xavier_uniform', use_dft=False):
     if use_dft and isinstance(m, nn.Linear) and m.weight.shape[-2] == m.weight.shape[-1]:
         m.weight = nn.Parameter(create_dct_matrix(m.weight.shape[-1])).to(m.weight.device)
-        print(m.name)
+        print(m.weight.shape)
         print(m.weight)
         return
 
@@ -127,7 +127,7 @@ def init_weights(m, mode: Optional[str] = 'xavier_uniform', use_dft=False):
                 tds_normal_(m.weight)
             else:
                 raise ValueError("Unknown Initialization mode: {0}".format(mode))
-            print(m.name)
+            print(m.weight.shape)
             print(m.weight)
 
     elif isinstance(m, nn.BatchNorm1d):
