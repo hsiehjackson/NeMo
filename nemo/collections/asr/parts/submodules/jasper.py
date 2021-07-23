@@ -103,7 +103,7 @@ def create_dct_matrix(n):
     return W
 
 
-def init_weights(m, mode: Optional[str] = 'xavier_uniform', use_dft=False):
+def init_weights(m, mode: Optional[str] = 'xavier_uniform', use_dft=True):
     if use_dft and isinstance(m, nn.Linear) and m.weight.shape[-2] == m.weight.shape[-1]:
         m.weight = create_dct_matrix(m.weight.shape[-1]).to(m.weight.device)
         return
@@ -353,7 +353,7 @@ class SpecialLinear(nn.Module):
             use_double=False,
             expand_factor=1,
             use_subset=-1,
-            use_fourier=False
+            use_dct=False,
     ):
 
         super(SpecialLinear, self).__init__()
@@ -362,7 +362,7 @@ class SpecialLinear(nn.Module):
             in_channels = use_subset
 
         if not use_double:
-            self.lin0 = nn.Linear(in_channels, out_channels)
+            self.lin = nn.Linear(in_channels, out_channels)
         else:
             self.lin1 = nn.Linear(in_channels, in_channels * expand_factor)
             self.lin2 = nn.Linear(in_channels * expand_factor, out_channels)
@@ -371,11 +371,14 @@ class SpecialLinear(nn.Module):
 
         self.use_double = use_double
         self.use_subset = use_subset
+        self.use_dct = use_dct
 
     def forward(self, x):
         x = x.transpose(-2, -1)
 
         if self.use_subset != -1:
+            if self.use_dct:
+                x = dct1(x)
             x = x[..., :self.use_subset]
 
         if self.use_double:

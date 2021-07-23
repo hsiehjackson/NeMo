@@ -167,7 +167,7 @@ class LegoEncoder(NeuralModule, Exportable):
 
         for i in range(len(n_blocks)):
             proto_block = LegoBlock(sub_blocks[i], d_model, outer_residual=outer_residual, dropout=dropout)
-            for j in range(n_blocks):
+            for j in range(n_blocks[i]):
                 block = deepcopy(proto_block)  # LegoBlock(sub_blocks, d_model, outer_residual=outer_residual)
                 block.id = cur_id
                 cur_id += 1

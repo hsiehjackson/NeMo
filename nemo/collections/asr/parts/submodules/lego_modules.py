@@ -24,6 +24,11 @@ from nemo.collections.asr.parts.submodules.jasper import MaskedConv1d
 
 import math
 
+from nemo.collections.asr.parts.submodules.multi_head_attention import (
+    MultiHeadAttention,
+    RelPositionMultiHeadAttention,
+)
+
 # LegoBlock is initialized based on list of sub_block configs
 
 __all__ = ['LegoBlock', 'LegoConvSubBlock', 'LegoFourierSubBlock', 'LegoLinearSubBlock', 'LegoPartialFourierMod']
@@ -490,3 +495,24 @@ class LegoPartialDCTMod(nn.Module):
             x_hat = x_hat.transpose(-1, self.dim)
 
         return x_hat
+
+
+class LegoAttentionBlock(nn.Module):
+
+    def __init__(self, d_model, n_heads=4):
+
+        super(LegoAttentionBlock, self).__init__()
+
+        self.attn = RelPositionMultiHeadAttention(n_head=n_heads,
+                                                  n_feat=d_model,
+                                                  dropout_rate=0,
+                                                  pos_bias_u=None,
+                                                  pos_bias_v=None)
+
+    def forward(self, x, mask=None, pos_emb=None):
+
+        return self.attn(query=x,
+                         key=x,
+                         value=x,
+                         mask=mask,
+                         pos_emb=pos_emb)
