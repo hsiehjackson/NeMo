@@ -372,7 +372,7 @@ class SpecialLinear(nn.Module):
         self.use_double = use_double
         self.use_subset = use_subset
 
-    def forward(self, x, lens):
+    def forward(self, x):
         x = x.transpose(-2, -1)
 
         if self.use_subset != -1:
@@ -387,7 +387,7 @@ class SpecialLinear(nn.Module):
 
         x = x.transpose(-2, -1)
 
-        return x, lens
+        return x
 
 
 class GroupShuffle(nn.Module):
