@@ -83,6 +83,7 @@ def tds_normal_(tensor, mode='fan_in'):
     with torch.no_grad():
         return tensor.normal_(0.0, bound)
 
+
 def dct1(x):
     """
     Discrete Cosine Transform, Type I
@@ -93,7 +94,6 @@ def dct1(x):
     x = x.view(-1, x_shape[-1])
 
     return torch.fft.rfft(torch.cat([x, x.flip([1])[..., 1:-1]], dim=-1)).real.view(*x_shape)
-
 
 
 def create_dct_matrix(n):
@@ -347,13 +347,13 @@ class MaskedConv1d(nn.Module):
 class SpecialLinear(nn.Module):
 
     def __init__(
-        self,
-        in_channels,
-        out_channels,
-        use_double=False,
-        expand_factor=1,
-        use_subset=-1,
-        use_fourier=False
+            self,
+            in_channels,
+            out_channels,
+            use_double=False,
+            expand_factor=1,
+            use_subset=-1,
+            use_fourier=False
     ):
 
         super(SpecialLinear, self).__init__()
@@ -832,6 +832,9 @@ class JasperBlock(nn.Module):
             separable=False,
             quantize=False,
     ):
+        if kernel_size == 1:
+            return SpecialLinear(in_channels, out_channels)
+
         use_mask = self.conv_mask
         if use_mask:
             return MaskedConv1d(
@@ -909,8 +912,7 @@ class JasperBlock(nn.Module):
                     heads=heads,
                     quantize=quantize,
                 ),
-                SpecialLinear(in_channels, out_channels),
-                """self._get_conv(
+                self._get_conv(
                     in_channels,
                     out_channels,
                     kernel_size=1,
@@ -920,7 +922,7 @@ class JasperBlock(nn.Module):
                     bias=bias,
                     groups=groups,
                     quantize=quantize,
-                ),"""
+                ),
             ]
         else:
             layers = [
@@ -1046,13 +1048,13 @@ class ParallelBlock(nn.Module):
     """
 
     def __init__(
-        self,
-        blocks,
-        aggregation_mode: str = "sum",
-        block_dropout_prob: int = 0.0,
-        residual_mode: str = "sum",
-        in_filters: int = None,
-        out_filters: int = None,
+            self,
+            blocks,
+            aggregation_mode: str = "sum",
+            block_dropout_prob: int = 0.0,
+            residual_mode: str = "sum",
+            in_filters: int = None,
+            out_filters: int = None,
     ):
         super().__init__()
         self.blocks = nn.ModuleList(blocks)
