@@ -67,7 +67,7 @@ model:
     outer_residual: true
     multi_block_residual: false
     conv_stride_every: 1
-    conv_stride_total: 2
+    conv_stride_total: 3
     multi_block_residual_skip: ${model.encoder.conv_stride_every}
     dropout: 0.
 
