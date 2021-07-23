@@ -28,6 +28,10 @@ from nemo.core.classes.exportable import Exportable
 from nemo.core.classes.module import NeuralModule
 from nemo.core.neural_types import AcousticEncodedRepresentation, LengthsType, NeuralType, SpectrogramType
 from nemo.collections.asr.parts.submodules.jasper import init_weights
+from nemo.collections.asr.parts.submodules.multi_head_attention import (
+    MultiHeadAttention,
+    RelPositionMultiHeadAttention,
+)
 
 from copy import deepcopy
 
@@ -97,7 +101,7 @@ class LegoEncoder(NeuralModule, Exportable):
             self,
             sub_blocks,
             feat_in,
-            n_blocks=8,
+            n_blocks=(8,),
             d_model=256,
             feat_out=-1,
             subsampling='striding',
@@ -150,24 +154,37 @@ class LegoEncoder(NeuralModule, Exportable):
                 dropout_rate_emb=dropout,
             )
         elif pos_emb_mode == "abs_pos":
-            pos_bias_u = None
-            pos_bias_v = None
             self.pos_enc = PositionalEncoding(
                 d_model=d_model, dropout_rate=dropout, max_len=pos_emb_max_len
             )
         else:
             raise ValueError(f"Not valid positional embedding mode: '{pos_emb_mode}'!")
 
-        print(sub_blocks)
 
         self.blocks = nn.ModuleList()
-        proto_block = LegoBlock(sub_blocks, d_model, outer_residual=outer_residual, dropout=dropout)
-        for i in range(n_blocks):
-            block = deepcopy(proto_block)  # LegoBlock(sub_blocks, d_model, outer_residual=outer_residual)
-            block.id = i
-            self.blocks.append(block)
 
-            print(self.blocks[-1].id)
+        cur_id = 0
+
+        for i in range(len(n_blocks)):
+            proto_block = LegoBlock(sub_blocks[i], d_model, outer_residual=outer_residual, dropout=dropout)
+            for j in range(n_blocks):
+                block = deepcopy(proto_block)  # LegoBlock(sub_blocks, d_model, outer_residual=outer_residual)
+                block.id = cur_id
+                cur_id += 1
+                self.blocks.append(block)
+
+        """self.attn_epilogue = nn.ModuleList()
+        for i in range(3):
+            self.attn_epilogue.append(
+                RelPositionMultiHeadAttention(
+                    n_head=4,
+                    n_feat=d_model,
+                    dropout_rate=dropout,
+                    pos_bias_u=pos_bias_u,
+                    pos_bias_v=pos_bias_v
+                )
+            )"""
+
 
         if feat_out > 0 and feat_out != self.output_dim:
             self.out_proj = nn.Linear(d_model, feat_out)
@@ -196,7 +213,7 @@ class LegoEncoder(NeuralModule, Exportable):
         else:
             audio_signal = self.pre_encode(audio_signal)
 
-        audio_signal, pos_emb = self.pos_enc(audio_signal)
+        #audio_signal, pos_emb = self.pos_enc(audio_signal)
         bs, xmax, idim = audio_signal.size()
 
         # Create the self-attention and padding masks

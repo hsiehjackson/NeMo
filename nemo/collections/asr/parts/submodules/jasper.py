@@ -832,7 +832,7 @@ class JasperBlock(nn.Module):
             separable=False,
             quantize=False,
     ):
-        if kernel_size == 1:
+        if kernel_size == 1 and stride == 1 and dilation == 1:
             return SpecialLinear(in_channels, out_channels)
 
         use_mask = self.conv_mask
