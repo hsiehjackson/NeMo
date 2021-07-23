@@ -99,6 +99,7 @@ def dct1(x):
 def create_dct_matrix(n):
     id = torch.eye(n)
     W = dct1(id)
+    print(W)
     return W
 
 
@@ -385,7 +386,7 @@ class SpecialLinear(nn.Module):
             x = self.nonlin(x)
             x = self.lin2(x)
         else:
-            x = self.lin0(x)
+            x = self.lin(x)
 
         x = x.transpose(-2, -1)
 
