@@ -345,22 +345,24 @@ class MaskedConv1d(nn.Module):
 
 
 class SpecialLinear(nn.Module):
+
     def __init__(
-            self,
-            in_channels,
-            out_channels,
-            use_double=False,
-            expand_factor=1,
-            use_subset=-1,
-            use_fourier=False
-            ):
+        self,
+        in_channels,
+        out_channels,
+        use_double=False,
+        expand_factor=1,
+        use_subset=-1,
+        use_fourier=False
+    ):
+
         super(SpecialLinear, self).__init__()
 
         if use_subset != -1:
             in_channels = use_subset
 
         if not use_double:
-            self.lin = nn.Linear(in_channels, out_channels)
+            self.lin0 = nn.Linear(in_channels, out_channels)
         else:
             self.lin1 = nn.Linear(in_channels, in_channels * expand_factor)
             self.lin2 = nn.Linear(in_channels * expand_factor, out_channels)
@@ -381,7 +383,7 @@ class SpecialLinear(nn.Module):
             x = self.nonlin(x)
             x = self.lin2(x)
         else:
-            x = self.lin(x)
+            x = self.lin0(x)
 
         x = x.transpose(-2, -1)
 
