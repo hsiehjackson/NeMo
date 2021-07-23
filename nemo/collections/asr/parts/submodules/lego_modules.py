@@ -439,7 +439,7 @@ def dct1(x):
     #print(torch.cat([x, x.flip([1])[..., 1:-1]], dim=1).shape)
     #print(torch.fft.rfft(torch.cat([x, x.flip([1])[..., 1:-1]], dim=1)).shape)
 
-    return torch.fft.rfft(torch.cat([x, torch.flip(x, -1)[..., 1:-1]], dim=-1)).real.view(*x_shape)
+    return torch.fft.rfft(torch.cat([x, torch.flip(x, [-1])[..., 1:-1]], dim=-1)).real.view(*x_shape)
 
 
 def idct1(X):
