@@ -483,7 +483,8 @@ class LegoPartialDCTMod(nn.Module):
         x_hat = self.lin(f)
 
         if self.proj == 1:
-            x_hat = idct1(F.pad(x_hat, [0, h_dim - self.mod_n]))
+            x_hat = F.pad(x_hat, [0, h_dim - self.mod_n])
+            x_hat = idct1(x_hat)
 
         if self.dim != -1:
             x_hat = x_hat.transpose(-1, self.dim)
