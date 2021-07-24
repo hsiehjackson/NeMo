@@ -101,8 +101,8 @@ def create_dct_matrix(n):
     return W
 
 
-def init_weights(m, mode: Optional[str] = 'xavier_uniform', use_dft=False):
-    if use_dft and isinstance(m, nn.Linear) and m.weight.shape[-2] == m.weight.shape[-1]:
+def init_weights(m, mode: Optional[str] = 'xavier_uniform', use_dct=True):
+    if use_dct and isinstance(m, nn.Linear) and m.weight.shape[-2] == m.weight.shape[-1]:
         m.weight = nn.Parameter(create_dct_matrix(m.weight.shape[-1])).to(m.weight.device)
         print(m.weight.shape)
         print(m.weight)

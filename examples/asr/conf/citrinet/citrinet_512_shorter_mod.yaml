@@ -55,6 +55,7 @@ model:
     kernel_size_factor: 1.0
     normalization: "batch"
 
+
   tokenizer:
     dir: ???  # path to directory which contains either tokenizer.model (bpe) or vocab.txt (for wpe)
     type: ???  # Can be either bpe or wpe
