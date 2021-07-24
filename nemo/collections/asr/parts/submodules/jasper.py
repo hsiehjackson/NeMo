@@ -699,6 +699,8 @@ class JasperBlock(nn.Module):
             stride_last=False,
             future_context: int = -1,
             quantize=False,
+            use_dct=False,
+            use_subset=-1,
     ):
         super(JasperBlock, self).__init__()
 
@@ -746,6 +748,8 @@ class JasperBlock(nn.Module):
                     normalization=normalization,
                     norm_groups=norm_groups,
                     quantize=quantize,
+                    use_dct=use_dct,
+                    use_subset=use_subset,
                 )
             )
 
@@ -767,6 +771,8 @@ class JasperBlock(nn.Module):
                 normalization=normalization,
                 norm_groups=norm_groups,
                 quantize=quantize,
+                use_dct=use_dct,
+                use_subset=use_subset,
             )
         )
 
@@ -808,6 +814,8 @@ class JasperBlock(nn.Module):
                         norm_groups=norm_groups,
                         stride=stride_val,
                         quantize=quantize,
+                        use_dct=use_dct,
+                        use_subset=use_subset,
                     )
                 )
 
@@ -839,9 +847,11 @@ class JasperBlock(nn.Module):
             heads=-1,
             separable=False,
             quantize=False,
+            use_dct=False,
+            use_subset=-1,
     ):
         if kernel_size == 1 and stride == 1 and dilation == 1:
-            return SpecialLinear(in_channels, out_channels)
+            return SpecialLinear(in_channels, out_channels, use_dct=use_dct, use_subset=use_subset)
 
         use_mask = self.conv_mask
         if use_mask:
@@ -902,6 +912,8 @@ class JasperBlock(nn.Module):
             normalization="batch",
             norm_groups=1,
             quantize=False,
+            use_dct=False,
+            use_subset=-1
     ):
         if norm_groups == -1:
             norm_groups = out_channels
@@ -930,6 +942,8 @@ class JasperBlock(nn.Module):
                     bias=bias,
                     groups=groups,
                     quantize=quantize,
+                    use_dct=use_dct,
+                    use_subset=use_subset,
                 ),
             ]
         else:
