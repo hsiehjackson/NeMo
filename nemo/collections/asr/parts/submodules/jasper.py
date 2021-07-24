@@ -92,7 +92,7 @@ def dct1(x):
     """
     x_shape = x.shape
 
-    return torch.fft.rfft(torch.cat([x, x.flip([-1])[..., 1:-1]], dim=-1)).real.view(*x_shape)
+    return torch.fft.rfft(torch.cat([x, x.flip([-1])[..., 1:-1]], dim=-1), norm="ortho").real.view(*x_shape)
 
 
 def create_dct_matrix(n):
@@ -360,6 +360,8 @@ class SpecialLinear(nn.Module):
     ):
 
         super(SpecialLinear, self).__init__()
+
+        use_subset = min(use_subset, in_channels)
 
         if use_subset != -1:
             in_channels = use_subset
