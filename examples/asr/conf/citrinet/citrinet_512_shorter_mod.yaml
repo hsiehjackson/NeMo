@@ -15,6 +15,7 @@ name: &name "Citrinet-512-8x-Stride"
 
 model:
   sample_rate: &sample_rate 16000
+  log_prediction: true # enables logging sample predictions in the output during training
 
   train_ds:
     manifest_filepath: ???
