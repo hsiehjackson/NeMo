@@ -45,7 +45,7 @@ class LegoEncoder(NeuralModule, Exportable):
     Args:
         sub_blocks (ListConfig): list of configs for the sub-blocks within each block
         feat_in (int): the size of feature channels
-        n_blocks (int): number of blocks of ConformerBlock
+        n_blocks (tuple): number of blocks
         d_model (int): the hidden size of the model
         feat_out (int): the size of the output features
             Defaults to -1 (means feat_out is d_model)

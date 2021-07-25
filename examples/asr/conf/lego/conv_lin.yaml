@@ -62,7 +62,9 @@ model:
   encoder:
     _target_: nemo.collections.asr.modules.LegoEncoder
     feat_in: ${model.preprocessor.features}
-    n_blocks: (8, 4)
+    n_blocks:
+      - 8
+      - 4
     d_model: 512
     outer_residual: true
     multi_block_residual: false
