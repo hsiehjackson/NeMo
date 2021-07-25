@@ -523,9 +523,10 @@ class LegoAttentionBlock(nn.Module):
         x = F.pad(x, [0, 0, 0, pad_val])
 
         x_shape = x.shape
-        x = x.reshape(x.shape[:-2] + (x.shape[-2] // self.patch_size, self.patch_size, x.shape[-1]))
+        x = x.reshape((-1, self.patch_size, x.shape[-1]))
 
-        x = self.pos_emb(x)
+        if self.use_pos_emb:
+            x = self.pos_emb(x)
 
         x = self.attn(query=x,
                       key=x,
