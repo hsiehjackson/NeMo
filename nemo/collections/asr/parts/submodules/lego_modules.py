@@ -518,12 +518,20 @@ class LegoAttentionBlock(nn.Module):
     def forward(self, x):
         shift = self.patch_size // 2 * (self.block_id % 2)
 
+        print(x.shape)
+
         x = x[..., shift:, :]
+
+        print(x.shape)
+
         pad_val = self.patch_size - x.shape[-2] % self.patch_size
         x = F.pad(x, [0, 0, 0, pad_val])
 
         x_shape = x.shape
         x = x.reshape((-1, self.patch_size, x.shape[-1]))
+
+        print(x_shape)
+        print(x.shape)
 
         if self.use_pos_emb:
             x = self.pos_emb(x)
@@ -533,8 +541,12 @@ class LegoAttentionBlock(nn.Module):
                       value=x,
                       mask=None)
 
+
         x = x.reshape(x_shape)
         x = x[..., :pad_val, :]
+        print(x.shape)
         x = F.pad(x, [0, 0, shift, 0])
+
+        print(x.shape)
 
         return x
