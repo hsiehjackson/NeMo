@@ -128,63 +128,18 @@ class LegoEncoder(NeuralModule, Exportable):
         self.conv_stride_every = conv_stride_every
         self.conv_stride_total = conv_stride_total
 
-        """if subsampling_conv_channels == -1:
-            subsampling_conv_channels = d_model
-        if subsampling and subsampling_factor > 1:
-            self.pre_encode = ConvSubsampling(
-                subsampling=subsampling,
-                subsampling_factor=subsampling_factor,
-                feat_in=feat_in,
-                feat_out=d_model,
-                conv_channels=subsampling_conv_channels,
-                activation=nn.ReLU(),
-            )
-            self._feat_out = d_model
-        #else:"""
         self.pre_encode = nn.Linear(feat_in, d_model)
-
-        pos_bias_u = None
-        pos_bias_v = None
-
-        if pos_emb_mode == "rel_pos":
-            self.pos_enc = RelPositionalEncoding(
-                d_model=d_model,
-                dropout_rate=dropout,
-                max_len=pos_emb_max_len,
-                dropout_rate_emb=dropout,
-            )
-        elif pos_emb_mode == "abs_pos":
-            self.pos_enc = PositionalEncoding(
-                d_model=d_model, dropout_rate=dropout, max_len=pos_emb_max_len
-            )
-        else:
-            raise ValueError(f"Not valid positional embedding mode: '{pos_emb_mode}'!")
-
 
         self.blocks = nn.ModuleList()
 
-        cur_id = 0
-
         for i in range(len(n_blocks)):
             proto_block = LegoBlock(sub_blocks[i], d_model, outer_residual=outer_residual, dropout=dropout)
+            cur_id = 0
             for j in range(n_blocks[i]):
                 block = deepcopy(proto_block)  # LegoBlock(sub_blocks, d_model, outer_residual=outer_residual)
                 block.id = cur_id
                 cur_id += 1
                 self.blocks.append(block)
-
-        """self.attn_epilogue = nn.ModuleList()
-        for i in range(3):
-            self.attn_epilogue.append(
-                RelPositionMultiHeadAttention(
-                    n_head=4,
-                    n_feat=d_model,
-                    dropout_rate=dropout,
-                    pos_bias_u=pos_bias_u,
-                    pos_bias_v=pos_bias_v
-                )
-            )"""
-
 
         if feat_out > 0 and feat_out != self.output_dim:
             self.out_proj = nn.Linear(d_model, feat_out)
@@ -212,20 +167,6 @@ class LegoEncoder(NeuralModule, Exportable):
             audio_signal, length = self.pre_encode(audio_signal, length)
         else:
             audio_signal = self.pre_encode(audio_signal)
-
-        #audio_signal, pos_emb = self.pos_enc(audio_signal)
-        bs, xmax, idim = audio_signal.size()
-
-        # Create the self-attention and padding masks
-        """pad_mask = self.make_pad_mask(length, max_time=xmax, device=audio_signal.device)
-        att_mask = pad_mask.unsqueeze(1).repeat([1, xmax, 1])
-        att_mask = att_mask & att_mask.transpose(1, 2)
-        if self.att_context_size[0] >= 0:
-            att_mask = att_mask.triu(diagonal=-self.att_context_size[0])
-        if self.att_context_size[1] >= 0:
-            att_mask = att_mask.tril(diagonal=self.att_context_size[1])
-        att_mask = ~att_mask
-        pad_mask = ~pad_mask"""
 
         prev_signal = audio_signal
 

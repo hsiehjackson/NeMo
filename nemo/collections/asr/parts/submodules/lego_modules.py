@@ -28,6 +28,7 @@ from nemo.collections.asr.parts.submodules.multi_head_attention import (
     MultiHeadAttention,
     RelPositionMultiHeadAttention,
 )
+from nemo.collections.asr.parts.submodules.multi_head_attention import PositionalEncoding, RelPositionalEncoding
 
 # LegoBlock is initialized based on list of sub_block configs
 
@@ -56,6 +57,8 @@ class LegoBlock(NeuralModule):
             dropout=0.,
             outer_residual=False,
             id=0,
+            attn_mask=None,
+            pos_emb=None
     ):
         super(LegoBlock, self).__init__()
 
@@ -79,7 +82,7 @@ class LegoBlock(NeuralModule):
 
         self.activation = nn.ReLU()
 
-    def forward(self, x, lens, att_mask=None, pos_emb=None, pad_mask=None):
+    def forward(self, x, lens):
         """
         Args:
             x (torch.Tensor): input signals (B, T, d_model)
@@ -439,10 +442,10 @@ def dct1(x):
     x_shape = x.shape
     x = x.view(-1, x_shape[-1])
 
-    #print(x_shape)
-    #print(x.shape)
-    #print(torch.cat([x, x.flip([1])[..., 1:-1]], dim=1).shape)
-    #print(torch.fft.rfft(torch.cat([x, x.flip([1])[..., 1:-1]], dim=1)).shape)
+    # print(x_shape)
+    # print(x.shape)
+    # print(torch.cat([x, x.flip([1])[..., 1:-1]], dim=1).shape)
+    # print(torch.fft.rfft(torch.cat([x, x.flip([1])[..., 1:-1]], dim=1)).shape)
 
     return torch.fft.rfft(torch.cat([x, torch.flip(x, [-1])[..., 1:-1]], dim=-1)).real.view(*x_shape)
 
@@ -499,20 +502,38 @@ class LegoPartialDCTMod(nn.Module):
 
 class LegoAttentionBlock(nn.Module):
 
-    def __init__(self, d_model, n_heads=4):
-
+    def __init__(self, d_model, n_heads=4, patch_size=128, use_pos_emb=True):
         super(LegoAttentionBlock, self).__init__()
 
-        self.attn = RelPositionMultiHeadAttention(n_head=n_heads,
-                                                  n_feat=d_model,
-                                                  dropout_rate=0,
-                                                  pos_bias_u=None,
-                                                  pos_bias_v=None)
+        self.attn = MultiHeadAttention(n_head=n_heads,
+                                       n_feat=d_model,
+                                       dropout_rate=0)
 
-    def forward(self, x, mask=None, pos_emb=None):
+        self.use_pos_emb = use_pos_emb
+        if use_pos_emb:
+            self.pos_emb = PositionalEncoding(d_model, dropout_rate=0., max_len=patch_size)
 
-        return self.attn(query=x,
-                         key=x,
-                         value=x,
-                         mask=mask,
-                         pos_emb=pos_emb)
+        self.patch_size = patch_size
+
+    def forward(self, x):
+        shift = self.patch_size // 2 * (self.block_id % 2)
+
+        x = x[..., shift:, :]
+        pad_val = self.patch_size - x.shape[-2] % self.patch_size
+        x = F.pad(x, [0, 0, 0, pad_val])
+
+        x_shape = x.shape
+        x = x.reshape(x.shape[:-2], x.shape[-2] // self.patch_size, self.patch_size, x.shape[-1])
+
+        x = self.pos_emb(x)
+
+        x = self.attn(query=x,
+                      key=x,
+                      value=x,
+                      mask=None)
+
+        x = x.reshape(x_shape)
+        x = x[..., :pad_val, :]
+        x = F.pad(x, [0, 0, shift, 0])
+
+        return x

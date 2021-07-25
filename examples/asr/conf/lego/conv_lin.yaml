@@ -71,8 +71,6 @@ model:
     multi_block_residual_skip: ${model.encoder.conv_stride_every}
     dropout: 0.
 
-    pos_emb_mode: 'rel_pos'
-
     sub_blocks:
       - - _target_: nemo.collections.asr.parts.submodules.lego_modules.LegoConvSubBlock
           d_model: ${model.encoder.d_model}
@@ -81,9 +79,9 @@ model:
         - _target_: nemo.collections.asr.parts.submodules.lego_modules.LegoLinearSubBlock
           d_model: ${model.encoder.d_model}
 
-      - - _target_: nemo.collections.asr.parts.submodules.lego_modules.LegoConvSubBlock
+      - - _target_: nemo.collections.asr.parts.submodules.lego_modules.LegoAttentionBlock
           d_model: ${model.encoder.d_model}
-          kernel_size: 31
+          patch_size: 128
 
         - _target_: nemo.collections.asr.parts.submodules.lego_modules.LegoLinearSubBlock
           d_model: ${model.encoder.d_model}
