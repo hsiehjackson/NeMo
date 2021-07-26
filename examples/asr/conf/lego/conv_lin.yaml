@@ -63,7 +63,8 @@ model:
     _target_: nemo.collections.asr.modules.LegoEncoder
     feat_in: ${model.preprocessor.features}
     n_blocks:
-      - 12
+      - 6
+      - 6
     d_model: 512
     outer_residual: true
     multi_block_residual: false
@@ -77,9 +78,13 @@ model:
           d_model: ${model.encoder.d_model}
           kernel_size: 17
 
-        - _target_: nemo.collections.asr.parts.submodules.lego_modules.LegoAttentionBlock
+        - _target_: nemo.collections.asr.parts.submodules.lego_modules.LegoLinearSubBlock
           d_model: ${model.encoder.d_model}
-          patch_size: 64
+
+      - - _target_: nemo.collections.asr.parts.submodules.lego_modules.LegoAttentionBlock
+          d_model: ${model.encoder.d_model}
+          patch_size: 128
+          n_hidden: 128
 
         - _target_: nemo.collections.asr.parts.submodules.lego_modules.LegoLinearSubBlock
           d_model: ${model.encoder.d_model}
