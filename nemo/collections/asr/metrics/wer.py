@@ -161,7 +161,7 @@ class WER(Metric):
 
             if self.log_prediction and ind == 0:
                 logging.info(f"\n")
-                logging.info(f" predicted tokens:{str(self.decode_ids_to_tokens(decoded_prediction))}")
+                logging.info(f"predicted tokens:{str(self.decode_ids_to_tokens(decoded_prediction))}")
                 logging.info(f"lengths:{str(decoded_l)}")
 
             if not return_hypotheses:
