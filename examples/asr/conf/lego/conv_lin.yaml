@@ -64,7 +64,6 @@ model:
     feat_in: ${model.preprocessor.features}
     n_blocks:
       - 12
-      - 0
     d_model: 512
     outer_residual: true
     multi_block_residual: false
