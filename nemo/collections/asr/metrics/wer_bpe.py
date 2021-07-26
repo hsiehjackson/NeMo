@@ -59,13 +59,13 @@ class WERBPE(Metric):
     """
 
     def __init__(
-        self,
-        tokenizer: TokenizerSpec,
-        batch_dim_index=0,
-        use_cer=False,
-        ctc_decode=True,
-        log_prediction=True,
-        dist_sync_on_step=False,
+            self,
+            tokenizer: TokenizerSpec,
+            batch_dim_index=0,
+            use_cer=False,
+            ctc_decode=True,
+            log_prediction=True,
+            dist_sync_on_step=False,
     ):
         super().__init__(dist_sync_on_step=dist_sync_on_step, compute_on_step=False)
         self.tokenizer = tokenizer
@@ -79,7 +79,7 @@ class WERBPE(Metric):
         self.add_state("words", default=torch.tensor(0), dist_reduce_fx='sum', persistent=False)
 
     def ctc_decoder_predictions_tensor(
-        self, predictions: torch.Tensor, predictions_len: torch.Tensor = None, return_hypotheses: bool = False
+            self, predictions: torch.Tensor, predictions_len: torch.Tensor = None, return_hypotheses: bool = False
     ) -> List[str]:
         """
         Decodes a sequence of labels to words
@@ -126,7 +126,7 @@ class WERBPE(Metric):
             if self.log_prediction and ind == 0:
                 logging.info(f"\n")
                 logging.info(f"predicted tokens:{str(self.decode_ids_to_tokens(decoded_prediction))}")
-                logging.info(f"lengths:{str(decoded_l)}")
+                logging.info(f"lengths:{str(decoded_l)}, total:{sum(decoded_l)}")
 
             if not return_hypotheses:
                 hypothesis = text
@@ -169,11 +169,11 @@ class WERBPE(Metric):
         return token_list
 
     def update(
-        self,
-        predictions: torch.Tensor,
-        targets: torch.Tensor,
-        target_lengths: torch.Tensor,
-        predictions_lengths: torch.Tensor = None,
+            self,
+            predictions: torch.Tensor,
+            targets: torch.Tensor,
+            target_lengths: torch.Tensor,
+            predictions_lengths: torch.Tensor = None,
     ):
         words = 0.0
         scores = 0.0

@@ -108,22 +108,14 @@ class LegoBlock(NeuralModule):
             # x = self.activation(x)
             x = self.dropout(x)
 
-            # bad
-            if hasattr(sub_block, 'residual_type'):
-                if sub_block.residual_type == 'add':
-                    x = residual + x
-                elif sub_block.residual_type == 'multiply':
-                    x = F.sigmoid(x)
-                    x = residual * x
-            else:
-                x = self.activation(x)
+            x = self.activation(x)
+            if residual.shape == x.shape:
                 x = residual + x
-                # residual add by default
 
         x = self.final_norm(x)
         # x = self.final_norm(x.transpose(-2, -1)).transpose(-2, -1)
 
-        if self.outer_residual:
+        if self.outer_residual and outer_residual.shape == x.shape:
             x = outer_residual + x
 
         return x, lens
@@ -131,24 +123,36 @@ class LegoBlock(NeuralModule):
 
 class LegoConvSubBlock(nn.Module):
 
-    def __init__(self, d_model, kernel_size=31, axis="time", residual_type="add", stride=1):
+    def __init__(self, d_model, kernel_size=31, axis="time", stride=1, transpose=False):
         super(LegoConvSubBlock, self).__init__()
         assert (kernel_size - 1) % 2 == 0
         self.d_model = d_model
+        self.transpose = transpose
+        self.stride = stride
 
-        self.depthwise_conv = MaskedConv1d(
-            in_channels=d_model,
-            out_channels=d_model,
-            kernel_size=kernel_size,
-            stride=stride,
-            padding=(kernel_size - 1) // 2,
-            groups=d_model,
-            bias=True,
-        )
+        if not self.transpose:
+            self.depthwise_conv = MaskedConv1d(
+                in_channels=d_model,
+                out_channels=d_model,
+                kernel_size=kernel_size,
+                stride=stride,
+                padding=(kernel_size - 1) // 2,
+                groups=d_model,
+                bias=True,
+            )
+        else:
+            self.depthwise_conv = nn.ConvTranspose1d(
+                in_channels=d_model,
+                out_channels=d_model,
+                kernel_size=kernel_size,
+                stride=stride,
+                padding=(kernel_size - 3) // 2,
+                groups=d_model,
+                bias=True,
+            )
 
         self.axis = axis
 
-        self.residual_type = residual_type
 
     def forward(self, x, lens, pad_mask=None):
         if self.axis == "time":
@@ -156,7 +160,11 @@ class LegoConvSubBlock(nn.Module):
             if pad_mask is not None:
                 x.masked_fill_(pad_mask.unsqueeze(1), 0.0)
 
-        x, lens = self.depthwise_conv(x, lens)
+        if not self.transpose:
+            x, lens = self.depthwise_conv(x, lens)
+        else:
+            x = self.depthwise_conv(x)
+            lens = 2 * lens
 
         if self.axis == "time":
             x = x.transpose(-2, -1)
@@ -293,7 +301,7 @@ class LegoChannelShuffle(nn.Module):
 
 class LegoPartialFourierMod(nn.Module):
 
-    def __init__(self, dim=-1, mod_n=16, complex_linear=True, residual_type='add', pool=False, f_exp=1,
+    def __init__(self, dim=-1, mod_n=16, complex_linear=True, pool=False, f_exp=1,
                  proj_type=1, dim_final=-1, ln_around_freq=False, patch_size=-1, shift=0):
         super(LegoPartialFourierMod, self).__init__()
 
@@ -332,8 +340,6 @@ class LegoPartialFourierMod(nn.Module):
         self.patch_size = patch_size
 
         self.shift = shift
-
-        self.residual_type = residual_type
 
     def forward(self, x):
         if self.dim != -1:

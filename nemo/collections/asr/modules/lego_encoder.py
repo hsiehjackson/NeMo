@@ -113,8 +113,8 @@ class LegoEncoder(NeuralModule, Exportable):
             outer_residual=False,
             multi_block_residual=False,
             multi_block_residual_skip=3,
-            conv_stride_every=3,
-            conv_stride_total=3,
+            #conv_stride_every=3,
+            #conv_stride_total=3,
     ):
         super().__init__()
 
@@ -125,8 +125,8 @@ class LegoEncoder(NeuralModule, Exportable):
         self.multi_block_residual = multi_block_residual
         self.multi_block_residual_skip = multi_block_residual_skip
 
-        self.conv_stride_every = conv_stride_every
-        self.conv_stride_total = conv_stride_total
+        #self.conv_stride_every = conv_stride_every
+        #self.conv_stride_total = conv_stride_total
 
         self.pre_encode = nn.Linear(feat_in, d_model)
 
@@ -148,10 +148,10 @@ class LegoEncoder(NeuralModule, Exportable):
             self.out_proj = None
             self._feat_out = d_model
 
-        self.stride_blocks = nn.ModuleList()
-        for i in range(conv_stride_total):
-            block = LegoConvSubBlock(d_model, stride=2)
-            self.stride_blocks.append(block)
+        #self.stride_blocks = nn.ModuleList()
+        #for i in range(conv_stride_total):
+        #    block = LegoConvSubBlock(d_model, stride=2)
+        #    self.stride_blocks.append(block)
 
         self.apply(lambda x: init_weights(x, mode='xavier_uniform'))
 
@@ -170,14 +170,10 @@ class LegoEncoder(NeuralModule, Exportable):
 
         prev_signal = audio_signal
 
-        strides_done = 0
-
         for lth, block in enumerate(self.blocks):
-            if lth > 0 and self.multi_block_residual and lth % self.multi_block_residual_skip == 0:
+            if lth > 0 and self.multi_block_residual and lth % self.multi_block_residual_skip == 0 \
+                    and prev_signal.shape == audio_signal.shape:
                 audio_signal += prev_signal
-            if lth % self.conv_stride_every == 0 and strides_done < self.conv_stride_total:
-                audio_signal, length = self.stride_blocks[strides_done](audio_signal, length)
-                strides_done += 1
             audio_signal, length = block(x=audio_signal, lens=length)
             if self.multi_block_residual and lth % self.multi_block_residual_skip == 0:
                 prev_signal = audio_signal
