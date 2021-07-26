@@ -48,6 +48,8 @@ model:
     se: true
     se_context_size: -1
     kernel_size_factor: 1.0
+    use_dct: false
+    use_subset: -1
 
   tokenizer:
     dir: ???  # path to directory which contains either tokenizer.model (bpe) or vocab.txt (for wpe)
@@ -91,6 +93,8 @@ model:
         separable: ${model.model_defaults.separable}
         se: ${model.model_defaults.se}
         se_context_size: ${model.model_defaults.se_context_size}
+        use_dct: ${model.model_defaults.use_dct}
+        use_subset: ${model.model_defaults.use_subset}
 
       - filters: 512
         repeat: ${model.model_defaults.repeat}
@@ -105,6 +109,8 @@ model:
         stride_last: true
         residual_mode: "stride_add"
         kernel_size_factor: ${model.model_defaults.kernel_size_factor}
+        use_dct: ${model.model_defaults.use_dct}
+        use_subset: ${model.model_defaults.use_subset}
 
       - filters: 512
         repeat: ${model.model_defaults.repeat}
@@ -117,6 +123,8 @@ model:
         se: ${model.model_defaults.se}
         se_context_size: ${model.model_defaults.se_context_size}
         kernel_size_factor: ${model.model_defaults.kernel_size_factor}
+        use_dct: ${model.model_defaults.use_dct}
+        use_subset: ${model.model_defaults.use_subset}
 
       - filters: 512
         repeat: ${model.model_defaults.repeat}
@@ -129,6 +137,8 @@ model:
         se: ${model.model_defaults.se}
         se_context_size: ${model.model_defaults.se_context_size}
         kernel_size_factor: ${model.model_defaults.kernel_size_factor}
+        use_dct: ${model.model_defaults.use_dct}
+        use_subset: ${model.model_defaults.use_subset}
 
       - filters: 512
         repeat: ${model.model_defaults.repeat}
@@ -141,6 +151,8 @@ model:
         se: ${model.model_defaults.se}
         se_context_size: ${model.model_defaults.se_context_size}
         kernel_size_factor: ${model.model_defaults.kernel_size_factor}
+        use_dct: ${model.model_defaults.use_dct}
+        use_subset: ${model.model_defaults.use_subset}
 
       - filters: 512
         repeat: ${model.model_defaults.repeat}
@@ -153,6 +165,8 @@ model:
         se: ${model.model_defaults.se}
         se_context_size: ${model.model_defaults.se_context_size}
         kernel_size_factor: ${model.model_defaults.kernel_size_factor}
+        use_dct: ${model.model_defaults.use_dct}
+        use_subset: ${model.model_defaults.use_subset}
 
       - filters: 512
         repeat: ${model.model_defaults.repeat}
@@ -165,6 +179,8 @@ model:
         se: ${model.model_defaults.se}
         se_context_size: ${model.model_defaults.se_context_size}
         kernel_size_factor: ${model.model_defaults.kernel_size_factor}
+        use_dct: ${model.model_defaults.use_dct}
+        use_subset: ${model.model_defaults.use_subset}
 
       - filters: 512
         repeat: ${model.model_defaults.repeat}
@@ -179,6 +195,8 @@ model:
         stride_last: true
         residual_mode: "stride_add"
         kernel_size_factor: ${model.model_defaults.kernel_size_factor}
+        use_dct: ${model.model_defaults.use_dct}
+        use_subset: ${model.model_defaults.use_subset}
 
       - filters: 512
         repeat: ${model.model_defaults.repeat}
@@ -191,6 +209,8 @@ model:
         se: ${model.model_defaults.se}
         se_context_size: ${model.model_defaults.se_context_size}
         kernel_size_factor: ${model.model_defaults.kernel_size_factor}
+        use_dct: ${model.model_defaults.use_dct}
+        use_subset: ${model.model_defaults.use_subset}
 
       - filters: 512
         repeat: ${model.model_defaults.repeat}
@@ -203,6 +223,8 @@ model:
         se: ${model.model_defaults.se}
         se_context_size: ${model.model_defaults.se_context_size}
         kernel_size_factor: ${model.model_defaults.kernel_size_factor}
+        use_dct: ${model.model_defaults.use_dct}
+        use_subset: ${model.model_defaults.use_subset}
 
       - filters: 512
         repeat: ${model.model_defaults.repeat}
@@ -215,6 +237,8 @@ model:
         se: ${model.model_defaults.se}
         se_context_size: ${model.model_defaults.se_context_size}
         kernel_size_factor: ${model.model_defaults.kernel_size_factor}
+        use_dct: ${model.model_defaults.use_dct}
+        use_subset: ${model.model_defaults.use_subset}
 
       - filters: 512
         repeat: ${model.model_defaults.repeat}
@@ -227,6 +251,8 @@ model:
         se: ${model.model_defaults.se}
         se_context_size: ${model.model_defaults.se_context_size}
         kernel_size_factor: ${model.model_defaults.kernel_size_factor}
+        use_dct: ${model.model_defaults.use_dct}
+        use_subset: ${model.model_defaults.use_subset}
 
       - filters: 512
         repeat: ${model.model_defaults.repeat}
@@ -239,6 +265,8 @@ model:
         se: ${model.model_defaults.se}
         se_context_size: ${model.model_defaults.se_context_size}
         kernel_size_factor: ${model.model_defaults.kernel_size_factor}
+        use_dct: ${model.model_defaults.use_dct}
+        use_subset: ${model.model_defaults.use_subset}
 
       - filters: 512
         repeat: ${model.model_defaults.repeat}
@@ -251,6 +279,8 @@ model:
         se: ${model.model_defaults.se}
         se_context_size: ${model.model_defaults.se_context_size}
         kernel_size_factor: ${model.model_defaults.kernel_size_factor}
+        use_dct: ${model.model_defaults.use_dct}
+        use_subset: ${model.model_defaults.use_subset}
 
       - filters: 512
         repeat: ${model.model_defaults.repeat}
@@ -265,6 +295,8 @@ model:
         stride_last: true
         residual_mode: "stride_add"
         kernel_size_factor: ${model.model_defaults.kernel_size_factor}
+        use_dct: ${model.model_defaults.use_dct}
+        use_subset: ${model.model_defaults.use_subset}
 
       - filters: 512
         repeat: ${model.model_defaults.repeat}
@@ -277,6 +309,8 @@ model:
         se: ${model.model_defaults.se}
         se_context_size: ${model.model_defaults.se_context_size}
         kernel_size_factor: ${model.model_defaults.kernel_size_factor}
+        use_dct: ${model.model_defaults.use_dct}
+        use_subset: ${model.model_defaults.use_subset}
 
       - filters: 512
         repeat: ${model.model_defaults.repeat}
@@ -289,6 +323,8 @@ model:
         se: ${model.model_defaults.se}
         se_context_size: ${model.model_defaults.se_context_size}
         kernel_size_factor: ${model.model_defaults.kernel_size_factor}
+        use_dct: ${model.model_defaults.use_dct}
+        use_subset: ${model.model_defaults.use_subset}
 
       - filters: 512
         repeat: ${model.model_defaults.repeat}
@@ -301,6 +337,8 @@ model:
         se: ${model.model_defaults.se}
         se_context_size: ${model.model_defaults.se_context_size}
         kernel_size_factor: ${model.model_defaults.kernel_size_factor}
+        use_dct: ${model.model_defaults.use_dct}
+        use_subset: ${model.model_defaults.use_subset}
 
       - filters: 512
         repeat: ${model.model_defaults.repeat}
@@ -313,6 +351,8 @@ model:
         se: ${model.model_defaults.se}
         se_context_size: ${model.model_defaults.se_context_size}
         kernel_size_factor: ${model.model_defaults.kernel_size_factor}
+        use_dct: ${model.model_defaults.use_dct}
+        use_subset: ${model.model_defaults.use_subset}
 
       - filters: 512
         repeat: ${model.model_defaults.repeat}
@@ -325,6 +365,8 @@ model:
         se: ${model.model_defaults.se}
         se_context_size: ${model.model_defaults.se_context_size}
         kernel_size_factor: ${model.model_defaults.kernel_size_factor}
+        use_dct: ${model.model_defaults.use_dct}
+        use_subset: ${model.model_defaults.use_subset}
 
       - filters: 512
         repeat: ${model.model_defaults.repeat}
@@ -337,6 +379,8 @@ model:
         se: ${model.model_defaults.se}
         se_context_size: ${model.model_defaults.se_context_size}
         kernel_size_factor: ${model.model_defaults.kernel_size_factor}
+        use_dct: ${model.model_defaults.use_dct}
+        use_subset: ${model.model_defaults.use_subset}
 
       - filters: 512
         repeat: ${model.model_defaults.repeat}
@@ -349,6 +393,8 @@ model:
         se: ${model.model_defaults.se}
         se_context_size: ${model.model_defaults.se_context_size}
         kernel_size_factor: ${model.model_defaults.kernel_size_factor}
+        use_dct: ${model.model_defaults.use_dct}
+        use_subset: ${model.model_defaults.use_subset}
 
       - filters: &enc_final 640
         repeat: 1
@@ -361,6 +407,8 @@ model:
         se: ${model.model_defaults.se}
         se_context_size: ${model.model_defaults.se_context_size}
         kernel_size_factor: ${model.model_defaults.kernel_size_factor}
+        use_dct: ${model.model_defaults.use_dct}
+        use_subset: ${model.model_defaults.use_subset}
 
 
   decoder:
