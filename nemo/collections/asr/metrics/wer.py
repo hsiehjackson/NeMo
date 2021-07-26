@@ -146,13 +146,23 @@ class WER(Metric):
                 prediction = prediction[: predictions_len[ind]]
             # CTC decoding procedure
             decoded_prediction = []
+            decoded_l = []
             previous = self.blank_id
+            cur_l = 0
             for p in prediction:
                 if (p != previous or previous == self.blank_id) and p != self.blank_id:
                     decoded_prediction.append(p)
+                    decoded_l.append(cur_l)
+                    cur_l = 0
                 previous = p
+                cur_l += 1
 
             text = self.decode_tokens_to_str(decoded_prediction)
+
+            if self.log_prediction and ind == 0:
+                logging.info(f"\n")
+                logging.info(f" predicted tokens:{str(self.decode_ids_to_tokens(decoded_prediction))}")
+                logging.info(f"lengths:{str(decoded_l)}")
 
             if not return_hypotheses:
                 hypothesis = text
