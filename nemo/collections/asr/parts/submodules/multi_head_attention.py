@@ -53,17 +53,19 @@ class MultiHeadAttention(nn.Module):
         dropout_rate (float): dropout rate
     """
 
-    def __init__(self, n_head, n_feat, dropout_rate):
+    def __init__(self, n_head, n_feat, dropout_rate, n_hidden=None):
         """Construct an MultiHeadedAttention object."""
         super(MultiHeadAttention, self).__init__()
-        assert n_feat % n_head == 0
+        if n_hidden is None:
+            n_hidden = n_feat
+        assert n_hidden % n_head == 0
         # We assume d_v always equals d_k
         self.d_k = n_feat // n_head
         self.h = n_head
-        self.linear_q = nn.Linear(n_feat, n_feat)
-        self.linear_k = nn.Linear(n_feat, n_feat)
-        self.linear_v = nn.Linear(n_feat, n_feat)
-        self.linear_out = nn.Linear(n_feat, n_feat)
+        self.linear_q = nn.Linear(n_feat, n_hidden)
+        self.linear_k = nn.Linear(n_feat, n_hidden)
+        self.linear_v = nn.Linear(n_feat, n_hidden)
+        self.linear_out = nn.Linear(n_hidden, n_feat)
         self.attn = None
         self.dropout = nn.Dropout(p=dropout_rate)
 

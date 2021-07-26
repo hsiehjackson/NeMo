@@ -502,12 +502,13 @@ class LegoPartialDCTMod(nn.Module):
 
 class LegoAttentionBlock(nn.Module):
 
-    def __init__(self, d_model, n_heads=4, patch_size=128, use_pos_emb=True):
+    def __init__(self, d_model, n_heads=4, patch_size=128, use_pos_emb=True, n_hidden=None):
         super(LegoAttentionBlock, self).__init__()
 
         self.attn = MultiHeadAttention(n_head=n_heads,
                                        n_feat=d_model,
-                                       dropout_rate=0)
+                                       dropout_rate=0,
+                                       n_hidden=n_hidden)
 
         self.use_pos_emb = use_pos_emb
         if use_pos_emb:
