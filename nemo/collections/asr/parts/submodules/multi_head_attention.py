@@ -60,7 +60,7 @@ class MultiHeadAttention(nn.Module):
             n_hidden = n_feat
         assert n_hidden % n_head == 0
         # We assume d_v always equals d_k
-        self.d_k = n_feat // n_head
+        self.d_k = n_hidden // n_head
         self.h = n_head
         self.linear_q = nn.Linear(n_feat, n_hidden)
         self.linear_k = nn.Linear(n_feat, n_hidden)
