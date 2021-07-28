@@ -714,6 +714,7 @@ class JasperBlock(nn.Module):
             quantize=False,
             use_dct=False,
             use_subset=-1,
+            dct_type=1,
     ):
         super(JasperBlock, self).__init__()
 
@@ -763,6 +764,7 @@ class JasperBlock(nn.Module):
                     quantize=quantize,
                     use_dct=use_dct,
                     use_subset=use_subset,
+                    dct_type=dct_type
                 )
             )
 
@@ -786,6 +788,8 @@ class JasperBlock(nn.Module):
                 quantize=quantize,
                 use_dct=use_dct,
                 use_subset=use_subset,
+                dct_type=dct_type
+
             )
         )
 
@@ -829,6 +833,8 @@ class JasperBlock(nn.Module):
                         quantize=quantize,
                         use_dct=use_dct,
                         use_subset=use_subset,
+                        dct_type=dct_type
+
                     )
                 )
 
@@ -862,9 +868,13 @@ class JasperBlock(nn.Module):
             quantize=False,
             use_dct=False,
             use_subset=-1,
+            dct_type=1,
     ):
         if kernel_size == 1 and stride == 1 and dilation == 1:
-            return SpecialLinear(in_channels, out_channels, use_dct=use_dct, use_subset=use_subset)
+            return SpecialLinear(in_channels, out_channels,
+                                 use_dct=use_dct,
+                                 use_subset=use_subset,
+                                 dct_type=dct_type)
 
         use_mask = self.conv_mask
         if use_mask:
@@ -926,7 +936,8 @@ class JasperBlock(nn.Module):
             norm_groups=1,
             quantize=False,
             use_dct=False,
-            use_subset=-1
+            use_subset=-1,
+            dct_type=1
     ):
         if norm_groups == -1:
             norm_groups = out_channels
@@ -957,6 +968,7 @@ class JasperBlock(nn.Module):
                     quantize=quantize,
                     use_dct=use_dct,
                     use_subset=use_subset,
+                    dct_type=dct_type,
                 ),
             ]
         else:
