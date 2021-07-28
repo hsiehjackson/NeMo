@@ -357,6 +357,7 @@ class SpecialLinear(nn.Module):
             expand_factor=1,
             use_subset=128,
             use_dct=True,
+            dct_type=1,
     ):
 
         super(SpecialLinear, self).__init__()
@@ -366,17 +367,25 @@ class SpecialLinear(nn.Module):
         if use_subset != -1:
             in_channels = use_subset
 
+        lin_out = out_channels
+        if dct_type == 2:
+            lin_out = in_channels
+
         if not use_double:
-            self.lin = nn.Linear(in_channels, out_channels)
+            self.lin = nn.Linear(in_channels, lin_out)
         else:
             self.lin1 = nn.Linear(in_channels, in_channels * expand_factor)
-            self.lin2 = nn.Linear(in_channels * expand_factor, out_channels)
+            self.lin2 = nn.Linear(in_channels * expand_factor, lin_out)
 
             self.nonlin = nn.ReLU()
+
+        self.out_channels = out_channels
+        self.lin_out = lin_out
 
         self.use_double = use_double
         self.use_subset = use_subset
         self.use_dct = use_dct
+        self.dct_type = dct_type
 
     def forward(self, x):
         x = x.transpose(-2, -1)
@@ -392,6 +401,10 @@ class SpecialLinear(nn.Module):
             x = self.lin2(x)
         else:
             x = self.lin(x)
+
+        if self.dct_type == 2:
+            x = F.pad(x, [0, self.out_channels - self.lin_out])
+            x = dct1(x)
 
         x = x.transpose(-2, -1)
 
