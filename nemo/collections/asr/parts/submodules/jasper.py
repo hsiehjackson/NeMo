@@ -958,6 +958,9 @@ class JasperBlock(nn.Module):
                     groups=in_channels,
                     heads=heads,
                     quantize=quantize,
+                    use_dct=use_dct,
+                    use_subset=use_subset,
+                    dct_type=dct_type,
                 ),
                 self._get_conv(
                     in_channels,
@@ -986,6 +989,9 @@ class JasperBlock(nn.Module):
                     bias=bias,
                     groups=groups,
                     quantize=quantize,
+                    use_dct=use_dct,
+                    use_subset=use_subset,
+                    dct_type=dct_type,
                 )
             ]
 
