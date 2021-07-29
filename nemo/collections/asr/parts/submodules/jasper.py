@@ -392,7 +392,10 @@ class SpecialLinear(nn.Module):
 
         if self.use_subset != -1:
             if self.use_dct:
-                x = dct1(x)
+                if self.dct_type == 1 or self.dct_type == 2:
+                    x = dct1(x)
+                else:
+                    x = torch.fft.rfft(x).real
             x = x[..., :self.use_subset]
 
         if self.use_double:
