@@ -105,7 +105,7 @@ def init_weights(m, mode: Optional[str] = 'xavier_uniform', use_dct=False):
     if use_dct and isinstance(m, nn.Linear) and m.weight.shape[-2] == m.weight.shape[-1]:
         m.weight = nn.Parameter(create_dct_matrix(m.weight.shape[-1])).to(m.weight.device)
         print(m.weight.shape)
-        #print(m.weight)
+        # print(m.weight)
         return
 
     if isinstance(m, MaskedConv1d):
@@ -127,7 +127,7 @@ def init_weights(m, mode: Optional[str] = 'xavier_uniform', use_dct=False):
             else:
                 raise ValueError("Unknown Initialization mode: {0}".format(mode))
             print(m.weight.shape)
-            #print(m.weight)
+            # print(m.weight)
 
     elif isinstance(m, nn.BatchNorm1d):
         if m.track_running_stats:
@@ -442,7 +442,7 @@ class SqueezeExcite(nn.Module):
             interpolation_mode: str = 'nearest',
             activation: Optional[Callable] = None,
             quantize: bool = False,
-            use_dct = False,
+            use_dct=False,
     ):
         """
         Squeeze-and-Excitation sub-module.
@@ -468,6 +468,7 @@ class SqueezeExcite(nn.Module):
         self.change_context_window(context_window=context_window)
 
         self.hidden_dim = channels // reduction_ratio
+        self.use_dct = use_dct
 
         if activation is None:
             activation = nn.ReLU(inplace=True)
@@ -1016,7 +1017,7 @@ class JasperBlock(nn.Module):
                 f"Normalization method ({normalization}) does not match" f" one of [batch, layer, group, instance]."
             )
 
-        #layers.append(GroupShuffle(groups, out_channels))
+        # layers.append(GroupShuffle(groups, out_channels))
         return layers
 
     def _get_act_dropout_layer(self, drop_prob=0.2, activation=None):
