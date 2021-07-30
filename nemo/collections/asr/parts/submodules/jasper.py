@@ -372,7 +372,7 @@ class SpecialLinear(nn.Module):
             lin_out = in_channels
 
         if not use_double:
-            self.lin = nn.Linear(in_channels, lin_out)
+            self.lin = nn.Sequential(nn.ReLU(), nn.Linear(in_channels, lin_out))
         else:
             self.lin1 = nn.Linear(in_channels, in_channels * expand_factor)
             self.lin2 = nn.Linear(in_channels * expand_factor, lin_out)
@@ -442,6 +442,7 @@ class SqueezeExcite(nn.Module):
             interpolation_mode: str = 'nearest',
             activation: Optional[Callable] = None,
             quantize: bool = False,
+            use_dct = False,
     ):
         """
         Squeeze-and-Excitation sub-module.
@@ -466,10 +467,14 @@ class SqueezeExcite(nn.Module):
         self.pool = None  # prepare a placeholder which will be updated
         self.change_context_window(context_window=context_window)
 
+        self.hidden_dim = channels // reduction_ratio
+
         if activation is None:
             activation = nn.ReLU(inplace=True)
 
-        if PYTORCH_QUANTIZATION_AVAILABLE and quantize:
+        if use_dct:
+            self.fc = nn.Sequential(activation, nn.Linear(channels // reduction_ratio, channels, bias=False))
+        elif PYTORCH_QUANTIZATION_AVAILABLE and quantize:
             self.fc = nn.Sequential(
                 quant_nn.QuantLinear(channels, channels // reduction_ratio, bias=False),
                 activation,
@@ -496,6 +501,8 @@ class SqueezeExcite(nn.Module):
             x = x.float()
             y = self._se_pool_step(x, timesteps)
             y = y.transpose(1, -1)  # [B, T - context_window + 1, C]
+            if self.use_dct:
+                y = dct1(y)[..., :self.hidden_dim]
             y = self.fc(y)  # [B, T - context_window + 1, C]
             y = y.transpose(1, -1)  # [B, C, T - context_window + 1]
 
@@ -805,6 +812,7 @@ class JasperBlock(nn.Module):
                     interpolation_mode=se_interpolation_mode,
                     activation=activation,
                     quantize=quantize,
+                    use_dct=use_dct
                 )
             )
 
