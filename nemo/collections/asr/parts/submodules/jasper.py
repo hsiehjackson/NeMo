@@ -91,8 +91,10 @@ def dct1(x):
     :return: the DCT-I of the signal over the last dimension
     """
     x_shape = x.shape
-
-    return torch.fft.rfft(torch.cat([x, x.flip([-1])[..., 1:-1]], dim=-1).float(), norm="ortho").real.half().view(*x_shape)
+    with torch.cuda.amp.autocast(enabled=False):
+        x = x.float()
+        x = torch.fft.rfft(torch.cat([x, x.flip([-1])[..., 1:-1]], dim=-1), norm="ortho").real.view(*x_shape)
+    return x
 
 
 def create_dct_matrix(n):
@@ -395,7 +397,9 @@ class SpecialLinear(nn.Module):
                 if self.dct_type == 1 or self.dct_type == 2:
                     x = dct1(x)
                 else:
-                    x = torch.fft.rfft(x.float()).real.half()
+                    with torch.cuda.amp.autocast(enabled=False):
+                        x = x.float()
+                        x = torch.fft.rfft(x).real
             x = x[..., :self.use_subset]
 
         if self.use_double:
@@ -508,7 +512,7 @@ class SqueezeExcite(nn.Module):
                 if self.dct_type == 1:
                     y = dct1(y)[..., :self.hidden_dim]
                 else:
-                    y = torch.fft.rfft(y.float()).real.half()[..., :self.hidden_dim]
+                    y = torch.fft.rfft(y).real[..., :self.hidden_dim]
             y = self.fc(y)  # [B, T - context_window + 1, C]
             y = y.transpose(1, -1)  # [B, C, T - context_window + 1]
 
