@@ -83,7 +83,7 @@ model:
     _target_: nemo.collections.asr.modules.ConvASREncoder
     feat_in: *n_mels
     activation: relu
-    conv_mask: true
+    conv_mask: false
 
     jasper:
       - filters: ${model.model_defaults.filters}
