@@ -443,6 +443,7 @@ class SqueezeExcite(nn.Module):
             activation: Optional[Callable] = None,
             quantize: bool = False,
             use_dct=False,
+            dct_type=1,
     ):
         """
         Squeeze-and-Excitation sub-module.
@@ -469,6 +470,7 @@ class SqueezeExcite(nn.Module):
 
         self.hidden_dim = channels // reduction_ratio
         self.use_dct = use_dct
+        self.dct_type = dct_type
 
         if activation is None:
             activation = nn.ReLU(inplace=True)
@@ -503,7 +505,10 @@ class SqueezeExcite(nn.Module):
             y = self._se_pool_step(x, timesteps)
             y = y.transpose(1, -1)  # [B, T - context_window + 1, C]
             if self.use_dct:
-                y = dct1(y)[..., :self.hidden_dim]
+                if self.dct_type == 1:
+                    y = dct1(y)[..., :self.hidden_dim]
+                else:
+                    y = torch.fft.rfft(y).real[..., :self.hidden_dim]
             y = self.fc(y)  # [B, T - context_window + 1, C]
             y = y.transpose(1, -1)  # [B, C, T - context_window + 1]
 
@@ -813,7 +818,8 @@ class JasperBlock(nn.Module):
                     interpolation_mode=se_interpolation_mode,
                     activation=activation,
                     quantize=quantize,
-                    use_dct=use_dct
+                    use_dct=use_dct,
+                    dct_type=dct_type
                 )
             )
 
