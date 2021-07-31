@@ -400,6 +400,8 @@ class SpecialLinear(nn.Module):
                     with torch.cuda.amp.autocast(enabled=False):
                         x = x.float()
                         x = torch.fft.rfft(x).real
+            if x.shape[-1] <= self.use_subset:
+                print("OH NO", x.shape[-1], self.use_subset)
             x = x[..., :self.use_subset]
 
         if self.use_double:
