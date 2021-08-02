@@ -208,8 +208,8 @@ class ConvASREncoder(NeuralModule, Exportable):
                     future_context=future_context,
                     quantize=quantize,
                     use_dct=lcfg.get('use_dct', False),
-                    use_subset=lcfg.get('use_dct', -1),
-                    dct_type=lcfg.get('use_dct', 1),
+                    use_subset=lcfg.get('use_subset', -1),
+                    dct_type=lcfg.get('dct_type', 1),
                 )
             )
             feat_in = lcfg['filters']
