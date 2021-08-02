@@ -483,6 +483,7 @@ class SqueezeExcite(nn.Module):
         self.pool = None  # prepare a placeholder which will be updated
         self.change_context_window(context_window=context_window)
 
+        self.channels = channels
         self.hidden_dim = channels // reduction_ratio
         self.use_dct = use_dct
         self.dct_type = dct_type
@@ -491,7 +492,10 @@ class SqueezeExcite(nn.Module):
             activation = nn.ReLU(inplace=True)
 
         if use_dct:
-            self.fc = nn.Sequential(activation, nn.Linear(channels // reduction_ratio, channels, bias=False))
+            if self.dct_type != 2:
+                self.fc = nn.Linear(channels // reduction_ratio, channels)
+            else:
+                self.fc = nn.Linear(channels // reduction_ratio, channels // reduction_ratio)
         elif PYTORCH_QUANTIZATION_AVAILABLE and quantize:
             self.fc = nn.Sequential(
                 quant_nn.QuantLinear(channels, channels // reduction_ratio, bias=False),
@@ -525,6 +529,9 @@ class SqueezeExcite(nn.Module):
                 else:
                     y = torch.fft.rfft(y).real[..., :self.hidden_dim]
             y = self.fc(y)  # [B, T - context_window + 1, C]
+            if self.dct_type == 2:
+                y = F.pad(y, [0, self.channels - y.shape[-1]])
+                y = dct1(y)
             y = y.transpose(1, -1)  # [B, C, T - context_window + 1]
 
         y = _se_context_upsample(y, timesteps, self.interpolation_mode, self.context_window_tensor)
