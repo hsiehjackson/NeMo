@@ -96,9 +96,10 @@ model:
         separable: ${model.model_defaults.separable}
         se: ${model.model_defaults.se}
         se_context_size: ${model.model_defaults.se_context_size}
-        use_dct: ${model.model_defaults.use_dct}
-        use_subset: ${model.model_defaults.use_subset}
-        dct_type: ${model.model_defaults.dct_type}
+        use_dct: false
+        #use_subset: ${model.model_defaults.use_subset}
+        #dct_type: ${model.model_defaults.dct_type}
+        #first one no dct
 
 
 

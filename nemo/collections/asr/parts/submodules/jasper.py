@@ -392,7 +392,7 @@ class SpecialLinear(nn.Module):
     def forward(self, x):
         x = x.transpose(-2, -1)
 
-        print(x.shape)
+        #print(x.shape)
 
         if self.use_subset != -1:
             if self.use_dct:
@@ -403,13 +403,13 @@ class SpecialLinear(nn.Module):
                         x = x.float()
                         x = torch.fft.rfft(x).real
 
-            print(x.shape)
+            #print(x.shape)
 
             #if x.shape[-1] <= self.use_subset:
             #    print("OH NO", x.shape[-1], self.use_subset)
             x = x[..., :self.use_subset]
 
-            print(x.shape)
+            #print(x.shape)
 
         if self.use_double:
             x = self.lin1(x)
@@ -418,7 +418,7 @@ class SpecialLinear(nn.Module):
         else:
             x = self.lin(x)
 
-        print(x.shape)
+        #print(x.shape)
 
         if self.dct_type == 2:
             x = F.pad(x, [0, self.out_channels - self.lin_out])
