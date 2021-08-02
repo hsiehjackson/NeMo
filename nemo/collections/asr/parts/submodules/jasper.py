@@ -374,7 +374,7 @@ class SpecialLinear(nn.Module):
             lin_out = in_channels
 
         if not use_double:
-            self.lin = nn.Sequential(nn.ReLU(), nn.Linear(in_channels, lin_out))
+            self.lin = nn.Sequential(nn.Linear(in_channels, lin_out))
         else:
             self.lin1 = nn.Linear(in_channels, in_channels * expand_factor)
             self.lin2 = nn.Linear(in_channels * expand_factor, lin_out)
@@ -400,8 +400,8 @@ class SpecialLinear(nn.Module):
                     with torch.cuda.amp.autocast(enabled=False):
                         x = x.float()
                         x = torch.fft.rfft(x).real
-            if x.shape[-1] <= self.use_subset:
-                print("OH NO", x.shape[-1], self.use_subset)
+            #if x.shape[-1] <= self.use_subset:
+            #    print("OH NO", x.shape[-1], self.use_subset)
             x = x[..., :self.use_subset]
 
         if self.use_double:
