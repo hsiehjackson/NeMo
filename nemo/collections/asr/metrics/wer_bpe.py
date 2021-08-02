@@ -123,10 +123,10 @@ class WERBPE(Metric):
 
             text = self.decode_tokens_to_str(decoded_prediction)
 
-            if self.log_prediction and ind == 0:
-                logging.info(f"\n")
-                logging.info(f"predicted tokens:{str(self.decode_ids_to_tokens(decoded_prediction))}")
-                logging.info(f"lengths:{str(decoded_l)}, total:{sum(decoded_l)}")
+            #if self.log_prediction and ind == 0:
+            #    logging.info(f"\n")
+            #    logging.info(f"predicted tokens:{str(self.decode_ids_to_tokens(decoded_prediction))}")
+            #    logging.info(f"lengths:{str(decoded_l)}, total:{sum(decoded_l)}")
 
             if not return_hypotheses:
                 hypothesis = text
