@@ -71,12 +71,14 @@ from nemo.core.config import hydra_runner
 from nemo.utils import logging
 from nemo.utils.exp_manager import exp_manager
 
+from nemo.collections.asr.parts.utils.spec_log_callback import SpectrogramLogCallback
+
 
 @hydra_runner(config_path="conf/citrinet/", config_name="config_bpe")
 def main(cfg):
     logging.info(f'Hydra config: {OmegaConf.to_yaml(cfg)}')
 
-    trainer = pl.Trainer(**cfg.trainer)
+    trainer = pl.Trainer(**cfg.trainer, callbacks=[SpectrogramLogCallback()])
     exp_manager(trainer, cfg.get("exp_manager", None))
     asr_model = EncDecCTCModelBPE(cfg=cfg.model, trainer=trainer)
 

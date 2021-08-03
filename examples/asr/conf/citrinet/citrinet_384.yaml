@@ -523,8 +523,6 @@ trainer:
   precision: 32
   sync_batchnorm: false
   benchmark: false
-  callbacks:
-    - _target_: nemo.collections.asr.parts.utils.spec_log_callback.SpectrogramLogCallback
 
 exp_manager:
   exp_dir: null
