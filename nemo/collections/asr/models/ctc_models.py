@@ -539,24 +539,35 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
                 input_signal=input_signal, length=input_signal_length,
             )
 
+        #processed_signal before spec augment
+        spectrograms = processed_signal.detach()
+
         if self.spec_augmentation is not None and self.training:
             processed_signal = self.spec_augmentation(input_spec=processed_signal, length=processed_signal_length)
 
+        #after spec augment
+        masked_spectrograms = processed_signal.detach()
+        spec_masks = (masked_spectrograms < 1e-5)
+
         encoded, encoded_len = self.encoder(audio_signal=processed_signal, length=processed_signal_length)
+
+        #encoded features
+        #this can be used for both transcribing and self-sup predictions
+
         log_probs = self.decoder(encoder_output=encoded)
         greedy_predictions = log_probs.argmax(dim=-1, keepdim=False)
 
-        return log_probs, encoded_len, greedy_predictions
+        return log_probs, encoded_len, greedy_predictions, (spectrograms, masked_spectrograms, spec_masks)
 
     # PTL-specific methods
     def training_step(self, batch, batch_nb):
         signal, signal_len, transcript, transcript_len = batch
         if isinstance(batch, DALIOutputs) and batch.has_processed_signal:
-            log_probs, encoded_len, predictions = self.forward(
+            log_probs, encoded_len, predictions, _ = self.forward(
                 processed_signal=signal, processed_signal_length=signal_len
             )
         else:
-            log_probs, encoded_len, predictions = self.forward(input_signal=signal, input_signal_length=signal_len)
+            log_probs, encoded_len, predictions, _ = self.forward(input_signal=signal, input_signal_length=signal_len)
 
         loss_value = self.loss(
             log_probs=log_probs, targets=transcript, input_lengths=encoded_len, target_lengths=transcript_len
@@ -585,7 +596,7 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
     def validation_step(self, batch, batch_idx, dataloader_idx=0):
         signal, signal_len, transcript, transcript_len = batch
         if isinstance(batch, DALIOutputs) and batch.has_processed_signal:
-            log_probs, encoded_len, predictions = self.forward(
+            log_probs, encoded_len, predictions, _ = self.forward(
                 processed_signal=signal, processed_signal_length=signal_len
             )
         else:
