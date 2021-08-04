@@ -13,11 +13,7 @@ class SpectrogramLogCallback(Callback):
             return
 
         signal, signal_len, transcript, transcript_len = batch
-        print(outputs[0].shape)
-        print(outputs[1].shape)
-        print(outputs[2].shape)
-        for i in outputs[3]:
-            print(i.shape)
+        print(outputs)
         log_probs, encoded_len, greedy_predictions, (spectrograms, masked_spectrograms, spec_masks) = outputs
 
         trainer.logger.experiment.log({
@@ -32,11 +28,7 @@ class SpectrogramLogCallback(Callback):
             return
 
         signal, signal_len, transcript, transcript_len = batch
-        print(outputs[0].shape)
-        print(outputs[1].shape)
-        print(outputs[2].shape)
-        for i in outputs[3]:
-            print(i.shape)
+        print(outputs)
         log_probs, encoded_len, greedy_predictions, (spectrograms, masked_spectrograms, spec_masks) = outputs
 
         trainer.logger.experiment.log({
