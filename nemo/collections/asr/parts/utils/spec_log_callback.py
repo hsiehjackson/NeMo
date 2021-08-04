@@ -12,7 +12,6 @@ class SpectrogramLogCallback(Callback):
         self.num_display = num_display
 
     def get_image(self, t):
-        t = t.float()
         t = t - t.min()
         t = t / t.max()
 
