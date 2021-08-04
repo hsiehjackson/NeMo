@@ -19,24 +19,24 @@ class SpectrogramLogCallback(Callback):
         log_probs = outputs['log_probs']
         spectrograms, masked_spectrograms, spec_masks = outputs['extra']
 
-        log_probs -= log_probs.min()
+        """log_probs -= log_probs.min()
         log_probs /= log_probs.max()
 
         spectrograms -= spectrograms.min()
         spectrograms /= spectrograms.max()
 
         masked_spectrograms -= masked_spectrograms.min()
-        masked_spectrograms /= masked_spectrograms.max()
+        masked_spectrograms /= masked_spectrograms.max()"""
 
         spec_masks = spec_masks.float()
 
         #trainer.logger.experiment[0].log({
         wandb.log({
             "global_step": trainer.global_step,
-            "train_spec": [wandb.Image(spectrograms[:self.num_display])],
-            "train_spec_masked": [wandb.Image(masked_spectrograms[:self.num_display])],
-            "train_masks": [wandb.Image(spec_masks[:self.num_display])],
-            "train_log_probs": [wandb.Image(log_probs[:self.num_display])],
+            "train_spec": [wandb.Image(x) for x in spectrograms[:self.num_display]],
+            "train_spec_masked": [wandb.Image(x) for x in masked_spectrograms[:self.num_display]],
+            "train_masks": [wandb.Image(x) for x in spec_masks[:self.num_display]],
+            "train_log_probs": [wandb.Image(x) for x in log_probs[:self.num_display]],
         })
 
     @rank_zero_only
@@ -48,22 +48,13 @@ class SpectrogramLogCallback(Callback):
         log_probs = outputs['log_probs']
         spectrograms, masked_spectrograms, spec_masks = outputs['extra']
 
-        log_probs -= log_probs.min()
-        log_probs /= log_probs.max()
-
-        spectrograms -= spectrograms.min()
-        spectrograms /= spectrograms.max()
-
-        masked_spectrograms -= masked_spectrograms.min()
-        masked_spectrograms /= masked_spectrograms.max()
-
         spec_masks = spec_masks.float()
 
         #trainer.logger.experiment[0].log({
         wandb.log({
             "global_step": trainer.global_step,
-            "val_spec": [wandb.Image(spectrograms[:self.num_display])],
-            "val_spec_masked": [wandb.Image(masked_spectrograms[:self.num_display])],
-            "val_masks": [wandb.Image(spec_masks[:self.num_display])],
-            "val_log_probs": [wandb.Image(log_probs[:self.num_display])],
+            "val_spec": [wandb.Image(x) for x in spectrograms[:self.num_display]],
+            "val_spec_masked": [wandb.Image(x) for x in masked_spectrograms[:self.num_display]],
+            "val_masks": [wandb.Image(x) for x in spec_masks[:self.num_display]],
+            "val_log_probs": [wandb.Image(x) for x in log_probs[:self.num_display]],
         })
