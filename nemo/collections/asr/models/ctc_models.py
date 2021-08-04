@@ -192,6 +192,8 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
 
         self.masked_evaluation = True
 
+        self.recon_loss_alpha = self._cfg.get("recon_loss_alpha", 0.)
+
     @torch.no_grad()
     def transcribe(
         self,
@@ -610,7 +612,7 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
             self._wer.reset()
             tensorboard_logs.update({'training_batch_wer': wer})
 
-        return {'loss': loss_ctc_value + loss_recon_value,
+        return {'loss': loss_ctc_value + self.recon_loss_alpha * loss_recon_value,
                 'loss_ctc': loss_ctc_value,
                 'loss_recon': loss_recon_value,
                 'log': tensorboard_logs,
@@ -638,7 +640,7 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
         wer, wer_num, wer_denom = self._wer.compute()
         self._wer.reset()
         return {
-            'val_loss': loss_ctc_value + loss_recon_value,
+            'val_loss': loss_ctc_value + self.recon_loss_alpha * loss_recon_value,
             'val_loss_ctc': loss_ctc_value,
             'val_loss_recon': loss_recon_value,
             'val_wer_num': wer_num,

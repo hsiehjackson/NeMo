@@ -134,17 +134,17 @@ class ConvASREncoder(NeuralModule, Exportable):
         )
 
     def __init__(
-        self,
-        jasper,
-        activation: str,
-        feat_in: int,
-        normalization_mode: str = "batch",
-        residual_mode: str = "add",
-        norm_groups: int = -1,
-        conv_mask: bool = True,
-        frame_splicing: int = 1,
-        init_mode: Optional[str] = 'xavier_uniform',
-        quantize: bool = False,
+            self,
+            jasper,
+            activation: str,
+            feat_in: int,
+            normalization_mode: str = "batch",
+            residual_mode: str = "add",
+            norm_groups: int = -1,
+            conv_mask: bool = True,
+            frame_splicing: int = 1,
+            init_mode: Optional[str] = 'xavier_uniform',
+            quantize: bool = False,
     ):
         super().__init__()
         if isinstance(jasper, ListConfig):
@@ -293,18 +293,18 @@ class ParallelConvASREncoder(NeuralModule, Exportable):
         )
 
     def __init__(
-        self,
-        jasper,
-        activation: str,
-        feat_in: int,
-        normalization_mode: str = "batch",
-        residual_mode: str = "add",
-        norm_groups: int = -1,
-        conv_mask: bool = True,
-        frame_splicing: int = 1,
-        init_mode: Optional[str] = 'xavier_uniform',
-        aggregation_mode: Optional[str] = None,
-        quantize: bool = False,
+            self,
+            jasper,
+            activation: str,
+            feat_in: int,
+            normalization_mode: str = "batch",
+            residual_mode: str = "add",
+            norm_groups: int = -1,
+            conv_mask: bool = True,
+            frame_splicing: int = 1,
+            init_mode: Optional[str] = 'xavier_uniform',
+            aggregation_mode: Optional[str] = None,
+            quantize: bool = False,
     ):
         super().__init__()
         if isinstance(jasper, ListConfig):
@@ -472,6 +472,7 @@ class ConvASRDecoder(NeuralModule, Exportable):
     def num_classes_with_blank(self):
         return self._num_classes
 
+
 class ConvASRDecoderRecon(NeuralModule, Exportable):
     """ASR Decoder for reconstructing masked regions of spectrogram
     """
@@ -506,9 +507,9 @@ class ConvASRDecoderRecon(NeuralModule, Exportable):
                                                           bias=True))
             self.decoder_layers.append(nn.Linear(feat_out, feat_out))
 
+        self.decoder_layers = nn.Sequential(*self.decoder_layers)
 
         self.apply(lambda x: init_weights(x, mode=init_mode))
-
 
     @typecheck()
     def forward(self, encoder_output):
@@ -569,12 +570,12 @@ class ConvASRDecoderClassification(NeuralModule, Exportable):
         return OrderedDict({"logits": NeuralType(('B', 'D'), LogitsType())})
 
     def __init__(
-        self,
-        feat_in: int,
-        num_classes: int,
-        init_mode: Optional[str] = "xavier_uniform",
-        return_logits: bool = True,
-        pooling_type='avg',
+            self,
+            feat_in: int,
+            num_classes: int,
+            init_mode: Optional[str] = "xavier_uniform",
+            return_logits: bool = True,
+            pooling_type='avg',
     ):
         super().__init__()
 
@@ -650,13 +651,13 @@ class ECAPAEncoder(NeuralModule, Exportable):
         )
 
     def __init__(
-        self,
-        feat_in: int,
-        filters: list,
-        kernel_sizes: list,
-        dilations: list,
-        scale: int = 8,
-        init_mode: str = 'xavier_uniform',
+            self,
+            feat_in: int,
+            filters: list,
+            kernel_sizes: list,
+            dilations: list,
+            scale: int = 8,
+            init_mode: str = 'xavier_uniform',
     ):
         super().__init__()
         self.layers = nn.ModuleList()
@@ -737,14 +738,14 @@ class SpeakerDecoder(NeuralModule, Exportable):
         )
 
     def __init__(
-        self,
-        feat_in: int,
-        num_classes: int,
-        emb_sizes: Optional[Union[int, list]] = 256,
-        pool_mode: str = 'xvector',
-        angular: bool = False,
-        attention_channels: int = 128,
-        init_mode: str = "xavier_uniform",
+            self,
+            feat_in: int,
+            num_classes: int,
+            emb_sizes: Optional[Union[int, list]] = 256,
+            pool_mode: str = 'xvector',
+            angular: bool = False,
+            attention_channels: int = 128,
+            init_mode: str = "xavier_uniform",
     ):
         super().__init__()
         self.angular = angular
@@ -777,7 +778,7 @@ class SpeakerDecoder(NeuralModule, Exportable):
         self.apply(lambda x: init_weights(x, mode=init_mode))
 
     def affine_layer(
-        self, inp_shape, out_shape, learn_mean=True, affine_type='conv',
+            self, inp_shape, out_shape, learn_mean=True, affine_type='conv',
     ):
         if affine_type == 'conv':
             layer = nn.Sequential(
