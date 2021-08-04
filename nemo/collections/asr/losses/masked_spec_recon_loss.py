@@ -29,7 +29,7 @@ class MaskedSpecReconLoss(Loss):
         """
         return {
             "spec_in": NeuralType(('B', 'T', 'D'), SpectrogramType()),
-            "mask": NeuralType(('B', 'T', 'D'), SpectrogramType()),
+            "masks": NeuralType(('B', 'T', 'D'), SpectrogramType()),
             "spec_out": NeuralType(('B', 'T', 'D'), SpectrogramType()),
         }
 
@@ -45,9 +45,9 @@ class MaskedSpecReconLoss(Loss):
         super().__init__()
 
     @typecheck()
-    def forward(self, spec_in, mask, spec_out):
-        mask_sum = mask.sum(dim=(-2, -1))
-        spec_diff = torch.abs((spec_in * mask) - (spec_out * mask)).sum(dim=(-2, -1))
+    def forward(self, spec_in, masks, spec_out):
+        mask_sum = masks.sum(dim=(-2, -1))
+        spec_diff = torch.abs((spec_in * masks) - (spec_out * masks)).sum(dim=(-2, -1))
         loss = spec_diff / mask_sum
         loss = torch.mean(loss)
         return loss
