@@ -28,6 +28,7 @@ from nemo.collections.asr.modules.conv_asr import (
     ECAPAEncoder,
     ParallelConvASREncoder,
     SpeakerDecoder,
+    ConvASRDecoderRecon,
 )
 from nemo.collections.asr.modules.lstm_decoder import LSTMDecoder
 from nemo.collections.asr.modules.rnnt import RNNTDecoder, RNNTJoint

@@ -14,3 +14,4 @@
 
 from nemo.collections.asr.losses.angularloss import AngularSoftmaxLoss
 from nemo.collections.asr.losses.ctc import CTCLoss
+from nemo.collections.asr.losses.masked_spec_recon_loss import MaskedSpecReconLoss
