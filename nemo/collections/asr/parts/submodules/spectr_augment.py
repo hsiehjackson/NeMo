@@ -23,7 +23,7 @@ from nemo.core.neural_types import LengthsType, NeuralType, SpectrogramType
 
 class SpecAugment(nn.Module, Typing):
     """
-    Zeroes out(cuts) random continuous horisontal or
+    Zeroes out(cuts) random continuous horizontal or
     vertical segments of the spectrogram as described in
     SpecAugment (https://arxiv.org/abs/1904.08779).
 

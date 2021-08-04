@@ -541,7 +541,7 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
             )
 
         #processed_signal before spec augment
-        spectrograms = processed_signal.detach()
+        spectrograms = processed_signal.detach().clone()
 
         if self.spec_augmentation is not None and self.training:
             processed_signal = self.spec_augmentation(input_spec=processed_signal, length=processed_signal_length)
