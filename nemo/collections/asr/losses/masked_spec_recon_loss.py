@@ -46,7 +46,6 @@ class MaskedSpecReconLoss(Loss):
 
     @typecheck()
     def forward(self, spec_in, masks, spec_out):
-        print(spec_in.shape, masks.shape, spec_out.shape)
         mask_sum = masks.sum(dim=(-2, -1))
         spec_diff = torch.abs((spec_in * masks) - (spec_out * masks)).sum(dim=(-2, -1))
         loss = spec_diff / mask_sum

@@ -550,9 +550,7 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
                 input_signal=input_signal, length=input_signal_length,
             )
 
-        print(processed_signal.shape)
         processed_signal = F.pad(processed_signal, [0, 8 - processed_signal.shape[-1] % 8])
-        print(processed_signal.shape)
 
         #processed_signal before spec augment
         spectrograms = processed_signal.detach().clone()
