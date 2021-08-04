@@ -550,7 +550,7 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
 
         #after spec augment
         masked_spectrograms = processed_signal.detach()
-        spec_masks = (masked_spectrograms < 1e-10)
+        spec_masks = (masked_spectrograms < 1e-5) and (masked_spectrograms > -1e-5)
 
         encoded, encoded_len = self.encoder(audio_signal=processed_signal, length=processed_signal_length)
 

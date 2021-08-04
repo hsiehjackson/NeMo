@@ -490,6 +490,12 @@ model:
     num_classes: -1  # filled with vocabulary size from tokenizer at runtime
     vocabulary: []  # filled with vocabulary from tokenizer at runtime
 
+  auto_decoder:
+    _target_: nemo.collections.asr.modules.ConvASRAutoDecoder
+    feat_in: *enc_final
+    feat_out: *n_mels
+    transpose_strides: 3
+
   optim:
     name: novograd
     lr: 0.05
