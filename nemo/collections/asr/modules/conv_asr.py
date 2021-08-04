@@ -498,14 +498,14 @@ class ConvASRDecoderRecon(NeuralModule, Exportable):
         self.feat_in = feat_in
         self.feat_out = feat_out
 
-        self.decoder_layers = [nn.Linear(feat_in, feat_out)]
+        self.decoder_layers = [nn.Conv1d(self.feat_in, self.feat_out, kernel_size=1, bias=True)]
         for i in range(stride_layers):
             self.decoder_layers.append(nn.ReLU())
-            self.decoder_layers.append(nn.ConvTranspose1d(feat_out, feat_out, kernel_size,
+            self.decoder_layers.append(nn.ConvTranspose1d(self.feat_out, self.feat_out, kernel_size,
                                                           stride=2,
                                                           padding=(kernel_size - 3) // 2,
                                                           bias=True))
-            self.decoder_layers.append(nn.Linear(feat_out, feat_out))
+            self.decoder_layers.append(nn.Conv1d(self.feat_out, self.feat_out, kernel_size=1, bias=True))
 
         self.decoder_layers = nn.Sequential(*self.decoder_layers)
 
