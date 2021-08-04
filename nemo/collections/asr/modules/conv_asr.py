@@ -503,7 +503,8 @@ class ConvASRDecoderRecon(NeuralModule, Exportable):
             self.decoder_layers.append(nn.ReLU())
             self.decoder_layers.append(nn.ConvTranspose1d(self.feat_out, self.feat_out, kernel_size,
                                                           stride=2,
-                                                          padding=(kernel_size - 3) // 2,
+                                                          padding=(kernel_size - 3) // 2 + 1,
+                                                          output_padding=1,
                                                           bias=True))
             self.decoder_layers.append(nn.Conv1d(self.feat_out, self.feat_out, kernel_size=1, bias=True))
 
