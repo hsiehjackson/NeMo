@@ -3,7 +3,7 @@ from pytorch_lightning.utilities import rank_zero_only
 
 import wandb
 
-import torch.nn.functional as F
+from torchvision import transforms
 
 class SpectrogramLogCallback(Callback):
 
@@ -16,7 +16,7 @@ class SpectrogramLogCallback(Callback):
         t -= t.min()
         t /= t.max()
 
-        i = F.to_pil_image(t)
+        i = transforms.ToPILImage(t)
 
         w, h = i.size
         if w < h // 2:
