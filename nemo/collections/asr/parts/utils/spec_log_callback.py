@@ -16,7 +16,7 @@ class SpectrogramLogCallback(Callback):
         t -= t.min()
         t /= t.max()
 
-        i = transforms.ToPILImage(t)
+        i = transforms.ToPILImage()(t)
 
         w, h = i.size
         if w < h // 2:
