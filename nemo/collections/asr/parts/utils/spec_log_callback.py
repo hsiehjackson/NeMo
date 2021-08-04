@@ -19,6 +19,17 @@ class SpectrogramLogCallback(Callback):
         log_probs = outputs['log_probs']
         spectrograms, masked_spectrograms, spec_masks = outputs['extra']
 
+        log_probs -= log_probs.min()
+        log_probs /= log_probs.max()
+
+        spectrograms -= spectrograms.min()
+        spectrograms /= spectrograms.max()
+
+        masked_spectrograms -= masked_spectrograms.min()
+        masked_spectrograms /= masked_spectrograms.max()
+
+        spec_masks = spec_masks.float()
+
         #trainer.logger.experiment[0].log({
         wandb.log({
             "global_step": trainer.global_step,
@@ -36,6 +47,17 @@ class SpectrogramLogCallback(Callback):
         signal, signal_len, transcript, transcript_len = batch
         log_probs = outputs['log_probs']
         spectrograms, masked_spectrograms, spec_masks = outputs['extra']
+
+        log_probs -= log_probs.min()
+        log_probs /= log_probs.max()
+
+        spectrograms -= spectrograms.min()
+        spectrograms /= spectrograms.max()
+
+        masked_spectrograms -= masked_spectrograms.min()
+        masked_spectrograms /= masked_spectrograms.max()
+
+        spec_masks = spec_masks.float()
 
         #trainer.logger.experiment[0].log({
         wandb.log({
