@@ -19,10 +19,10 @@ class SpectrogramLogCallback(Callback):
         i = transforms.ToPILImage()(t)
 
         w, h = i.size
-        if w < h // 2:
-            w = h // 2
-        if h < w // 2:
-            h = w // 2
+        if w < h // 6:
+            w = h // 6
+        if h < w // 6:
+            h = w // 6
         i = i.resize((w, h))
         
         return wandb.Image(i)
