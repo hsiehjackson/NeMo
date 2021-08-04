@@ -598,7 +598,7 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
 
         loss_recon_value = self.loss_recon(spec_in=spectrograms, masks=spec_masks, spec_out=spec_recon)
 
-        tensorboard_logs = {'train_loss_ctc': loss_value, 'learning_rate': self._optimizer.param_groups[0]['lr'],
+        tensorboard_logs = {'train_loss_ctc': loss_ctc_value, 'learning_rate': self._optimizer.param_groups[0]['lr'],
                             'train_loss_recon': loss_recon_value}
 
         if hasattr(self, '_trainer') and self._trainer is not None:
