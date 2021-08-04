@@ -7,9 +7,13 @@ class SpectrogramLogCallback(Callback):
     def __init__(self, num_display=8):
         super().__init__()
         self.num_display = num_display
+        self.start_logging = False
+
+    def on_sanity_check_end(self, trainer, pl_module):
+        self.start_logging = True
 
     def on_train_batch_end(self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx):
-        if batch_idx % 100 != 0:
+        if batch_idx % 100 != 0 or not self.start_logging:
             return
 
         signal, signal_len, transcript, transcript_len = batch
@@ -24,7 +28,7 @@ class SpectrogramLogCallback(Callback):
         })
 
     def on_validation_batch_end(self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx):
-        if batch_idx % 100 != 0:
+        if batch_idx % 100 != 0 or not self.start_logging:
             return
 
         signal, signal_len, transcript, transcript_len = batch
