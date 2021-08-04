@@ -13,8 +13,8 @@ class SpectrogramLogCallback(Callback):
             return
 
         signal, signal_len, transcript, transcript_len = batch
-        print(outputs)
-        log_probs, encoded_len, greedy_predictions, (spectrograms, masked_spectrograms, spec_masks) = outputs
+        log_probs = outputs['log_probs']
+        spectrograms, masked_spectrograms, spec_masks = outputs['extra']
 
         trainer.logger.experiment.log({
             "train_spec": [wandb.Image(spectrograms[:self.num_display])],
@@ -28,8 +28,8 @@ class SpectrogramLogCallback(Callback):
             return
 
         signal, signal_len, transcript, transcript_len = batch
-        print(outputs)
-        log_probs, encoded_len, greedy_predictions, (spectrograms, masked_spectrograms, spec_masks) = outputs
+        log_probs = outputs['log_probs']
+        spectrograms, masked_spectrograms, spec_masks = outputs['extra']
 
         trainer.logger.experiment.log({
             "val_spec": [wandb.Image(spectrograms[:self.num_display])],

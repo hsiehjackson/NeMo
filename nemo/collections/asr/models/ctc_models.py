@@ -564,11 +564,13 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
     def training_step(self, batch, batch_nb):
         signal, signal_len, transcript, transcript_len = batch
         if isinstance(batch, DALIOutputs) and batch.has_processed_signal:
-            log_probs, encoded_len, predictions, _ = self.forward(
+            log_probs, encoded_len, predictions, (spectrograms, masked_spectrograms, spec_masks) = \
+                self.forward(
                 processed_signal=signal, processed_signal_length=signal_len
             )
         else:
-            log_probs, encoded_len, predictions, _ = self.forward(input_signal=signal, input_signal_length=signal_len)
+            log_probs, encoded_len, predictions, (spectrograms, masked_spectrograms, spec_masks) = \
+                self.forward(input_signal=signal, input_signal_length=signal_len)
 
         loss_value = self.loss(
             log_probs=log_probs, targets=transcript, input_lengths=encoded_len, target_lengths=transcript_len
@@ -592,16 +594,19 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
             self._wer.reset()
             tensorboard_logs.update({'training_batch_wer': wer})
 
-        return {'loss': loss_value, 'log': tensorboard_logs}
+        return {'loss': loss_value, 'log': tensorboard_logs,
+                'log_probs': log_probs, 'extra': (spectrograms, masked_spectrograms, spec_masks)}
 
     def validation_step(self, batch, batch_idx, dataloader_idx=0):
         signal, signal_len, transcript, transcript_len = batch
         if isinstance(batch, DALIOutputs) and batch.has_processed_signal:
-            log_probs, encoded_len, predictions, _ = self.forward(
+            log_probs, encoded_len, predictions, (spectrograms, masked_spectrograms, spec_masks) = \
+                self.forward(
                 processed_signal=signal, processed_signal_length=signal_len
             )
         else:
-            log_probs, encoded_len, predictions, _ = self.forward(input_signal=signal, input_signal_length=signal_len)
+            log_probs, encoded_len, predictions, (spectrograms, masked_spectrograms, spec_masks) = \
+                self.forward(input_signal=signal, input_signal_length=signal_len)
 
         loss_value = self.loss(
             log_probs=log_probs, targets=transcript, input_lengths=encoded_len, target_lengths=transcript_len
@@ -616,6 +621,8 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
             'val_wer_num': wer_num,
             'val_wer_denom': wer_denom,
             'val_wer': wer,
+            'log_probs': log_probs,
+            'extra': (spectrograms, masked_spectrograms, spec_masks)
         }
 
     def test_step(self, batch, batch_idx, dataloader_idx=0):
