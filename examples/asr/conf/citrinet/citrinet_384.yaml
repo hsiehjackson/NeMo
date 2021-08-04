@@ -494,7 +494,7 @@ model:
     _target_: nemo.collections.asr.modules.ConvASRAutoDecoder
     feat_in: *enc_final
     feat_out: *n_mels
-    transpose_strides: 3
+    stride_layers: 3
 
   optim:
     name: novograd
