@@ -26,6 +26,7 @@ from tqdm.auto import tqdm
 from nemo.collections.asr.data import audio_to_text_dataset
 from nemo.collections.asr.data.audio_to_text_dali import DALIOutputs
 from nemo.collections.asr.losses.ctc import CTCLoss
+from nemo.collections.asr.losses.masked_spec_recon_loss import MaskedSpecReconLoss
 from nemo.collections.asr.metrics.wer import WER
 from nemo.collections.asr.models.asr_model import ASRModel, ExportableEncDecModel
 from nemo.collections.asr.parts.mixins import ASRModuleMixin
@@ -164,11 +165,15 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
 
         self.decoder = EncDecCTCModel.from_config_dict(self._cfg.decoder)
 
+        self.decoder_recon = EncDecCTCModel.from_config_dict(self._cfg.decoder_recon)
+
         self.loss = CTCLoss(
             num_classes=self.decoder.num_classes_with_blank - 1,
             zero_infinity=True,
             reduction=self._cfg.get("ctc_reduction", "mean_batch"),
         )
+
+        self.loss_recon = MaskedSpecReconLoss()
 
         if hasattr(self._cfg, 'spec_augment') and self._cfg.spec_augment is not None:
             self.spec_augmentation = EncDecCTCModel.from_config_dict(self._cfg.spec_augment)
@@ -249,7 +254,7 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
 
                 temporary_datalayer = self._setup_transcribe_dataloader(config)
                 for test_batch in tqdm(temporary_datalayer, desc="Transcribing"):
-                    logits, logits_len, greedy_predictions = self.forward(
+                    logits, logits_len, greedy_predictions, _ = self.forward(
                         input_signal=test_batch[0].to(device), input_signal_length=test_batch[1].to(device)
                     )
                     if logprobs:
@@ -563,25 +568,31 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
         log_probs = self.decoder(encoder_output=encoded)
         greedy_predictions = log_probs.argmax(dim=-1, keepdim=False)
 
-        return log_probs, encoded_len, greedy_predictions, (spectrograms, masked_spectrograms, spec_masks)
+        #make None otherwise
+        spec_recon = self.decoder_recon(encoder_output=encoded)
+
+        return log_probs, encoded_len, greedy_predictions, (spectrograms, masked_spectrograms, spec_masks, spec_recon)
 
     # PTL-specific methods
     def training_step(self, batch, batch_nb):
         signal, signal_len, transcript, transcript_len = batch
         if isinstance(batch, DALIOutputs) and batch.has_processed_signal:
-            log_probs, encoded_len, predictions, (spectrograms, masked_spectrograms, spec_masks) = \
+            log_probs, encoded_len, predictions, (spectrograms, masked_spectrograms, spec_masks, spec_recon) = \
                 self.forward(
                 processed_signal=signal, processed_signal_length=signal_len
             )
         else:
-            log_probs, encoded_len, predictions, (spectrograms, masked_spectrograms, spec_masks) = \
+            log_probs, encoded_len, predictions, (spectrograms, masked_spectrograms, spec_masks, spec_recon) = \
                 self.forward(input_signal=signal, input_signal_length=signal_len)
 
-        loss_value = self.loss(
+        loss_ctc_value = self.loss(
             log_probs=log_probs, targets=transcript, input_lengths=encoded_len, target_lengths=transcript_len
         )
 
-        tensorboard_logs = {'train_loss': loss_value, 'learning_rate': self._optimizer.param_groups[0]['lr']}
+        loss_recon_value = self.loss_recon(spec_in=spectrograms, masks=spec_masks, spec_out=spec_recon)
+
+        tensorboard_logs = {'train_loss_ctc': loss_value, 'learning_rate': self._optimizer.param_groups[0]['lr'],
+                            'train_loss_recon': loss_recon_value}
 
         if hasattr(self, '_trainer') and self._trainer is not None:
             log_every_n_steps = self._trainer.log_every_n_steps
@@ -599,35 +610,42 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
             self._wer.reset()
             tensorboard_logs.update({'training_batch_wer': wer})
 
-        return {'loss': loss_value, 'log': tensorboard_logs,
-                'log_probs': log_probs, 'extra': (spectrograms, masked_spectrograms, spec_masks)}
+        return {'loss': loss_ctc_value + loss_recon_value,
+                'loss_ctc': loss_ctc_value,
+                'loss_recon': loss_recon_value,
+                'log': tensorboard_logs,
+                'log_probs': log_probs,
+                'extra': (spectrograms, masked_spectrograms, spec_masks, spec_recon)}
 
     def validation_step(self, batch, batch_idx, dataloader_idx=0):
         signal, signal_len, transcript, transcript_len = batch
         if isinstance(batch, DALIOutputs) and batch.has_processed_signal:
-            log_probs, encoded_len, predictions, (spectrograms, masked_spectrograms, spec_masks) = \
+            log_probs, encoded_len, predictions, (spectrograms, masked_spectrograms, spec_masks, spec_recon) = \
                 self.forward(
                 processed_signal=signal, processed_signal_length=signal_len
             )
         else:
-            log_probs, encoded_len, predictions, (spectrograms, masked_spectrograms, spec_masks) = \
+            log_probs, encoded_len, predictions, (spectrograms, masked_spectrograms, spec_masks, spec_recon) = \
                 self.forward(input_signal=signal, input_signal_length=signal_len)
 
-        loss_value = self.loss(
+        loss_ctc_value = self.loss(
             log_probs=log_probs, targets=transcript, input_lengths=encoded_len, target_lengths=transcript_len
         )
+        loss_recon_value = self.loss_recon(spec_in=spectrograms, masks=spec_masks, spec_out=spec_recon)
         self._wer.update(
             predictions=predictions, targets=transcript, target_lengths=transcript_len, predictions_lengths=encoded_len
         )
         wer, wer_num, wer_denom = self._wer.compute()
         self._wer.reset()
         return {
-            'val_loss': loss_value,
+            'val_loss': loss_ctc_value + loss_recon_value,
+            'val_loss_ctc': loss_ctc_value,
+            'val_loss_recon': loss_recon_value,
             'val_wer_num': wer_num,
             'val_wer_denom': wer_denom,
             'val_wer': wer,
             'log_probs': log_probs,
-            'extra': (spectrograms, masked_spectrograms, spec_masks)
+            'extra': (spectrograms, masked_spectrograms, spec_masks, spec_recon)
         }
 
     def test_step(self, batch, batch_idx, dataloader_idx=0):

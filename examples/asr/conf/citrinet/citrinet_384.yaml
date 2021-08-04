@@ -490,8 +490,8 @@ model:
     num_classes: -1  # filled with vocabulary size from tokenizer at runtime
     vocabulary: []  # filled with vocabulary from tokenizer at runtime
 
-  auto_decoder:
-    _target_: nemo.collections.asr.modules.ConvASRAutoDecoder
+  decoder_recon:
+    _target_: nemo.collections.asr.modules.ConvASRDecoderRecon
     feat_in: *enc_final
     feat_out: *n_mels
     stride_layers: 3

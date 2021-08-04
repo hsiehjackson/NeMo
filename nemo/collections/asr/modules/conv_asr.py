@@ -472,6 +472,77 @@ class ConvASRDecoder(NeuralModule, Exportable):
     def num_classes_with_blank(self):
         return self._num_classes
 
+class ConvASRDecoderRecon(NeuralModule, Exportable):
+    """ASR Decoder for reconstructing masked regions of spectrogram
+    """
+
+    def save_to(self, save_path: str):
+        pass
+
+    @classmethod
+    def restore_from(cls, restore_path: str):
+        pass
+
+    @property
+    def input_types(self):
+        return OrderedDict({"encoder_output": NeuralType(('B', 'D', 'T'), AcousticEncodedRepresentation())})
+
+    @property
+    def output_types(self):
+        return OrderedDict({"spec_recon": NeuralType(('B', 'T', 'D'), SpectrogramType())})
+
+    def __init__(self, feat_in, feat_out, stride_layers, kernel_size=11, init_mode="xavier_uniform"):
+        super().__init__()
+
+        self.feat_in = feat_in
+        self.feat_out = feat_out
+
+        self.decoder_layers = [nn.Linear(feat_in, feat_out)]
+        for i in range(stride_layers):
+            self.decoder_layers.append(nn.ReLU())
+            self.decoder_layers.append(nn.ConvTranspose1d(feat_out, feat_out, kernel_size,
+                                                          stride=2,
+                                                          padding=(kernel_size - 3) // 2,
+                                                          bias=True))
+            self.decoder_layers.append(nn.Linear(feat_out, feat_out))
+
+
+        self.apply(lambda x: init_weights(x, mode=init_mode))
+
+
+    @typecheck()
+    def forward(self, encoder_output):
+        return self.decoder_layers(encoder_output)
+
+    def input_example(self):
+        """
+        Generates input examples for tracing etc.
+        Returns:
+            A tuple of input examples.
+        """
+        bs = 8
+        seq = 64
+        input_example = torch.randn(bs, self._feat_in, seq).to(next(self.parameters()).device)
+        return tuple([input_example])
+
+    def _prepare_for_export(self, **kwargs):
+        m_count = 0
+        for m in self.modules():
+            if type(m).__name__ == "MaskedConv1d":
+                m.use_mask = False
+                m_count += 1
+        if m_count > 0:
+            logging.warning(f"Turned off {m_count} masked convolutions")
+        Exportable._prepare_for_export(self, **kwargs)
+
+    @property
+    def vocabulary(self):
+        return self.__vocabulary
+
+    @property
+    def num_classes_with_blank(self):
+        return self._num_classes
+
 
 class ConvASRDecoderClassification(NeuralModule, Exportable):
     """Simple ASR Decoder for use with classification models such as JasperNet and QuartzNet

@@ -33,13 +33,14 @@ class SpectrogramLogCallback(Callback):
 
         signal, signal_len, transcript, transcript_len = batch
         log_probs = outputs['log_probs']
-        spectrograms, masked_spectrograms, spec_masks = outputs['extra']
+        spectrograms, masked_spectrograms, spec_masks, spec_recon = outputs['extra']
 
 
         #trainer.logger.experiment[0].log({
         wandb.log({
             "global_step": trainer.global_step,
             "train_spec": [self.get_image(x) for x in spectrograms[:self.num_display]],
+            "train_spec_recon": [self.get_image(x) for x in spec_recon[:self.num_display]],
             "train_spec_masked": [self.get_image(x) for x in masked_spectrograms[:self.num_display]],
             "train_masks": [self.get_image(x) for x in spec_masks[:self.num_display]],
             "train_log_probs": [self.get_image(x) for x in log_probs[:self.num_display]],
@@ -52,13 +53,14 @@ class SpectrogramLogCallback(Callback):
 
         signal, signal_len, transcript, transcript_len = batch
         log_probs = outputs['log_probs']
-        spectrograms, masked_spectrograms, spec_masks = outputs['extra']
+        spectrograms, masked_spectrograms, spec_masks, spec_recon = outputs['extra']
 
 
         #trainer.logger.experiment[0].log({
         wandb.log({
             "global_step": trainer.global_step,
             "val_spec": [self.get_image(x) for x in spectrograms[:self.num_display]],
+            "val_spec_recon": [self.get_image(x) for x in spec_recon[:self.num_display]],
             "val_spec_masked": [self.get_image(x) for x in masked_spectrograms[:self.num_display]],
             "val_masks": [self.get_image(x) for x in spec_masks[:self.num_display]],
             "val_log_probs": [self.get_image(x) for x in log_probs[:self.num_display]],
