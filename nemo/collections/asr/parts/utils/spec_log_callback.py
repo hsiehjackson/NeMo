@@ -13,8 +13,8 @@ class SpectrogramLogCallback(Callback):
 
     def get_image(self, t):
         t = t.float()
-        t -= t.min()
-        t /= t.max()
+        t = t - t.min()
+        t = t / t.max()
 
         i = transforms.ToPILImage()(t)
 

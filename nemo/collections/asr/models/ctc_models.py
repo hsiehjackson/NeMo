@@ -185,6 +185,8 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
             log_prediction=self._cfg.get("log_prediction", False),
         )
 
+        self.masked_evaluation = True
+
     @torch.no_grad()
     def transcribe(
         self,
@@ -543,7 +545,7 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
         #processed_signal before spec augment
         spectrograms = processed_signal.detach().clone()
 
-        if self.spec_augmentation is not None and self.training:
+        if self.spec_augmentation is not None and (self.training or self.masked_evaluation):
             processed_signal = self.spec_augmentation(input_spec=processed_signal, length=processed_signal_length)
 
         #after spec augment
@@ -626,7 +628,9 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
         }
 
     def test_step(self, batch, batch_idx, dataloader_idx=0):
+        self.masked_evaluation = False
         logs = self.validation_step(batch, batch_idx, dataloader_idx=dataloader_idx)
+        self.masked_evaluation = True
         test_logs = {
             'test_loss': logs['val_loss'],
             'test_wer_num': logs['val_wer_num'],
