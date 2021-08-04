@@ -3,12 +3,29 @@ from pytorch_lightning.utilities import rank_zero_only
 
 import wandb
 
+import torch.nn.functional as F
 
 class SpectrogramLogCallback(Callback):
 
     def __init__(self, num_display=8):
         super().__init__()
         self.num_display = num_display
+
+    def get_image(self, t):
+        t = t.float()
+        t -= t.min()
+        t /= t.max()
+
+        i = F.to_pil_image(t)
+
+        w, h = i.size
+        if w < h // 2:
+            w = h // 2
+        if h < w // 2:
+            h = w // 2
+        i = i.resize((w, h))
+        
+        return wandb.Image(i)
 
     @rank_zero_only
     def on_train_batch_end(self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx):
@@ -19,24 +36,14 @@ class SpectrogramLogCallback(Callback):
         log_probs = outputs['log_probs']
         spectrograms, masked_spectrograms, spec_masks = outputs['extra']
 
-        """log_probs -= log_probs.min()
-        log_probs /= log_probs.max()
-
-        spectrograms -= spectrograms.min()
-        spectrograms /= spectrograms.max()
-
-        masked_spectrograms -= masked_spectrograms.min()
-        masked_spectrograms /= masked_spectrograms.max()"""
-
-        spec_masks = spec_masks.float()
 
         #trainer.logger.experiment[0].log({
         wandb.log({
             "global_step": trainer.global_step,
-            "train_spec": [wandb.Image(x) for x in spectrograms[:self.num_display]],
-            "train_spec_masked": [wandb.Image(x) for x in masked_spectrograms[:self.num_display]],
-            "train_masks": [wandb.Image(x) for x in spec_masks[:self.num_display]],
-            "train_log_probs": [wandb.Image(x) for x in log_probs[:self.num_display]],
+            "train_spec": [self.get_image(x) for x in spectrograms[:self.num_display]],
+            "train_spec_masked": [self.get_image(x) for x in masked_spectrograms[:self.num_display]],
+            "train_masks": [self.get_image(x) for x in spec_masks[:self.num_display]],
+            "train_log_probs": [self.get_image(x) for x in log_probs[:self.num_display]],
         })
 
     @rank_zero_only
@@ -48,13 +55,12 @@ class SpectrogramLogCallback(Callback):
         log_probs = outputs['log_probs']
         spectrograms, masked_spectrograms, spec_masks = outputs['extra']
 
-        spec_masks = spec_masks.float()
 
         #trainer.logger.experiment[0].log({
         wandb.log({
             "global_step": trainer.global_step,
-            "val_spec": [wandb.Image(x) for x in spectrograms[:self.num_display]],
-            "val_spec_masked": [wandb.Image(x) for x in masked_spectrograms[:self.num_display]],
-            "val_masks": [wandb.Image(x) for x in spec_masks[:self.num_display]],
-            "val_log_probs": [wandb.Image(x) for x in log_probs[:self.num_display]],
+            "val_spec": [self.get_image(x) for x in spectrograms[:self.num_display]],
+            "val_spec_masked": [self.get_image(x) for x in masked_spectrograms[:self.num_display]],
+            "val_masks": [self.get_image(x) for x in spec_masks[:self.num_display]],
+            "val_log_probs": [self.get_image(x) for x in log_probs[:self.num_display]],
         })
