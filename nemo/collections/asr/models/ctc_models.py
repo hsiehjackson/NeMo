@@ -19,6 +19,7 @@ from math import ceil
 from typing import Dict, List, Optional, Union
 
 import torch
+import torch.nn.functional as F
 from omegaconf import DictConfig, OmegaConf, open_dict
 from pytorch_lightning import Trainer
 from tqdm.auto import tqdm
@@ -548,6 +549,8 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
             processed_signal, processed_signal_length = self.preprocessor(
                 input_signal=input_signal, length=input_signal_length,
             )
+
+        processed_signal = F.pad(processed_signal, [0, 8 - processed_signal.shape[-1] % 8])
 
         #processed_signal before spec augment
         spectrograms = processed_signal.detach().clone()
