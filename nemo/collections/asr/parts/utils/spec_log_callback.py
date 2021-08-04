@@ -19,7 +19,8 @@ class SpectrogramLogCallback(Callback):
         log_probs = outputs['log_probs']
         spectrograms, masked_spectrograms, spec_masks = outputs['extra']
 
-        trainer.logger.experiment[0].log({
+        #trainer.logger.experiment[0].log({
+        wandb.log({
             "global_step": trainer.global_step,
             "train_spec": [wandb.Image(spectrograms[:self.num_display])],
             "train_spec_masked": [wandb.Image(masked_spectrograms[:self.num_display])],
@@ -36,7 +37,8 @@ class SpectrogramLogCallback(Callback):
         log_probs = outputs['log_probs']
         spectrograms, masked_spectrograms, spec_masks = outputs['extra']
 
-        trainer.logger.experiment[0].log({
+        #trainer.logger.experiment[0].log({
+        wandb.log({
             "global_step": trainer.global_step,
             "val_spec": [wandb.Image(spectrograms[:self.num_display])],
             "val_spec_masked": [wandb.Image(masked_spectrograms[:self.num_display])],
