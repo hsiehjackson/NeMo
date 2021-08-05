@@ -591,11 +591,17 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
             log_probs, encoded_len, predictions, (spectrograms, masked_spectrograms, spec_masks, spec_recon) = \
                 self.forward(input_signal=signal, input_signal_length=signal_len)
 
-        loss_ctc_value = self.loss(
-            log_probs=log_probs, targets=transcript, input_lengths=encoded_len, target_lengths=transcript_len
-        )
+        if self.ctc_loss_coeff > 1e-10:
+            loss_ctc_value = self.loss(
+                log_probs=log_probs, targets=transcript, input_lengths=encoded_len, target_lengths=transcript_len
+            )
+        else:
+            loss_ctc_value = 0.
 
-        loss_recon_value = self.loss_recon(spec_in=spectrograms, masks=spec_masks, spec_out=spec_recon)
+        if self.recon_loss_coeff > 1e-10:
+            loss_recon_value = self.loss_recon(spec_in=spectrograms, masks=spec_masks, spec_out=spec_recon)
+        else:
+            loss_recon_value = 0.
 
         tensorboard_logs = {'train_loss_ctc': loss_ctc_value, 'learning_rate': self._optimizer.param_groups[0]['lr'],
                             'train_loss_recon': loss_recon_value}
