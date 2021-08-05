@@ -497,6 +497,7 @@ class ConvASRDecoderRecon(NeuralModule, Exportable):
 
         self.feat_in = feat_in
         self.feat_out = feat_out
+        self.feat_hidden = feat_hidden
 
         self.decoder_layers = [nn.Conv1d(self.feat_in, self.feat_hidden, kernel_size=1, bias=True)]
         for i in range(stride_layers):
