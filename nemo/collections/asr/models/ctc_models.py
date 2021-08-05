@@ -158,15 +158,19 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
 
         with open_dict(self._cfg):
             if "feat_in" not in self._cfg.decoder or (
-                not self._cfg.decoder.feat_in and hasattr(self.encoder, '_feat_out')
+                    not self._cfg.decoder.feat_in and hasattr(self.encoder, '_feat_out')
             ):
                 self._cfg.decoder.feat_in = self.encoder._feat_out
             if "feat_in" not in self._cfg.decoder or not self._cfg.decoder.feat_in:
                 raise ValueError("param feat_in of the decoder's config is not set!")
 
+        self.ctc_loss_coeff = self._cfg.get("ctc_loss_coeff", 1.)
+        self.recon_loss_coeff = self._cfg.get("recon_loss_coeff", 0.)
+
         self.decoder = EncDecCTCModel.from_config_dict(self._cfg.decoder)
 
-        self.decoder_recon = EncDecCTCModel.from_config_dict(self._cfg.decoder_recon)
+        if self.recon_loss_coeff > 1e-10:
+            self.decoder_recon = EncDecCTCModel.from_config_dict(self._cfg.decoder_recon)
 
         self.loss = CTCLoss(
             num_classes=self.decoder.num_classes_with_blank - 1,
@@ -193,16 +197,13 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
 
         self.masked_evaluation = True
 
-        self.ctc_loss_coeff = self._cfg.get("ctc_loss_coeff", 1.)
-        self.recon_loss_coeff = self._cfg.get("recon_loss_coeff", 0.)
-
     @torch.no_grad()
     def transcribe(
-        self,
-        paths2audio_files: List[str],
-        batch_size: int = 4,
-        logprobs: bool = False,
-        return_hypotheses: bool = False,
+            self,
+            paths2audio_files: List[str],
+            batch_size: int = 4,
+            logprobs: bool = False,
+            return_hypotheses: bool = False,
     ) -> List[str]:
         """
         Uses greedy decoding to transcribe audio files. Use this method for debugging and prototyping.
@@ -376,7 +377,7 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
         # Instantiate tarred dataset loader or normal dataset loader
         if config.get('is_tarred', False):
             if ('tarred_audio_filepaths' in config and config['tarred_audio_filepaths'] is None) or (
-                'manifest_filepath' in config and config['manifest_filepath'] is None
+                    'manifest_filepath' in config and config['manifest_filepath'] is None
             ):
                 logging.warning(
                     "Could not load dataset as `manifest_filepath` was None or "
@@ -511,12 +512,12 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
             "outputs": NeuralType(('B', 'T', 'D'), LogprobsType()),
             "encoded_lengths": NeuralType(tuple('B'), LengthsType()),
             "greedy_predictions": NeuralType(('B', 'T'), LabelsType()),
-            #"extra": NeuralType(tuple('B'), LengthsType()),
+            # "extra": NeuralType(tuple('B'), LengthsType()),
         }
 
-    #@typecheck()
+    # @typecheck()
     def forward(
-        self, input_signal=None, input_signal_length=None, processed_signal=None, processed_signal_length=None
+            self, input_signal=None, input_signal_length=None, processed_signal=None, processed_signal_length=None
     ):
         """
         Forward pass of the model.
@@ -553,29 +554,34 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
 
         processed_signal = F.pad(processed_signal, [0, 8 - processed_signal.shape[-1] % 8])
 
-        #processed_signal before spec augment
+        # processed_signal before spec augment
         spectrograms = processed_signal.detach().clone()
 
         if self.spec_augmentation is not None and (self.training or self.masked_evaluation):
             processed_signal = self.spec_augmentation(input_spec=processed_signal, length=processed_signal_length)
 
-        #after spec augment
+        # after spec augment
         masked_spectrograms = processed_signal.detach()
         spec_masks = torch.logical_and(masked_spectrograms < 1e-5, masked_spectrograms > -1e-5).float()
         for idx, proc_len in enumerate(processed_signal_length):
             spec_masks[idx, :, proc_len:] = 0.
 
-
         encoded, encoded_len = self.encoder(audio_signal=processed_signal, length=processed_signal_length)
 
-        #encoded features
-        #this can be used for both transcribing and self-sup predictions
+        # encoded features
+        # this can be used for both transcribing and self-sup predictions
+        if self.ctc_loss_coeff > 1e-10:
+            log_probs = self.decoder(encoder_output=encoded)
+            greedy_predictions = log_probs.argmax(dim=-1, keepdim=False)
+        else:
+            log_probs = None
+            greedy_predictions = None
 
-        log_probs = self.decoder(encoder_output=encoded)
-        greedy_predictions = log_probs.argmax(dim=-1, keepdim=False)
-
-        #make None otherwise
-        spec_recon = self.decoder_recon(encoder_output=encoded)
+        # make None otherwise
+        if self.recon_loss_coeff > 1e-10:
+            spec_recon = self.decoder_recon(encoder_output=encoded)
+        else:
+            spec_recon = None
 
         return log_probs, encoded_len, greedy_predictions, (spectrograms, masked_spectrograms, spec_masks, spec_recon)
 
@@ -585,8 +591,8 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
         if isinstance(batch, DALIOutputs) and batch.has_processed_signal:
             log_probs, encoded_len, predictions, (spectrograms, masked_spectrograms, spec_masks, spec_recon) = \
                 self.forward(
-                processed_signal=signal, processed_signal_length=signal_len
-            )
+                    processed_signal=signal, processed_signal_length=signal_len
+                )
         else:
             log_probs, encoded_len, predictions, (spectrograms, masked_spectrograms, spec_masks, spec_recon) = \
                 self.forward(input_signal=signal, input_signal_length=signal_len)
@@ -634,16 +640,24 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
         if isinstance(batch, DALIOutputs) and batch.has_processed_signal:
             log_probs, encoded_len, predictions, (spectrograms, masked_spectrograms, spec_masks, spec_recon) = \
                 self.forward(
-                processed_signal=signal, processed_signal_length=signal_len
-            )
+                    processed_signal=signal, processed_signal_length=signal_len
+                )
         else:
             log_probs, encoded_len, predictions, (spectrograms, masked_spectrograms, spec_masks, spec_recon) = \
                 self.forward(input_signal=signal, input_signal_length=signal_len)
 
-        loss_ctc_value = self.loss(
-            log_probs=log_probs, targets=transcript, input_lengths=encoded_len, target_lengths=transcript_len
-        )
-        loss_recon_value = self.loss_recon(spec_in=spectrograms, masks=spec_masks, spec_out=spec_recon)
+        if self.ctc_loss_coeff > 1e-10:
+            loss_ctc_value = self.loss(
+                log_probs=log_probs, targets=transcript, input_lengths=encoded_len, target_lengths=transcript_len
+            )
+        else:
+            loss_ctc_value = 0.
+
+        if self.recon_loss_coeff > 1e-10:
+            loss_recon_value = self.loss_recon(spec_in=spectrograms, masks=spec_masks, spec_out=spec_recon)
+        else:
+            loss_recon_value = 0.
+
         self._wer.update(
             predictions=predictions, targets=transcript, target_lengths=transcript_len, predictions_lengths=encoded_len
         )

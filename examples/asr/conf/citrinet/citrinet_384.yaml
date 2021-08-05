@@ -495,6 +495,7 @@ model:
   decoder_recon:
     _target_: nemo.collections.asr.modules.ConvASRDecoderRecon
     feat_in: *enc_final
+    feat_hidden: ${model.model_defaults.filters}
     feat_out: *n_mels
     stride_layers: 3
 
