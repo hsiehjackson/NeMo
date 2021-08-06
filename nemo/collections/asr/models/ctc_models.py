@@ -666,9 +666,9 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
             wer, wer_num, wer_denom = self._wer.compute()
             self._wer.reset()
         else:
-            wer = 1.
-            wer_num = 1.
-            wer_denom = 1.
+            wer = torch.Tensor([1])
+            wer_num = torch.Tensor([1])
+            wer_denom = torch.Tensor([1])
 
         return {
             'val_loss': loss_ctc_value + self.recon_loss_coeff * loss_recon_value,
