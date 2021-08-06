@@ -78,7 +78,10 @@ from nemo.collections.asr.parts.utils.spec_log_callback import SpectrogramLogCal
 def main(cfg):
     logging.info(f'Hydra config: {OmegaConf.to_yaml(cfg)}')
 
-    trainer = pl.Trainer(**cfg.trainer, callbacks=[SpectrogramLogCallback()])
+    callbacks = []
+    if cfg.model.recon_loss_coeff > 1e-10:
+        callbacks.append(SpectrogramLogCallback())
+    trainer = pl.Trainer(**cfg.trainer, callbacks=callbacks)
     exp_manager(trainer, cfg.get("exp_manager", None))
     asr_model = EncDecCTCModelBPE(cfg=cfg.model, trainer=trainer)
 

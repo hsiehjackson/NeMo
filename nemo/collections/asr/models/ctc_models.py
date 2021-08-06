@@ -617,16 +617,17 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
         else:
             log_every_n_steps = 1
 
-        if (batch_nb + 1) % log_every_n_steps == 0:
-            self._wer.update(
-                predictions=predictions,
-                targets=transcript,
-                target_lengths=transcript_len,
-                predictions_lengths=encoded_len,
-            )
-            wer, _, _ = self._wer.compute()
-            self._wer.reset()
-            tensorboard_logs.update({'training_batch_wer': wer})
+        if self.ctc_loss_coeff > 1e-10:
+            if (batch_nb + 1) % log_every_n_steps == 0:
+                self._wer.update(
+                    predictions=predictions,
+                    targets=transcript,
+                    target_lengths=transcript_len,
+                    predictions_lengths=encoded_len,
+                )
+                wer, _, _ = self._wer.compute()
+                self._wer.reset()
+                tensorboard_logs.update({'training_batch_wer': wer})
 
         return {'loss': self.ctc_loss_coeff * loss_ctc_value + self.recon_loss_coeff * loss_recon_value,
                 'loss_ctc': loss_ctc_value,
@@ -658,11 +659,17 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
         else:
             loss_recon_value = 0.
 
-        self._wer.update(
-            predictions=predictions, targets=transcript, target_lengths=transcript_len, predictions_lengths=encoded_len
-        )
-        wer, wer_num, wer_denom = self._wer.compute()
-        self._wer.reset()
+        if self.ctc_loss_coeff > 1e-10:
+            self._wer.update(
+                predictions=predictions, targets=transcript, target_lengths=transcript_len, predictions_lengths=encoded_len
+            )
+            wer, wer_num, wer_denom = self._wer.compute()
+            self._wer.reset()
+        else:
+            wer = 1.
+            wer_num = 1.
+            wer_denom = 1.
+
         return {
             'val_loss': loss_ctc_value + self.recon_loss_coeff * loss_recon_value,
             'val_loss_ctc': loss_ctc_value,
