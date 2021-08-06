@@ -43,8 +43,11 @@ class SpectrogramLogCallback(Callback):
             "train_spec_recon": [self.get_image(x) for x in spec_recon[:self.num_display]],
             "train_spec_masked": [self.get_image(x) for x in masked_spectrograms[:self.num_display]],
             "train_masks": [self.get_image(x) for x in spec_masks[:self.num_display]],
-            "train_log_probs": [self.get_image(x) for x in log_probs[:self.num_display]],
         })
+        if log_probs is not None:
+            wandb.log({
+                "train_log_probs": [self.get_image(x) for x in log_probs[:self.num_display]],
+            })
 
     @rank_zero_only
     def on_validation_batch_end(self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx):
@@ -63,5 +66,8 @@ class SpectrogramLogCallback(Callback):
             "val_spec_recon": [self.get_image(x) for x in spec_recon[:self.num_display]],
             "val_spec_masked": [self.get_image(x) for x in masked_spectrograms[:self.num_display]],
             "val_masks": [self.get_image(x) for x in spec_masks[:self.num_display]],
-            "val_log_probs": [self.get_image(x) for x in log_probs[:self.num_display]],
         })
+        if log_probs is not None:
+            wandb.log({
+                "val_log_probs": [self.get_image(x) for x in log_probs[:self.num_display]],
+            })
