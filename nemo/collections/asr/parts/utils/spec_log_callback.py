@@ -5,6 +5,7 @@ import wandb
 
 from torchvision import transforms
 
+
 class SpectrogramLogCallback(Callback):
 
     def __init__(self, num_display=8):
@@ -29,8 +30,10 @@ class SpectrogramLogCallback(Callback):
         else:
             wandb.Image(t,
                         masks={
-                            "mask_data": masks.round().int(),
-                            "class_labels": {1: "masked"}
+                            "masks": {
+                                "mask_data": masks.round().int(),
+                                "class_labels": {1: "masked"}
+                            }
                         }
                         )
 
@@ -66,8 +69,7 @@ class SpectrogramLogCallback(Callback):
         log_probs = outputs['log_probs']
         spectrograms, masked_spectrograms, spec_masks, spec_recon = outputs['extra']
 
-
-        #trainer.logger.experiment[0].log({
+        # trainer.logger.experiment[0].log({
         wandb.log({
             "global_step": trainer.global_step,
             "val_spec": [self.get_image(x) for x in spectrograms[:self.num_display]],
