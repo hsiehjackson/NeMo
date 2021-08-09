@@ -27,7 +27,12 @@ class SpectrogramLogCallback(Callback):
         if masks is None:
             return wandb.Image(t)
         else:
-            wandb.Image(t, mask_data=masks.round().int(), class_labels={0: "unmasked", 1: "masked"})
+            wandb.Image(t,
+                        masks={
+                            "mask_data": masks.round().int(),
+                            "class_labels": {1: "masked"}
+                        }
+                        )
 
     """@rank_zero_only
     def on_train_batch_end(self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx):
