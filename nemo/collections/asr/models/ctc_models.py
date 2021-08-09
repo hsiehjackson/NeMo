@@ -693,6 +693,38 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
         }
         return test_logs
 
+    #override to log properly for each decoder
+    #for now just ctc and recon
+    def multi_validation_epoch_end(self, outputs, dataloader_idx: int = 0):
+        val_loss_mean = torch.stack([x['val_loss'] for x in outputs]).mean()
+
+        logs = {'val_loss': val_loss_mean}
+
+        if self.ctc_loss_coeff > 1e-10:
+            wer_num = torch.stack([x['val_wer_num'] for x in outputs]).sum()
+            wer_denom = torch.stack([x['val_wer_denom'] for x in outputs]).sum()
+            logs['val_wer'] = wer_num / wer_denom
+
+        if self.recon_loss_coeff > 1e-10:
+            logs['val_loss_recon'] = torch.stack([x['val_loss_recon'] for x in outputs]).mean()
+
+        return {'val_loss': val_loss_mean, 'log': logs}
+
+    def multi_test_epoch_end(self, outputs, dataloader_idx: int = 0):
+        val_loss_mean = torch.stack([x['test_loss'] for x in outputs]).mean()
+
+        logs = {'test_loss': val_loss_mean}
+
+        if self.ctc_loss_coeff > 1e-10:
+            wer_num = torch.stack([x['test_wer_num'] for x in outputs]).sum()
+            wer_denom = torch.stack([x['test_wer_denom'] for x in outputs]).sum()
+            logs['test_wer'] = wer_num / wer_denom
+
+        if self.recon_loss_coeff > 1e-10:
+            logs['test_loss_recon'] = torch.stack([x['test_loss_recon'] for x in outputs]).mean()
+
+        return {'test_loss': val_loss_mean, 'log': logs}
+
     def test_dataloader(self):
         if self._test_dl is not None:
             return self._test_dl
