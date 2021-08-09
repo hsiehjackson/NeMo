@@ -68,6 +68,7 @@ class SpectrogramLogCallback(Callback):
         signal, signal_len, transcript, transcript_len = batch
         log_probs = outputs['log_probs']
         spectrograms, masked_spectrograms, spec_masks, spec_recon = outputs['extra']
+        spectrograms = spectrograms + spec_masks * 0.1
 
         # trainer.logger.experiment[0].log({
         wandb.log({
@@ -76,8 +77,8 @@ class SpectrogramLogCallback(Callback):
             "val_spec_recon": [self.get_image(x) for x in spec_recon[:self.num_display]],
             #"val_spec_recon": [self.get_image(x, m) for x, m in
             #                   zip(spec_recon[:self.num_display], spec_masks[:self.num_display])],
-            "val_spec_masked": [self.get_image(x) for x in masked_spectrograms[:self.num_display]],
-            "val_masks": [self.get_image(x) for x in spec_masks[:self.num_display]],
+            #"val_spec_masked": [self.get_image(x) for x in masked_spectrograms[:self.num_display]],
+            #"val_masks": [self.get_image(x) for x in spec_masks[:self.num_display]],
         })
         if log_probs is not None:
             wandb.log({
