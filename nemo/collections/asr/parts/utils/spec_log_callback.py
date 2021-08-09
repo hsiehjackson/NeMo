@@ -73,15 +73,15 @@ class SpectrogramLogCallback(Callback):
 
         # trainer.logger.experiment[0].log({
         wandb.log({
-            "global_step": trainer.global_step,
             "val_spec": [self.get_image(x) for x in spectrograms[:self.num_display]],
             "val_spec_recon": [self.get_image(x) for x in spec_recon[:self.num_display]],
             #"val_spec_recon": [self.get_image(x, m) for x, m in
             #                   zip(spec_recon[:self.num_display], spec_masks[:self.num_display])],
             #"val_spec_masked": [self.get_image(x) for x in masked_spectrograms[:self.num_display]],
             #"val_masks": [self.get_image(x) for x in spec_masks[:self.num_display]],
-        })
+        }, step=trainer.global_step)
+
         if log_probs is not None:
             wandb.log({
                 "val_log_probs": [self.get_image(x) for x in log_probs[:self.num_display]],
-            })
+            }, step=trainer.global_step)
