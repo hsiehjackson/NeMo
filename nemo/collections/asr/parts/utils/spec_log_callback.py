@@ -31,7 +31,7 @@ class SpectrogramLogCallback(Callback):
             wandb.Image(t,
                         masks={
                             "masks": {
-                                "mask_data": masks.round().int(),
+                                "mask_data": masks.round().int().cpu().numpy(),
                                 "class_labels": {1: "masked"}
                             }
                         }
