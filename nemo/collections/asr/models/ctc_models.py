@@ -556,12 +556,14 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
 
         # processed_signal before spec augment
         spectrograms = processed_signal.detach().clone()
+        spectrograms = F.avg_pool1d(spectrograms, kernel_size=8)
 
         if self.spec_augmentation is not None and (self.training or self.masked_evaluation):
             processed_signal = self.spec_augmentation(input_spec=processed_signal, length=processed_signal_length)
 
         # after spec augment
         masked_spectrograms = processed_signal.detach()
+        masked_spectrograms = F.avg_pool1d(masked_spectrograms, kernel_size=8)
         spec_masks = torch.logical_and(masked_spectrograms < 1e-5, masked_spectrograms > -1e-5).float()
         for idx, proc_len in enumerate(processed_signal_length):
             spec_masks[idx, :, proc_len:] = 0.

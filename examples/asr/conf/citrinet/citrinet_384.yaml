@@ -497,7 +497,7 @@ model:
     feat_in: *enc_final
     feat_hidden: ${model.model_defaults.filters}
     feat_out: *n_mels
-    stride_layers: 3
+    stride_layers: 0
 
   optim:
     name: novograd
