@@ -68,8 +68,8 @@ class SpectrogramLogCallback(Callback):
         signal, signal_len, transcript, transcript_len = batch
         log_probs = outputs['log_probs']
         spectrograms, masked_spectrograms, spec_masks, spec_recon = outputs['extra']
-        spectrograms = spectrograms + spec_masks * 0.2 * (spectrograms.max() - spectrograms.min())
-        spec_recon = spec_recon + spec_masks * 0.2 * (spec_recon.max() - spec_recon.min())
+        spectrograms = spectrograms + spec_masks * 0.12 * (spectrograms.max() - spectrograms.min())
+        spec_recon = spec_recon + spec_masks * 0.12 * (spec_recon.max() - spec_recon.min())
 
         # trainer.logger.experiment[0].log({
         wandb.log({
