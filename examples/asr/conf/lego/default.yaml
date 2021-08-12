@@ -115,25 +115,20 @@ model:
       last_epoch: -1
 
 trainer:
-  gpus: -1 # number of GPUs, -1 would use all available GPUs
-  num_nodes: 1
+  gpus: 0 # number of gpus
   max_epochs: 100
   max_steps: null # computed at runtime if not set
-  val_check_interval: 1.0 # Set to 0.25 to check 4 times per epoch, or an int for number of iterations
+  num_nodes: 1
   accelerator: ddp
   accumulate_grad_batches: 1
-  gradient_clip_val: 0.0
-  amp_level: O1 # O1/O2 for mixed precision
-  precision: 16 # Should be set to 16 for O1 and O2 to enable the AMP.
-  log_every_n_steps: 10  # Interval of logging.
-  progress_bar_refresh_rate: 10
-  resume_from_checkpoint: null # The path to a checkpoint file to continue the training, restores the whole state including the epoch, step, LR schedulers, apex, etc.
-  num_sanity_val_steps: 0 # number of steps to perform validation steps for sanity check the validation process before starting the training, setting to 0 disables it
-  check_val_every_n_epoch: 1 # number of evaluations on validation every n epochs
-  sync_batchnorm: true
   checkpoint_callback: false  # Provided by exp_manager
   logger: false  # Provided by exp_manager
-  benchmark: true
+  log_every_n_steps: 100  # Interval of logging.
+  val_check_interval: 1.0 # Set to 0.25 to check 4 times per epoch, or an int for number of iterations
+  check_val_every_n_epoch: 1
+  precision: 32
+  sync_batchnorm: false
+  benchmark: false
 
 exp_manager:
   exp_dir: null
