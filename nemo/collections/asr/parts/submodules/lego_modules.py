@@ -131,7 +131,7 @@ class LegoConvSubBlock(nn.Module):
         self.stride = stride
 
         if not self.transpose:
-            self.depthwise_conv = MaskedConv1d(
+            self.depthwise_conv = nn.Conv1d(
                 in_channels=d_model,
                 out_channels=d_model,
                 kernel_size=kernel_size,
@@ -153,7 +153,6 @@ class LegoConvSubBlock(nn.Module):
 
         self.axis = axis
 
-
     def forward(self, x, lens, pad_mask=None):
         if self.axis == "time":
             x = x.transpose(-2, -1)
@@ -161,7 +160,8 @@ class LegoConvSubBlock(nn.Module):
                 x.masked_fill_(pad_mask.unsqueeze(1), 0.0)
 
         if not self.transpose:
-            x, lens = self.depthwise_conv(x, lens)
+            x = self.depthwise_conv(x)
+            lens = (lens - 1) // self.stride + 1
         else:
             x = self.depthwise_conv(x)
             lens = 2 * lens
@@ -525,11 +525,11 @@ class LegoAttentionBlock(nn.Module):
     def forward(self, x):
         shift = self.patch_size // 2 * (self.block_id % 2)
 
-        #print(1, x.shape)
+        # print(1, x.shape)
 
         x = x[..., shift:, :]
 
-        #print(2, x.shape)
+        # print(2, x.shape)
 
         pad_val = self.patch_size - x.shape[-2] % self.patch_size
         x = F.pad(x, [0, 0, 0, pad_val])
@@ -537,8 +537,8 @@ class LegoAttentionBlock(nn.Module):
         x_shape = x.shape
         x = x.reshape((-1, self.patch_size, x.shape[-1]))
 
-        #print(3, x_shape)
-        #print(4, x.shape)
+        # print(3, x_shape)
+        # print(4, x.shape)
 
         if self.use_pos_emb:
             x, _ = self.pos_emb(x)
@@ -548,12 +548,11 @@ class LegoAttentionBlock(nn.Module):
                       value=x,
                       mask=None)
 
-
         x = x.reshape(x_shape)
         x = x[..., :-pad_val, :]
-        #print(5, x.shape)
+        # print(5, x.shape)
         x = F.pad(x, [0, 0, shift, 0])
 
-        #print(6, x.shape)
+        # print(6, x.shape)
 
         return x

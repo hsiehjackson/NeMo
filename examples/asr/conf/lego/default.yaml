@@ -63,17 +63,25 @@ model:
     _target_: nemo.collections.asr.modules.LegoEncoder
     feat_in: ${model.preprocessor.features}
     n_blocks:
+      - 3
       - 6
       - 6
     d_model: 512
     outer_residual: true
     multi_block_residual: false
-    conv_stride_every: 1
-    conv_stride_total: 3
     multi_block_residual_skip: ${model.encoder.conv_stride_every}
     dropout: 0.
 
     sub_blocks:
+
+      - - _target_: nemo.collections.asr.parts.submodules.lego_modules.LegoConvSubBlock
+          d_model: ${model.encoder.d_model}
+          stride: 2
+          kernel_size: 17
+
+        - _target_: nemo.collections.asr.parts.submodules.lego_modules.LegoLinearSubBlock
+          d_model: ${model.encoder.d_model}
+
       - - _target_: nemo.collections.asr.parts.submodules.lego_modules.LegoConvSubBlock
           d_model: ${model.encoder.d_model}
           kernel_size: 17
