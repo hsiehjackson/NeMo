@@ -25,7 +25,7 @@ __all__ = ['MaskedSpecReconLoss']
 class MaskedSpecReconLoss(Loss):
     @property
     def input_types(self):
-        """Input types definitions for CTCLoss.
+        """Input types definitions for MaskedSpecReconLoss.
         """
         return {
             "spec_in": NeuralType(('B', 'T', 'D'), SpectrogramType()),
@@ -35,19 +35,23 @@ class MaskedSpecReconLoss(Loss):
 
     @property
     def output_types(self):
-        """Output types definitions for CTCLoss.
+        """Output types definitions for MaskedSpecReconLoss.
         loss:
             NeuralType(None)
         """
         return {"loss": NeuralType(elements_type=LossType())}
 
-    def __init__(self):
+    def __init__(self, only_masked_recon_loss=True):
         super().__init__()
+        self.only_masked_recon_loss = only_masked_recon_loss
 
     @typecheck()
     def forward(self, spec_in, masks, spec_out):
-        mask_sum = masks.sum(dim=(-2, -1))
-        spec_diff = torch.abs((spec_in * masks) - (spec_out * masks)).sum(dim=(-2, -1))
-        loss = spec_diff / mask_sum
-        loss = torch.mean(loss)
-        return loss
+        if self.only_masked_recon_loss:
+            mask_sum = masks.sum(dim=(-2, -1))
+            spec_diff = torch.abs((spec_in * masks) - (spec_out * masks)).sum(dim=(-2, -1))
+            loss = spec_diff / mask_sum
+            loss = torch.mean(loss)
+            return loss
+        else:
+            return torch.abs(spec_in - spec_out).sum(dim=(-2, -1)).mean()

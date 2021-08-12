@@ -491,13 +491,14 @@ model:
     vocabulary: []  # filled with vocabulary from tokenizer at runtime
 
   recon_loss_coeff: 0.
+  only_masked_recon_loss: true
 
   decoder_recon:
     _target_: nemo.collections.asr.modules.ConvASRDecoderRecon
     feat_in: *enc_final
     feat_hidden: ${model.model_defaults.filters}
     feat_out: *n_mels
-    stride_layers: 0
+    stride_layers: 3
 
   optim:
     name: novograd
