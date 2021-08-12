@@ -51,7 +51,8 @@ class MaskedSpecReconLoss(Loss):
             mask_sum = masks.sum(dim=(-2, -1))
             spec_diff = torch.abs((spec_in * masks) - (spec_out * masks)).sum(dim=(-2, -1))
             loss = spec_diff / mask_sum
-            loss = torch.mean(loss)
-            return loss
+            return loss.mean()
         else:
-            return torch.abs(spec_in - spec_out).sum(dim=(-2, -1)).mean()
+            spec_diff = torch.abs(spec_in - spec_out).sum(dim=(-2, -1))
+            loss = spec_diff / (spec_in.shape[-2] * spec_in.shape[-1])
+            return loss.mean()
