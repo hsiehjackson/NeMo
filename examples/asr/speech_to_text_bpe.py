@@ -79,7 +79,7 @@ def main(cfg):
     logging.info(f'Hydra config: {OmegaConf.to_yaml(cfg)}')
 
     callbacks = []
-    if cfg.model.recon_loss_coeff > 1e-10:
+    if cfg.get("model.recon_loss_coeff", 0.) > 1e-10:
         callbacks.append(SpectrogramLogCallback())
     trainer = pl.Trainer(**cfg.trainer, callbacks=callbacks)
     exp_manager(trainer, cfg.get("exp_manager", None))
