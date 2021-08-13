@@ -1,4 +1,4 @@
-name: "Lego-Conv-FG"
+name: "Lego"
 
 model:
   sample_rate: &sample_rate 16000
@@ -15,7 +15,6 @@ model:
     is_tarred: false
     tarred_audio_filepaths: null
     use_start_end_token: false
-    pin_memory: true
 
   validation_ds:
     manifest_filepath: ???
@@ -23,7 +22,6 @@ model:
     batch_size: 32
     shuffle: false
     use_start_end_token: false
-    pin_memory: true
 
   test_ds:
     manifest_filepath: null
@@ -31,7 +29,6 @@ model:
     batch_size: 32
     shuffle: false
     use_start_end_token: false
-    pin_memory: true
 
   # recommend small vocab size of 128 or 256 with 4x sub-sampling
   tokenizer:
@@ -140,16 +137,18 @@ trainer:
 
 exp_manager:
   exp_dir: null
-  name: ${name}
+  name: {$name}
   create_tensorboard_logger: true
   create_checkpoint_callback: true
   checkpoint_callback_params:
-    # in case of multiple validation sets, first one is used
     monitor: "val_wer"
     mode: "min"
     save_top_k: 3
-
-  # you need to set these two to True to continue the training
+  create_wandb_logger: false
+  wandb_logger_kwargs:
+    name: null
+    project: null
+    entity: null
   resume_if_exists: false
   resume_ignore_no_checkpoint: false
 
