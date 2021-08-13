@@ -137,7 +137,7 @@ trainer:
 
 exp_manager:
   exp_dir: null
-  name: {$name}
+  name: ${name}
   create_tensorboard_logger: true
   create_checkpoint_callback: true
   checkpoint_callback_params:
@@ -152,8 +152,9 @@ exp_manager:
   resume_if_exists: false
   resume_ignore_no_checkpoint: false
 
-  # You may use this section to create a W&B logger
-  create_wandb_logger: false
-  wandb_logger_kwargs:
-    name: null
-    project: null
+hydra:
+  run:
+    dir: .
+  job_logging:
+    root:
+      handlers: null
