@@ -62,8 +62,8 @@ class SpectrogramLogCallback(Callback):
 
     @rank_zero_only
     def on_validation_batch_end(self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx):
-        if batch_idx % 100 != 0:
-            return
+        #if batch_idx % 100 != 0:
+        #    return
 
         signal, signal_len, transcript, transcript_len = batch
         log_probs = outputs['log_probs']
