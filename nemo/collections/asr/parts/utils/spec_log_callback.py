@@ -12,6 +12,7 @@ class SpectrogramLogCallback(Callback):
         super().__init__()
         self.num_display = num_display
 
+
     def get_image(self, t, masks=None):
         """t = t - t.min()
         t = t / t.max()
@@ -61,9 +62,41 @@ class SpectrogramLogCallback(Callback):
             })"""
 
     @rank_zero_only
+    def on_train_batch_end(self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx):
+        if batch_idx % 100 != 0:
+            return
+
+        print("logging train spec", batch_idx)
+
+
+        signal, signal_len, transcript, transcript_len = batch
+        log_probs = outputs['log_probs']
+        spectrograms, masked_spectrograms, spec_masks, spec_recon = outputs['extra']
+        spectrograms = spectrograms + spec_masks * 0.12 * (spectrograms.max() - spectrograms.min())
+        spec_recon = spec_recon + spec_masks * 0.12 * (spec_recon.max() - spec_recon.min())
+
+        # trainer.logger.experiment[0].log({
+        wandb.log({
+            "train_spec": [self.get_image(x) for x in spectrograms[:self.num_display]],
+            "train_spec_recon": [self.get_image(x) for x in spec_recon[:self.num_display]],
+            #"val_spec_recon": [self.get_image(x, m) for x, m in
+            #                   zip(spec_recon[:self.num_display], spec_masks[:self.num_display])],
+            #"val_spec_masked": [self.get_image(x) for x in masked_spectrograms[:self.num_display]],
+            #"val_masks": [self.get_image(x) for x in spec_masks[:self.num_display]],
+        }, step=trainer.global_step)
+
+        if log_probs is not None:
+            wandb.log({
+                "train_log_probs": [self.get_image(x) for x in log_probs[:self.num_display]],
+            }, step=trainer.global_step)
+
+
+    @rank_zero_only
     def on_validation_batch_end(self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx):
         #if batch_idx % 100 != 0:
         #    return
+
+        print("logging val spec", batch_idx)
 
         signal, signal_len, transcript, transcript_len = batch
         log_probs = outputs['log_probs']
