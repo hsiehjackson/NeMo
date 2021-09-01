@@ -39,7 +39,7 @@ from nemo.utils import logging
 __all__ = ['EncMultiDecPTModel']
 
 
-class EncMultiDecPTModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
+class EncMultiDecPTModel(ExportableEncDecModel, ASRModuleMixin):
     """Base class for encoder decoder CTC-based models."""
 
     @classmethod
