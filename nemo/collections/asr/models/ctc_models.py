@@ -636,7 +636,7 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
                 'loss_recon': loss_recon_value,
                 'log': tensorboard_logs,
                 'log_probs': log_probs,
-                'extra': (spectrograms, masked_spectrograms, spec_masks, spec_recon)}
+                'extra': (spectrograms, spec_masks, [spec_recon])}
 
     def validation_step(self, batch, batch_idx, dataloader_idx=0):
         signal, signal_len, transcript, transcript_len = batch
@@ -680,7 +680,7 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
             'val_wer_denom': wer_denom,
             'val_wer': wer,
             'log_probs': log_probs,
-            'extra': (spectrograms, masked_spectrograms, spec_masks, spec_recon)
+            'extra': (spectrograms, spec_masks, [spec_recon])
         }
 
     def test_step(self, batch, batch_idx, dataloader_idx=0):
