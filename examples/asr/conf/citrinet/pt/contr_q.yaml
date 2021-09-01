@@ -529,7 +529,7 @@ exp_manager:
   create_tensorboard_logger: true
   create_checkpoint_callback: true
   checkpoint_callback_params:
-    monitor: "val_wer"
+    monitor: "val_loss"
     mode: "min"
     save_top_k: 3
   create_wandb_logger: false
