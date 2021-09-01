@@ -499,7 +499,7 @@ class ASRTarredDatasetBuilder:
                 new_entry = {
                     'audio_filepath': squashed_filename,
                     'duration': entry['duration'],
-                    'text': entry['text'],
+                    #'text': entry['text'],
                     'shard_id': shard_id,  # Keep shard ID for recordkeeping
                 }
 

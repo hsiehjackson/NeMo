@@ -36,10 +36,10 @@ from nemo.core.classes.common import PretrainedModelInfo, typecheck
 from nemo.core.neural_types import AudioSignal, LabelsType, LengthsType, LogprobsType, NeuralType, SpectrogramType
 from nemo.utils import logging
 
-__all__ = ['EncDecPTModel']
+__all__ = ['EncMultiDecPTModel']
 
 
-class EncDecPTModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
+class EncMultiDecPTModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
     """Base class for encoder decoder CTC-based models."""
 
     @classmethod
