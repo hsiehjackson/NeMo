@@ -62,8 +62,8 @@ class EncMultiDecPTModel(ModelPT, ExportableEncDecModel, ASRModuleMixin):
             self.world_size = trainer.num_nodes * trainer.num_gpus
 
         super().__init__(cfg=cfg, trainer=trainer)
-        self.preprocessor = EncDecPTModel.from_config_dict(self._cfg.preprocessor)
-        self.encoder = EncDecPTModel.from_config_dict(self._cfg.encoder)
+        self.preprocessor = EncMultiDecPTModel.from_config_dict(self._cfg.preprocessor)
+        self.encoder = EncMultiDecPTModel.from_config_dict(self._cfg.encoder)
 
         with open_dict(self._cfg):
             if "feat_in" not in self._cfg.decoder or (
@@ -82,11 +82,11 @@ class EncMultiDecPTModel(ModelPT, ExportableEncDecModel, ASRModuleMixin):
             self.loss_alphas = [1.0 for i in range(len(self.losses))]
 
         for dec_cfg, loss_cfg in zip(self._cfg.decoders, self._cfg.losses):
-            self.decoders.append(EncDecPTModel.from_config_dict(dec_cfg))
-            self.losses.append(EncDecPTModel.from_config_dict(loss_cfg))
+            self.decoders.append(EncMultiDecPTModel.from_config_dict(dec_cfg))
+            self.losses.append(EncMultiDecPTModel.from_config_dict(loss_cfg))
 
         if hasattr(self._cfg, 'spec_augment') and self._cfg.spec_augment is not None:
-            self.spec_augmentation = EncDecPTModel.from_config_dict(self._cfg.spec_augment)
+            self.spec_augmentation = EncMultiDecPTModel.from_config_dict(self._cfg.spec_augment)
         else:
             self.spec_augmentation = None
 
@@ -98,7 +98,7 @@ class EncMultiDecPTModel(ModelPT, ExportableEncDecModel, ASRModuleMixin):
 
         # Automatically inject args from model config to dataloader config
         audio_to_text_dataset.inject_dataloader_value_from_model_config(self.cfg, config, key='sample_rate')
-        audio_to_text_dataset.inject_dataloader_value_from_model_config(self.cfg, config, key='labels')
+        #audio_to_text_dataset.inject_dataloader_value_from_model_config(self.cfg, config, key='labels')
 
         shuffle = config['shuffle']
         device = 'gpu' if torch.cuda.is_available() else 'cpu'
