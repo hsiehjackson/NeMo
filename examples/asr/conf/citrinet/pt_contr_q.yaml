@@ -41,10 +41,10 @@ model:
     separable: true
     se: true
     se_context_size: -1
-    kernel_size_factor: 1.0
+    kernel_size_factor: 0.25
     use_dct: false
     use_subset: -1
-    dct_type: 1
+    dct_type: 0
     filters: 384
 
   tokenizer:
@@ -68,7 +68,7 @@ model:
   spec_augment:
     _target_: nemo.collections.asr.modules.SpectrogramAugmentation
     freq_masks: 2
-    time_masks: 2
+    time_masks: 10
     freq_width: 27
     time_width: 0.05
 

@@ -22,7 +22,7 @@ model:
     sample_rate: 16000
     batch_size: 32
     trim_silence: false
-    max_duration: 16.7
+    max_duration: 20.0
     shuffle: true
     is_tarred: false
     tarred_audio_filepaths: null
@@ -75,7 +75,7 @@ model:
   spec_augment:
     _target_: nemo.collections.asr.modules.SpectrogramAugmentation
     freq_masks: 2
-    time_masks: 2
+    time_masks: 10
     freq_width: 27
     time_width: 0.05
 

@@ -908,9 +908,10 @@ class JasperBlock(nn.Module):
             quantize=False,
             use_dct=False,
             use_subset=-1,
-            dct_type=1,
+            dct_type=0,
     ):
-        if kernel_size == 1 and stride == 1 and dilation == 1:
+        ###remove later
+        if kernel_size == 1 and stride == 1 and dilation == 1 and dct_type != 0:
             return SpecialLinear(in_channels, out_channels,
                                  use_dct=use_dct,
                                  use_subset=use_subset,
