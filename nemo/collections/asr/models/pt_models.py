@@ -73,6 +73,7 @@ class EncMultiDecPTModel(ModelPT, ExportableEncDecModel, ASRModuleMixin):
             if "feat_in" not in self._cfg.decoder or not self._cfg.decoder.feat_in:
                 raise ValueError("param feat_in of the decoder's config is not set!")
 
+
         self.decoders = []
         self.losses = []
 
@@ -90,6 +91,7 @@ class EncMultiDecPTModel(ModelPT, ExportableEncDecModel, ASRModuleMixin):
         else:
             self.spec_augmentation = None
 
+
     def _setup_dataloader_from_config(self, config: Optional[Dict]):
         if 'augmentor' in config:
             augmentor = process_augmentations(config['augmentor'])
@@ -99,6 +101,7 @@ class EncMultiDecPTModel(ModelPT, ExportableEncDecModel, ASRModuleMixin):
         # Automatically inject args from model config to dataloader config
         audio_to_text_dataset.inject_dataloader_value_from_model_config(self.cfg, config, key='sample_rate')
         #audio_to_text_dataset.inject_dataloader_value_from_model_config(self.cfg, config, key='labels')
+        config['labels'] = None
 
         shuffle = config['shuffle']
         device = 'gpu' if torch.cuda.is_available() else 'cpu'
