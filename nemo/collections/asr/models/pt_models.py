@@ -71,7 +71,7 @@ class EncMultiDecPTModel(ModelPT, ExportableEncDecModel, ASRModuleMixin):
         if hasattr(self._cfg, 'loss_alphas'):
             self.loss_alphas = self._cfg.loss_alphas
         else:
-            self.loss_alphas = [1.0 for i in range(len(self.losses))]
+            self.loss_alphas = [1.0 for i in range(len(self._cfg.losses))]
 
         for dec_cfg, loss_cfg in zip(self._cfg.decoders, self._cfg.losses):
             self.decoders.append(EncMultiDecPTModel.from_config_dict(dec_cfg))
