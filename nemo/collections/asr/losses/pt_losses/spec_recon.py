@@ -28,8 +28,8 @@ class SpecReconLoss(Loss):
         """Input types definitions for SpecRecon.
         """
         return {
-            "spec_in": NeuralType(('B', 'T', 'D'), SpectrogramType()),
-            "masks": NeuralType(('B', 'T', 'D'), SpectrogramType()),
+            "spec_in": NeuralType(('B', 'D', 'T'), SpectrogramType()),
+            "masks": NeuralType(('B', 'D', 'T'), SpectrogramType()),
             "out": NeuralType(('B', 'T', 'D'), VoidType()),
         }
 

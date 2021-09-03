@@ -41,8 +41,8 @@ class ContrastiveLoss(Loss):
         """Input types definitions for Contrastive.
         """
         return {
-            "spec_in": NeuralType(('B', 'T', 'D'), SpectrogramType()),
-            "masks": NeuralType(('B', 'T', 'D'), SpectrogramType()),
+            "spec_in": NeuralType(('B', 'D', 'T'), SpectrogramType()),
+            "masks": NeuralType(('B', 'D', 'T'), SpectrogramType()),
             "out": NeuralType(('B', 'T', 'D'), VoidType()),
         }
 
@@ -96,6 +96,8 @@ class ContrastiveLoss(Loss):
 
     @typecheck()
     def forward(self, spec_in, masks, out):
+        spec_in = spec_in.transpose(-2, -1)
+
         targets = spec_in
         if self.quantized_targets:
             targets, prob_ppl_loss, cur_codebook_temp = self.quantizer(spec_in)

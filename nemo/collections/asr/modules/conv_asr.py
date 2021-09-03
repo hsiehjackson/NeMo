@@ -519,7 +519,7 @@ class ConvASRDecoderRecon(NeuralModule, Exportable):
 
     @typecheck()
     def forward(self, encoder_output):
-        return self.decoder_layers(encoder_output)
+        return self.decoder_layers(encoder_output).transpose(-2, -1)
 
     def input_example(self):
         """
