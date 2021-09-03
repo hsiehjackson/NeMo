@@ -81,7 +81,7 @@ class EncMultiDecPTModel(ModelPT, ExportableEncDecModel, ASRModuleMixin):
         else:
             self.spec_augmentation = None
 
-        self.masked_evaluation = False
+        self.masked_evaluation = True
 
     def _setup_dataloader_from_config(self, config: Optional[Dict]):
         if 'augmentor' in config:
