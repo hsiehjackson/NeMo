@@ -19,6 +19,7 @@ from math import ceil
 from typing import Dict, List, Optional, Union
 
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 from omegaconf import DictConfig, OmegaConf, open_dict
 from pytorch_lightning import Trainer
@@ -75,6 +76,10 @@ class EncMultiDecPTModel(ModelPT, ExportableEncDecModel, ASRModuleMixin):
         for dec_cfg, loss_cfg in zip(self._cfg.decoders, self._cfg.losses):
             self.decoders.append(EncMultiDecPTModel.from_config_dict(dec_cfg))
             self.losses.append(EncMultiDecPTModel.from_config_dict(loss_cfg))
+
+        #can i use modulelist or do I need multidecoder class?
+        self.decoders = nn.ModuleList(self.decoders)
+        self.losses = nn.ModuleList(self.losses)
 
         if hasattr(self._cfg, 'spec_augment') and self._cfg.spec_augment is not None:
             self.spec_augmentation = EncMultiDecPTModel.from_config_dict(self._cfg.spec_augment)
