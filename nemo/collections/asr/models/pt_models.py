@@ -37,7 +37,6 @@ from nemo.core.neural_types import AudioSignal, LabelsType, LengthsType, Logprob
 from nemo.utils import logging
 from nemo.core.classes import ModelPT
 
-
 __all__ = ['EncMultiDecPTModel']
 
 
@@ -82,6 +81,7 @@ class EncMultiDecPTModel(ModelPT, ExportableEncDecModel, ASRModuleMixin):
         else:
             self.spec_augmentation = None
 
+        self.masked_evaluation = False
 
     def _setup_dataloader_from_config(self, config: Optional[Dict]):
         if 'augmentor' in config:
@@ -91,12 +91,11 @@ class EncMultiDecPTModel(ModelPT, ExportableEncDecModel, ASRModuleMixin):
 
         # Automatically inject args from model config to dataloader config
         audio_to_text_dataset.inject_dataloader_value_from_model_config(self.cfg, config, key='sample_rate')
-        #audio_to_text_dataset.inject_dataloader_value_from_model_config(self.cfg, config, key='labels')
-        #config['labels'] = None
+        # audio_to_text_dataset.inject_dataloader_value_from_model_config(self.cfg, config, key='labels')
+        # config['labels'] = None
 
         shuffle = config['shuffle']
         device = 'gpu' if torch.cuda.is_available() else 'cpu'
-
 
         # Instantiate tarred dataset loader or normal dataset loader
         if config.get('is_tarred', False):
@@ -261,14 +260,14 @@ class EncMultiDecPTModel(ModelPT, ExportableEncDecModel, ASRModuleMixin):
 
         # processed_signal before spec augment
         spectrograms = processed_signal.detach().clone()
-        #spectrograms = F.avg_pool1d(spectrograms, kernel_size=8)
+        # spectrograms = F.avg_pool1d(spectrograms, kernel_size=8)
 
         if self.spec_augmentation is not None and (self.training or self.masked_evaluation):
             processed_signal = self.spec_augmentation(input_spec=processed_signal, length=processed_signal_length)
 
         # after spec augment
         masked_spectrograms = processed_signal.detach()
-        #masked_spectrograms = F.avg_pool1d(masked_spectrograms, kernel_size=8)
+        # masked_spectrograms = F.avg_pool1d(masked_spectrograms, kernel_size=8)
         spec_masks = torch.logical_and(masked_spectrograms < 1e-5, masked_spectrograms > -1e-5).float()
         for idx, proc_len in enumerate(processed_signal_length):
             spec_masks[idx, :, proc_len:] = 0.
@@ -321,7 +320,7 @@ class EncMultiDecPTModel(ModelPT, ExportableEncDecModel, ASRModuleMixin):
 
         return return_dict
 
-    #do we even need this?
+    # do we even need this?
     def test_step(self, batch, batch_idx, dataloader_idx=0):
         self.masked_evaluation = False
         logs = self.validation_step(batch, batch_idx, dataloader_idx=dataloader_idx)
@@ -331,8 +330,8 @@ class EncMultiDecPTModel(ModelPT, ExportableEncDecModel, ASRModuleMixin):
         }
         return test_logs
 
-    #override to log properly for each decoder
-    #for now just ctc and recon
+    # override to log properly for each decoder
+    # for now just ctc and recon
     def multi_validation_epoch_end(self, outputs, dataloader_idx: int = 0):
         val_loss_mean = torch.stack([x['val_loss'] for x in outputs]).mean()
 

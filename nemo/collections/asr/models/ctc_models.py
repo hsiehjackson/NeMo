@@ -195,7 +195,9 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
             log_prediction=self._cfg.get("log_prediction", False),
         )
 
-        self.masked_evaluation = True
+        #does this mean all our evaluation was off??
+        #(was set to true)
+        self.masked_evaluation = False
 
     @torch.no_grad()
     def transcribe(

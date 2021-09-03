@@ -51,7 +51,7 @@ model:
     kernel_size_factor: 0.25
     use_dct: false
     use_subset: -1
-    dct_type: 1
+    dct_type: 0
     filters: 1024
 
   tokenizer:
