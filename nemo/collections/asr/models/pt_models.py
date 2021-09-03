@@ -274,7 +274,7 @@ class EncMultiDecPTModel(ModelPT, ExportableEncDecModel, ASRModuleMixin):
 
         encoded, encoded_len = self.encoder(audio_signal=processed_signal, length=processed_signal_length)
 
-        decoder_outs = [decoder(encoded) for decoder in self.decoders]
+        decoder_outs = [decoder(encoder_output=encoded) for decoder in self.decoders]
 
         return spectrograms, spec_masks, decoder_outs
 
