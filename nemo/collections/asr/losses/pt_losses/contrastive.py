@@ -54,7 +54,9 @@ class ContrastiveLoss(Loss):
         """
         return {"loss": NeuralType(elements_type=LossType())}
 
-    def __init__(self, dim, n_negatives=100, quantized_targets=True, quantizer_cfg=None, prob_ppl_weight=0.1):
+    def __init__(self, dim, n_negatives=100, quantized_targets=True, quantizer_cfg=None, prob_ppl_weight=0.1,
+                 logit_temp=0.1, reduce=True):
+
         super().__init__()
         self.quantized_targets = quantized_targets
         self.n_negatives = n_negatives
@@ -67,6 +69,9 @@ class ContrastiveLoss(Loss):
                     "vq_dim": dim,
                 }
             self.quantizer = hydra.utils.instantiate(config=quantizer_cfg)
+        self.prob_ppl_weight = prob_ppl_weight
+        self.logit_temp = logit_temp
+        self.reduce = reduce
 
     def sample_negatives(self, y, num):
 
