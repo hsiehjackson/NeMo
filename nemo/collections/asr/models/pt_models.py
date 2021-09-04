@@ -77,7 +77,7 @@ class EncMultiDecPTModel(ModelPT, ExportableEncDecModel, ASRModuleMixin):
             self.decoders.append(EncMultiDecPTModel.from_config_dict(dec_cfg))
             self.losses.append(EncMultiDecPTModel.from_config_dict(loss_cfg))
 
-        #can i use modulelist or do I need multidecoder class?
+        # can i use modulelist or do I need multidecoder class?
         self.decoders = nn.ModuleList(self.decoders)
         self.losses = nn.ModuleList(self.losses)
 
@@ -338,41 +338,31 @@ class EncMultiDecPTModel(ModelPT, ExportableEncDecModel, ASRModuleMixin):
     # override to log properly for each decoder
     # for now just ctc and recon
     def multi_validation_epoch_end(self, outputs, dataloader_idx: int = 0):
-        val_loss_mean = torch.stack([x['val_loss'] for x in outputs]).mean()
+        return_dict = {}
 
-        logs = {'val_loss': val_loss_mean}
+        for key in outputs[0].keys():
+            if key[:3] == "val":
+                return_dict[key] = torch.stack([x[key] for x in outputs]).mean()
 
-        if self.ctc_loss_coeff > 1e-10:
-            wer_num = torch.stack([x['val_wer_num'] for x in outputs]).sum()
-            wer_denom = torch.stack([x['val_wer_denom'] for x in outputs]).sum()
-            logs['val_wer'] = wer_num / wer_denom
-
-        if self.recon_loss_coeff > 1e-10:
-            logs['val_loss_recon'] = torch.stack([x['val_loss_recon'] for x in outputs]).mean()
-
-        return {'val_loss': val_loss_mean, 'log': logs}
+        return return_dict
 
     def multi_test_epoch_end(self, outputs, dataloader_idx: int = 0):
-        val_loss_mean = torch.stack([x['test_loss'] for x in outputs]).mean()
+        return_dict = {}
 
-        logs = {'test_loss': val_loss_mean}
+        for key in outputs[0].keys():
+            if key[:3] == "test":
+                return_dict[key] = torch.stack([x[key] for x in outputs]).mean()
 
-        if self.ctc_loss_coeff > 1e-10:
-            wer_num = torch.stack([x['test_wer_num'] for x in outputs]).sum()
-            wer_denom = torch.stack([x['test_wer_denom'] for x in outputs]).sum()
-            logs['test_wer'] = wer_num / wer_denom
+        return return_dict
 
-        if self.recon_loss_coeff > 1e-10:
-            logs['test_loss_recon'] = torch.stack([x['test_loss_recon'] for x in outputs]).mean()
 
-        return {'test_loss': val_loss_mean, 'log': logs}
+def test_dataloader(self):
+    if self._test_dl is not None:
+        return self._test_dl
 
-    def test_dataloader(self):
-        if self._test_dl is not None:
-            return self._test_dl
 
-    def _setup_transcribe_dataloader(self, config: Dict) -> 'torch.utils.data.DataLoader':
-        """
+def _setup_transcribe_dataloader(self, config: Dict) -> 'torch.utils.data.DataLoader':
+    """
         Setup function for a temporary data loader which wraps the provided audio file.
 
         Args:
@@ -387,14 +377,14 @@ class EncMultiDecPTModel(ModelPT, ExportableEncDecModel, ASRModuleMixin):
         Returns:
             A pytorch DataLoader for the given audio file(s).
         """
-        dl_config = {
-            'manifest_filepath': os.path.join(config['temp_dir'], 'manifest.json'),
-            'sample_rate': self.preprocessor._sample_rate,
-            'labels': self.decoder.vocabulary,
-            'batch_size': min(config['batch_size'], len(config['paths2audio_files'])),
-            'trim_silence': True,
-            'shuffle': False,
-        }
+    dl_config = {
+        'manifest_filepath': os.path.join(config['temp_dir'], 'manifest.json'),
+        'sample_rate': self.preprocessor._sample_rate,
+        'labels': self.decoder.vocabulary,
+        'batch_size': min(config['batch_size'], len(config['paths2audio_files'])),
+        'trim_silence': True,
+        'shuffle': False,
+    }
 
-        temporary_datalayer = self._setup_dataloader_from_config(config=DictConfig(dl_config))
-        return temporary_datalayer
+    temporary_datalayer = self._setup_dataloader_from_config(config=DictConfig(dl_config))
+    return temporary_datalayer
