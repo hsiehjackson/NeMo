@@ -18,6 +18,7 @@ from torch import nn
 
 from nemo.core import Loss, typecheck
 from nemo.core.neural_types import LossType, NeuralType, SpectrogramType, VoidType
+from nemo.collections.asr.modules.wav2vec_modules import GumbelVectorQuantizer
 
 import hydra
 
@@ -54,7 +55,8 @@ class ContrastiveLoss(Loss):
         """
         return {"loss": NeuralType(elements_type=LossType())}
 
-    def __init__(self, dim, n_negatives=100, quantized_targets=True, quantizer_cfg=None, prob_ppl_weight=0.1,
+    def __init__(self, in_dim, proj_dim=128, combine_time_steps=1, n_negatives=100, quantized_targets=True,
+                 codebook_size=300, prob_ppl_weight=0.1,
                  logit_temp=0.1, reduce=True):
 
         super().__init__()
@@ -62,16 +64,23 @@ class ContrastiveLoss(Loss):
         self.n_negatives = n_negatives
         self.prob_ppl_weight = prob_ppl_weight
         if self.quantized_targets:
-            if quantizer_cfg is None:
+            """if quantizer_cfg is None:
                 quantizer_cfg = {
                     "_target_": "nemo.collections.asr.modules.wav2vec_modules.GumbelVectorQuantizer",
-                    "dim": dim,
-                    "vq_dim": dim,
+                    "dim": proj_dim,
+                    "vq_dim": proj_dim,
                 }
-            self.quantizer = hydra.utils.instantiate(config=quantizer_cfg)
+            self.quantizer = hydra.utils.instantiate(config=quantizer_cfg)"""
+            self.quantizer = GumbelVectorQuantizer(dim=in_dim * combine_time_steps,
+                                                   vq_dim=proj_dim,
+                                                   num_vars=codebook_size)
         self.prob_ppl_weight = prob_ppl_weight
         self.logit_temp = logit_temp
         self.reduce = reduce
+        self.combine_time_steps = combine_time_steps
+
+        if not self.quantized_targets:
+            self.target_proj = nn.Linear(in_dim * combine_time_steps, proj_dim)
 
     def sample_negatives(self, y, num):
 
@@ -102,10 +111,16 @@ class ContrastiveLoss(Loss):
     @typecheck()
     def forward(self, spec_in, masks, out):
         spec_in = spec_in.transpose(-2, -1)
-
         targets = spec_in
+
+        targets = targets.reshape(targets.shape[0], targets.shape[1] // self.combine_time_steps, -1)
+        #targets = self.target_proj(targets)
+
         if self.quantized_targets:
-            targets, prob_ppl_loss, cur_codebook_temp = self.quantizer(spec_in)
+            targets, prob_ppl_loss, cur_codebook_temp = self.quantizer(targets)
+        else:
+            targets = self.target_proj(targets)
+
         negatives, _ = self.sample_negatives(targets, targets.size(1))
 
         # Calculate similarity between logits and all targets, returning FxBxT
