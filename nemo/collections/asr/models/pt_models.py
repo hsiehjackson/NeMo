@@ -288,8 +288,9 @@ class EncMultiDecPTModel(ModelPT, ExportableEncDecModel, ASRModuleMixin):
         signal, signal_len, transcript, transcript_len = batch
         spectrograms, spec_masks, decoder_outs = self.forward(input_signal=signal, input_signal_length=signal_len)
 
-        return_dict = {'learning_rate': self._optimizer.param_groups[0]['lr'],
-                       'extra': (spectrograms, spec_masks, decoder_outs)}
+        return_dict = {'extra': (spectrograms, spec_masks, decoder_outs)}
+
+        log = {'learning_rate': self._optimizer.param_groups[0]['lr']}
 
         total_loss = 0
 
@@ -298,10 +299,13 @@ class EncMultiDecPTModel(ModelPT, ExportableEncDecModel, ASRModuleMixin):
             loss_val = self.losses[i](spec_in=spectrograms,
                                       masks=spec_masks,
                                       out=out)
-            return_dict["train_" + loss_name] = loss_val
+            log["train_" + loss_name] = loss_val
             total_loss += loss_val * self.loss_alphas[i]
 
         return_dict['loss'] = total_loss
+        log['train_loss'] = total_loss
+
+        return_dict['log'] = log
 
         return return_dict
 
@@ -325,33 +329,16 @@ class EncMultiDecPTModel(ModelPT, ExportableEncDecModel, ASRModuleMixin):
 
         return return_dict
 
-    # do we even need this?
-    def test_step(self, batch, batch_idx, dataloader_idx=0):
-        self.masked_evaluation = False
-        logs = self.validation_step(batch, batch_idx, dataloader_idx=dataloader_idx)
-        self.masked_evaluation = True
-        test_logs = {
-            'test_loss': logs['val_loss'],
-        }
-        return test_logs
-
-    # override to log properly for each decoder
-    # for now just ctc and recon
     def multi_validation_epoch_end(self, outputs, dataloader_idx: int = 0):
         return_dict = {}
+        log = {}
 
         for key in outputs[0].keys():
             if key[:3] == "val":
-                return_dict[key] = torch.stack([x[key] for x in outputs]).mean()
+                log[key] = torch.stack([x[key] for x in outputs]).mean()
 
-        return return_dict
-
-    def multi_test_epoch_end(self, outputs, dataloader_idx: int = 0):
-        return_dict = {}
-
-        for key in outputs[0].keys():
-            if key[:3] == "test":
-                return_dict[key] = torch.stack([x[key] for x in outputs]).mean()
+        return_dict['val_loss'] = log['val_loss']
+        return_dict['log'] = log
 
         return return_dict
 
