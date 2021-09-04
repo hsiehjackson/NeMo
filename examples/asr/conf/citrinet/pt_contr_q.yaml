@@ -488,6 +488,8 @@ model:
     - _target_: nemo.collections.asr.losses.ContrastiveLoss
       dim: *n_mels
 
+  loss_log_names: ["contr_1"]
+
 
   optim:
     name: novograd

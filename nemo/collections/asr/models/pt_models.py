@@ -73,6 +73,11 @@ class EncMultiDecPTModel(ModelPT, ExportableEncDecModel, ASRModuleMixin):
         else:
             self.loss_alphas = [1.0 for i in range(len(self._cfg.losses))]
 
+        if hasattr(self._cfg, 'loss_log_names'):
+            self.loss_log_names = self._cfg.loss_log_names
+        else:
+            self.loss_log_names = [str(i) for i in range(len(self._cfg.losses))]
+
         for dec_cfg, loss_cfg in zip(self._cfg.decoders, self._cfg.losses):
             self.decoders.append(EncMultiDecPTModel.from_config_dict(dec_cfg))
             self.losses.append(EncMultiDecPTModel.from_config_dict(loss_cfg))
@@ -295,11 +300,11 @@ class EncMultiDecPTModel(ModelPT, ExportableEncDecModel, ASRModuleMixin):
         total_loss = 0
 
         for i, out in enumerate(decoder_outs):
-            loss_name = str(type(self.losses[i]))
+            loss_name = self.loss_log_names[i]
             loss_val = self.losses[i](spec_in=spectrograms,
                                       masks=spec_masks,
                                       out=out)
-            log["train_" + loss_name] = loss_val
+            log["train_loss_" + loss_name] = loss_val
             total_loss += loss_val * self.loss_alphas[i]
 
         return_dict['loss'] = total_loss
@@ -318,11 +323,11 @@ class EncMultiDecPTModel(ModelPT, ExportableEncDecModel, ASRModuleMixin):
         total_loss = 0
 
         for i, out in enumerate(decoder_outs):
-            loss_name = str(type(self.losses[i]))
+            loss_name = self.loss_log_names[i]
             loss_val = self.losses[i](spec_in=spectrograms,
                                       masks=spec_masks,
                                       out=out)
-            return_dict["val_" + loss_name] = loss_val
+            return_dict["val_loss_" + loss_name] = loss_val
             total_loss += loss_val * self.loss_alphas[i]
 
         return_dict['val_loss'] = total_loss
