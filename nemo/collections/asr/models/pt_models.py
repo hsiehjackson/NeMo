@@ -301,7 +301,7 @@ class EncMultiDecPTModel(ModelPT, ExportableEncDecModel, ASRModuleMixin):
             return_dict["train_" + loss_name] = loss_val
             total_loss += loss_val * self.loss_alphas[i]
 
-        return_dict['val_loss'] = total_loss
+        return_dict['loss'] = total_loss
 
         return return_dict
 
