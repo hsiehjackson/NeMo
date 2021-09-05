@@ -22,7 +22,7 @@ model:
     sample_rate: 16000
     batch_size: 32
     trim_silence: false
-    max_duration: 16.7
+    max_duration: 35.0
     shuffle: true
     is_tarred: false
     tarred_audio_filepaths: null
