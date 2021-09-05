@@ -15,13 +15,12 @@
 
 import torch
 from torch import nn
+import torch.nn.functional as F
 
 from nemo.core import Loss, typecheck
 from nemo.core.neural_types import LossType, NeuralType, SpectrogramType, VoidType
-from nemo.collections.asr.modules import GumbelVectorQuantizer
 
-
-import torch.nn.functional as F
+import hydra
 
 __all__ = ['ContrastiveLoss']
 
@@ -68,11 +67,14 @@ class ContrastiveLoss(Loss):
                     "_target_": "nemo.collections.asr.modules.wav2vec_modules.GumbelVectorQuantizer",
                     "dim": proj_dim,
                     "vq_dim": proj_dim,
-                }
-            self.quantizer = hydra.utils.instantiate(config=quantizer_cfg)"""
-            self.quantizer = GumbelVectorQuantizer(dim=in_dim * combine_time_steps,
-                                                   vq_dim=proj_dim,
-                                                   num_vars=codebook_size)
+                }"""
+            quantizer_cfg = {
+                "_target_": "nemo.collections.asr.modules.wav2vec_modules.GumbelVectorQuantizer",
+                "dim": in_dim * combine_time_steps,
+                "vq_dim": proj_dim,
+                "num_vars": codebook_size
+            }
+            self.quantizer = hydra.utils.instantiate(config=quantizer_cfg)
         self.prob_ppl_weight = prob_ppl_weight
         self.logit_temp = logit_temp
         self.reduce = reduce

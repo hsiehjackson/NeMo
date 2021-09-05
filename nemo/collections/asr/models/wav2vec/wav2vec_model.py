@@ -30,7 +30,7 @@ from torch import nn
 from nemo.collections.asr.data import audio_to_text_dataset
 from nemo.collections.asr.losses.wav2vecloss import Wav2VecLoss
 from nemo.collections.asr.models.wav2vec.wav2vec_config import Wav2VecEncoderModelConfig
-from nemo.collections.asr.modules import GumbelVectorQuantizer, compute_mask_indices
+from nemo.collections.asr.modules.wav2vec_modules import GumbelVectorQuantizer, compute_mask_indices
 from nemo.collections.asr.parts.preprocessing.perturb import process_augmentations
 from nemo.collections.asr.parts.submodules.wav2vec import ConvFeatureEncoder, GradMultiply, Wav2VecTransformerEncoder
 from nemo.core import ModelPT
