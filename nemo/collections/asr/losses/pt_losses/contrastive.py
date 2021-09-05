@@ -18,9 +18,8 @@ from torch import nn
 
 from nemo.core import Loss, typecheck
 from nemo.core.neural_types import LossType, NeuralType, SpectrogramType, VoidType
-from nemo.collections.asr.modules.wav2vec_modules import GumbelVectorQuantizer
+from nemo.collections.asr.modules import GumbelVectorQuantizer
 
-import hydra
 
 import torch.nn.functional as F
 
