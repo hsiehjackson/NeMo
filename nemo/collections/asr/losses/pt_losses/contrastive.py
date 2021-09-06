@@ -110,33 +110,24 @@ class ContrastiveLoss(Loss):
         else:
             targets = self.target_proj(targets)
 
-        print(masks.shape)
-        print(masks.mean(-1)[0])
         masks = masks.mean(-1) > 0.8
-        print(masks.shape)
-        print(masks[0])
         out_masked_only = out[masks]
         targets_masked_only = targets[masks]
-        print(out_masked_only.shape, targets_masked_only.shape)
 
         negatives, _ = self.sample_negatives(targets.reshape(targets.shape[0] * targets.shape[1], -1),
                                              targets_masked_only.size(0))
 
-        print(negatives.shape)
         # NxTxC
 
         # Calculate similarity between logits and all targets, returning FxBxT(old)
         similarity_scores = self._calculate_similarity(out_masked_only, negatives, targets_masked_only)
         # FxT ??
 
-        print(similarity_scores.shape)
 
         # Create targets of size T
         similarity_targets = out.new_zeros(similarity_scores.size(1), dtype=torch.long)
         # T ?
 
-        print(similarity_targets.shape)
-        print("-----------")
 
         # Transpose similarity scores to TxF for loss
         similarity_scores = similarity_scores.transpose(0, 1)
