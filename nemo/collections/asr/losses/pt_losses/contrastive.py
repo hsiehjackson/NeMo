@@ -98,6 +98,7 @@ class ContrastiveLoss(Loss):
     @typecheck()
     def forward(self, spec_in, masks, out):
         spec_in = spec_in.transpose(-2, -1)
+        masks = masks.transpose(-2, -1)
         targets = spec_in
 
         targets = targets.reshape(targets.shape[0], targets.shape[1] // self.combine_time_steps, -1)
