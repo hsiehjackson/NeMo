@@ -136,6 +136,7 @@ class ContrastiveLoss(Loss):
         # T ?
 
         print(similarity_targets.shape)
+        print("-----------")
 
         # Transpose similarity scores to TxF for loss
         similarity_scores = similarity_scores.transpose(0, 1)
