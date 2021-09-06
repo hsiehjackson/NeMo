@@ -53,7 +53,7 @@ class ContrastiveLoss(Loss):
         """
         return {"loss": NeuralType(elements_type=LossType())}
 
-    def __init__(self, in_dim, proj_dim=128, combine_time_steps=1, n_negatives=100, quantized_targets=True,
+    def __init__(self, in_dim, proj_dim=128, combine_time_steps=1, n_negatives=20, quantized_targets=True,
                  codebook_size=300, prob_ppl_weight=0.1,
                  logit_temp=0.1, reduce=True):
 
@@ -119,12 +119,12 @@ class ContrastiveLoss(Loss):
 
         masks = masks.mean(-1) > 0.8
         print(masks.shape)
-        print(masks)
+        print(masks[0])
         out_masked_only = out[masks]
         targets_masked_only = targets[masks]
         print(out_masked_only.shape, targets_masked_only.shape)
 
-        negatives, _ = self.sample_negatives(targets, targets_masked_only.size(1))
+        negatives, _ = self.sample_negatives(targets, targets_masked_only.size(0))
 
         print(negatives.shape)
 
