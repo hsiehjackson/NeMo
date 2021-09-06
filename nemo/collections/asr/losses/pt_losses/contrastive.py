@@ -53,7 +53,7 @@ class ContrastiveLoss(Loss):
         """
         return {"loss": NeuralType(elements_type=LossType())}
 
-    def __init__(self, in_dim, proj_dim=128, combine_time_steps=1, n_negatives=20, quantized_targets=True,
+    def __init__(self, in_dim, proj_dim=128, combine_time_steps=1, n_negatives=100, quantized_targets=True,
                  codebook_size=300, prob_ppl_weight=0.1,
                  logit_temp=0.1, reduce=True):
 
@@ -82,23 +82,15 @@ class ContrastiveLoss(Loss):
         if self.n_negatives == 0:
             return y.new(0)
 
-        bsz, tsz, fsz = y.shape
-        y = y.view(-1, fsz)  # BTC => (BxT)C
+        #bsz, tsz, fsz = y.shape
+        #y = y.view(-1, fsz)  # BTC => (BxT)C
 
-        high = tsz
+        high = y.shape[0]
         with torch.no_grad():
-            assert high > 1, f"{bsz, tsz, fsz}"
-
-            tszs = buffered_arange(num).unsqueeze(-1).expand(-1, self.n_negatives).flatten()
-
-            neg_idxs = torch.randint(low=0, high=high - 1, size=(bsz, self.n_negatives * num))
-            neg_idxs[neg_idxs >= tszs] += 1
-
-        for i in range(1, bsz):
-            neg_idxs[i] += i * high
+            neg_idxs = torch.randint(low=0, high=high - 1, size=(self.n_negatives * num,))
 
         negs = y[neg_idxs.view(-1)]
-        negs = negs.view(bsz, num, self.n_negatives, fsz).permute(
+        negs = negs.view(num, self.n_negatives, y.shape[-1]).permute(
             2, 0, 1, 3
         )  # to NxBxTxC
         return negs, neg_idxs
@@ -117,6 +109,8 @@ class ContrastiveLoss(Loss):
         else:
             targets = self.target_proj(targets)
 
+        print(masks.shape)
+        print(masks.mean(-1)[0])
         masks = masks.mean(-1) > 0.8
         print(masks.shape)
         print(masks[0])
@@ -124,7 +118,8 @@ class ContrastiveLoss(Loss):
         targets_masked_only = targets[masks]
         print(out_masked_only.shape, targets_masked_only.shape)
 
-        negatives, _ = self.sample_negatives(targets, targets_masked_only.size(0))
+        negatives, _ = self.sample_negatives(targets.reshape(targets.shape[0] * targets.shape[1], -1),
+                                             targets_masked_only.size(0))
 
         print(negatives.shape)
 
