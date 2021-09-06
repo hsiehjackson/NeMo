@@ -62,12 +62,6 @@ class ContrastiveLoss(Loss):
         self.n_negatives = n_negatives
         self.prob_ppl_weight = prob_ppl_weight
         if self.quantized_targets:
-            """if quantizer_cfg is None:
-                quantizer_cfg = {
-                    "_target_": "nemo.collections.asr.modules.wav2vec_modules.GumbelVectorQuantizer",
-                    "dim": proj_dim,
-                    "vq_dim": proj_dim,
-                }"""
             quantizer_cfg = {
                 "_target_": "nemo.collections.asr.modules.wav2vec_modules.GumbelVectorQuantizer",
                 "dim": in_dim * combine_time_steps,
@@ -115,6 +109,7 @@ class ContrastiveLoss(Loss):
         targets = spec_in
 
         targets = targets.reshape(targets.shape[0], targets.shape[1] // self.combine_time_steps, -1)
+        masks = masks.reshape(targets.shape)
         #targets = self.target_proj(targets)
 
         if self.quantized_targets:
@@ -122,10 +117,19 @@ class ContrastiveLoss(Loss):
         else:
             targets = self.target_proj(targets)
 
-        negatives, _ = self.sample_negatives(targets, targets.size(1))
+        masks = masks.mean(-1) > 0.8
+        print(masks.shape)
+        print(masks)
+        out_masked_only = out[masks]
+        targets_masked_only = targets[masks]
+        print(out_masked_only.shape, targets_masked_only.shape)
+
+        negatives, _ = self.sample_negatives(targets, targets_masked_only.size(1))
+
+        print(negatives.shape)
 
         # Calculate similarity between logits and all targets, returning FxBxT
-        similarity_scores = self._calculate_similarity(out, negatives, targets)
+        similarity_scores = self._calculate_similarity(out_masked_only, negatives, targets_masked_only)
 
         # Create targets of size B*T
         similarity_targets = out.new_zeros(similarity_scores.size(1) * similarity_scores.size(2), dtype=torch.long)

@@ -515,6 +515,8 @@ model:
 
   loss_log_names: ["contr_4", "contr_8", "recon"]
 
+  loss_alphas: [0.01, 0.01, 1.0]
+
 
   optim:
     name: novograd
