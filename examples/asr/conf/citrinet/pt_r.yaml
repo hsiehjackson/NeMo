@@ -475,47 +475,19 @@ model:
         dct_type: ${model.model_defaults.dct_type}
 
 
-
   decoders:
     - _target_: nemo.collections.asr.modules.ConvASRDecoderRecon
       feat_in: *enc_final
       feat_hidden: 256
-      feat_out: &dec_out 128
-      stride_layers: 2
-
-    - _target_: nemo.collections.asr.modules.ConvASRDecoderRecon
-      feat_in: *enc_final
-      feat_hidden: 256
-      feat_out: *dec_out
-      stride_layers: 1
-
-    - _target_: nemo.collections.asr.modules.ConvASRDecoderRecon
-      feat_in: *enc_final
-      feat_hidden: 256
-      feat_out: *dec_out
-      stride_layers: 0
+      feat_out: *n_mels
+      stride_layers: 3
 
 
   losses:
-    - _target_: nemo.collections.asr.losses.ContrastiveLoss
-      in_dim: *n_mels
-      proj_dim: *dec_out
-      combine_time_steps: 2
-      codebook_size: 300
+    - _target_: nemo.collections.asr.losses.SpecReconLoss
 
-    - _target_: nemo.collections.asr.losses.ContrastiveLoss
-      in_dim: *n_mels
-      proj_dim: *dec_out
-      combine_time_steps: 4
-      codebook_size: 300
 
-    - _target_: nemo.collections.asr.losses.ContrastiveLoss
-      in_dim: *n_mels
-      proj_dim: *dec_out
-      combine_time_steps: 8
-      codebook_size: 300
-
-  loss_log_names: ["contr_2", "contr_4", "contr_8"]
+  loss_log_names: ["recon"]
 
 
   optim:

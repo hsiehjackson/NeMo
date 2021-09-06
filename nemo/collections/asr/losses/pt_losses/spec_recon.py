@@ -54,11 +54,8 @@ class SpecReconLoss(Loss):
         out = out.reshape(bs, -1)
 
         if self.only_masked_recon_loss:
-            mask_sum = masks.sum(dim=-1)
-            spec_diff = torch.linalg.norm((spec_in * masks) - (out * masks), ord=self.norm_type)
-            loss = spec_diff / mask_sum
-            return loss.mean()
+            loss = torch.linalg.norm((spec_in * masks) - (out * masks), ord=self.norm_type)
         else:
-            spec_diff = torch.linalg.norm((spec_in - out), ord=self.norm_type)
-            loss = spec_diff / spec_in.shape[-1]
-            return loss.mean()
+            loss = torch.linalg.norm((spec_in - out), ord=self.norm_type)
+
+        return loss.mean()
