@@ -91,8 +91,8 @@ class ContrastiveLoss(Loss):
 
         negs = y[neg_idxs.view(-1)]
         negs = negs.view(num, self.n_negatives, y.shape[-1]).permute(
-            2, 0, 1, 3
-        )  # to NxBxTxC
+            1, 0, 2
+        )  # to NxTxC
         return negs, neg_idxs
 
     @typecheck()
@@ -122,16 +122,22 @@ class ContrastiveLoss(Loss):
                                              targets_masked_only.size(0))
 
         print(negatives.shape)
+        # NxTxC
 
-        # Calculate similarity between logits and all targets, returning FxBxT
+        # Calculate similarity between logits and all targets, returning FxBxT(old)
         similarity_scores = self._calculate_similarity(out_masked_only, negatives, targets_masked_only)
+        # FxT ??
 
-        # Create targets of size B*T
-        similarity_targets = out.new_zeros(similarity_scores.size(1) * similarity_scores.size(2), dtype=torch.long)
+        print(similarity_scores.shape)
 
-        # Transpose similarity scores to (T*B)xF for loss
-        similarity_scores = similarity_scores.transpose(0, 2)
-        similarity_scores = similarity_scores.reshape(-1, similarity_scores.size(-1))
+        # Create targets of size T
+        similarity_targets = out.new_zeros(similarity_scores.size(1), dtype=torch.long)
+        # T ?
+
+        print(similarity_targets.shape)
+
+        # Transpose similarity scores to TxF for loss
+        similarity_scores = similarity_scores.transpose(0, 1)
 
         loss = F.cross_entropy(similarity_scores, similarity_targets, reduction="sum" if self.reduce else "none")
 
