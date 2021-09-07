@@ -304,6 +304,8 @@ class EncMultiDecPTModel(ModelPT, ExportableEncDecModel, ASRModuleMixin):
             loss_val = self.losses[i](spec_in=spectrograms,
                                       masks=spec_masks,
                                       out=out)
+            if torch.isnan(loss_val).any():
+                continue
             log["train_loss_" + loss_name] = loss_val
             total_loss += loss_val * self.loss_alphas[i]
 
