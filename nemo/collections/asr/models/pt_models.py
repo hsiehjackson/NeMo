@@ -266,7 +266,7 @@ class EncMultiDecPTModel(ModelPT, ExportableEncDecModel, ASRModuleMixin):
                 input_signal=input_signal, length=input_signal_length,
             )
 
-        processed_signal = F.pad(processed_signal, [0, 8 - processed_signal.shape[-1] % 8])
+        processed_signal = F.pad(processed_signal, [0, 64 - processed_signal.shape[-1] % 64])
 
         # processed_signal before spec augment
         spectrograms = processed_signal.detach().clone()
