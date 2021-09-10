@@ -48,7 +48,7 @@ model:
     separable: true
     se: true
     se_context_size: -1
-    kernel_size_factor: 1.0
+    kernel_size_factor: 0.25
     # encoder / decoder values
     enc_hidden: 1024
     pred_hidden: 1024
