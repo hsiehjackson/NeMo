@@ -834,7 +834,8 @@ def configure_checkpointing(
         params.every_n_val_epochs = params.period
 
     checkpoint_callback = NeMoModelCheckpoint(n_resume=resume, **params)
-    checkpoint_callback.last_model_path = trainer.checkpoint_connector.resume_checkpoint_path or ""
+    checkpoint_callback.last_model_path = "" if trainer.checkpoint_connector.resume_checkpoint_path is None \
+        else trainer.checkpoint_connector.resume_checkpoint_path
     trainer.callbacks.append(checkpoint_callback)
 
 
