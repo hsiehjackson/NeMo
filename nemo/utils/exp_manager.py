@@ -836,8 +836,6 @@ def configure_checkpointing(
     checkpoint_callback = NeMoModelCheckpoint(n_resume=resume, **params)
     if hasattr(trainer.checkpoint_connector, "resume_checkpoint_path"):
         checkpoint_callback.last_model_path = trainer.checkpoint_connector.resume_checkpoint_path
-    else:
-        checkpoint_callback.last_model_path = ""
     trainer.callbacks.append(checkpoint_callback)
 
 
