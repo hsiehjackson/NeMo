@@ -98,9 +98,6 @@ model:
         separable: ${model.model_defaults.separable}
         se: ${model.model_defaults.se}
         se_context_size: ${model.model_defaults.se_context_size}
-        use_dct: false
-
-
 
       - filters: ${model.model_defaults.filters}
         repeat: ${model.model_defaults.repeat}
@@ -115,10 +112,6 @@ model:
         stride_last: true
         residual_mode: "stride_add"
         kernel_size_factor: ${model.model_defaults.kernel_size_factor}
-        use_dct: ${model.model_defaults.use_dct}
-        use_subset: ${model.model_defaults.use_subset}
-        dct_type: ${model.model_defaults.dct_type}
-
 
 
       - filters: ${model.model_defaults.filters}
@@ -132,9 +125,6 @@ model:
         se: ${model.model_defaults.se}
         se_context_size: ${model.model_defaults.se_context_size}
         kernel_size_factor: ${model.model_defaults.kernel_size_factor}
-        use_dct: ${model.model_defaults.use_dct}
-        use_subset: ${model.model_defaults.use_subset}
-        dct_type: ${model.model_defaults.dct_type}
 
 
 
@@ -149,9 +139,6 @@ model:
         se: ${model.model_defaults.se}
         se_context_size: ${model.model_defaults.se_context_size}
         kernel_size_factor: ${model.model_defaults.kernel_size_factor}
-        use_dct: ${model.model_defaults.use_dct}
-        use_subset: ${model.model_defaults.use_subset}
-        dct_type: ${model.model_defaults.dct_type}
 
 
 
@@ -166,10 +153,6 @@ model:
         se: ${model.model_defaults.se}
         se_context_size: ${model.model_defaults.se_context_size}
         kernel_size_factor: ${model.model_defaults.kernel_size_factor}
-        use_dct: ${model.model_defaults.use_dct}
-        use_subset: ${model.model_defaults.use_subset}
-        dct_type: ${model.model_defaults.dct_type}
-
 
 
       - filters: ${model.model_defaults.filters}
@@ -183,9 +166,6 @@ model:
         se: ${model.model_defaults.se}
         se_context_size: ${model.model_defaults.se_context_size}
         kernel_size_factor: ${model.model_defaults.kernel_size_factor}
-        use_dct: ${model.model_defaults.use_dct}
-        use_subset: ${model.model_defaults.use_subset}
-        dct_type: ${model.model_defaults.dct_type}
 
 
 
@@ -200,9 +180,6 @@ model:
         se: ${model.model_defaults.se}
         se_context_size: ${model.model_defaults.se_context_size}
         kernel_size_factor: ${model.model_defaults.kernel_size_factor}
-        use_dct: ${model.model_defaults.use_dct}
-        use_subset: ${model.model_defaults.use_subset}
-        dct_type: ${model.model_defaults.dct_type}
 
 
 
@@ -219,10 +196,6 @@ model:
         stride_last: true
         residual_mode: "stride_add"
         kernel_size_factor: ${model.model_defaults.kernel_size_factor}
-        use_dct: ${model.model_defaults.use_dct}
-        use_subset: ${model.model_defaults.use_subset}
-        dct_type: ${model.model_defaults.dct_type}
-
 
 
       - filters: ${model.model_defaults.filters}
@@ -236,9 +209,6 @@ model:
         se: ${model.model_defaults.se}
         se_context_size: ${model.model_defaults.se_context_size}
         kernel_size_factor: ${model.model_defaults.kernel_size_factor}
-        use_dct: ${model.model_defaults.use_dct}
-        use_subset: ${model.model_defaults.use_subset}
-        dct_type: ${model.model_defaults.dct_type}
 
 
 
@@ -253,9 +223,6 @@ model:
         se: ${model.model_defaults.se}
         se_context_size: ${model.model_defaults.se_context_size}
         kernel_size_factor: ${model.model_defaults.kernel_size_factor}
-        use_dct: ${model.model_defaults.use_dct}
-        use_subset: ${model.model_defaults.use_subset}
-        dct_type: ${model.model_defaults.dct_type}
 
 
 
@@ -270,9 +237,6 @@ model:
         se: ${model.model_defaults.se}
         se_context_size: ${model.model_defaults.se_context_size}
         kernel_size_factor: ${model.model_defaults.kernel_size_factor}
-        use_dct: ${model.model_defaults.use_dct}
-        use_subset: ${model.model_defaults.use_subset}
-        dct_type: ${model.model_defaults.dct_type}
 
 
 
@@ -287,9 +251,6 @@ model:
         se: ${model.model_defaults.se}
         se_context_size: ${model.model_defaults.se_context_size}
         kernel_size_factor: ${model.model_defaults.kernel_size_factor}
-        use_dct: ${model.model_defaults.use_dct}
-        use_subset: ${model.model_defaults.use_subset}
-        dct_type: ${model.model_defaults.dct_type}
 
 
 
@@ -304,9 +265,6 @@ model:
         se: ${model.model_defaults.se}
         se_context_size: ${model.model_defaults.se_context_size}
         kernel_size_factor: ${model.model_defaults.kernel_size_factor}
-        use_dct: ${model.model_defaults.use_dct}
-        use_subset: ${model.model_defaults.use_subset}
-        dct_type: ${model.model_defaults.dct_type}
 
 
 
@@ -321,10 +279,6 @@ model:
         se: ${model.model_defaults.se}
         se_context_size: ${model.model_defaults.se_context_size}
         kernel_size_factor: ${model.model_defaults.kernel_size_factor}
-        use_dct: ${model.model_defaults.use_dct}
-        use_subset: ${model.model_defaults.use_subset}
-        dct_type: ${model.model_defaults.dct_type}
-
 
 
       - filters: ${model.model_defaults.filters}
@@ -340,10 +294,6 @@ model:
         stride_last: true
         residual_mode: "stride_add"
         kernel_size_factor: ${model.model_defaults.kernel_size_factor}
-        use_dct: ${model.model_defaults.use_dct}
-        use_subset: ${model.model_defaults.use_subset}
-        dct_type: ${model.model_defaults.dct_type}
-
 
 
       - filters: ${model.model_defaults.filters}
@@ -357,10 +307,6 @@ model:
         se: ${model.model_defaults.se}
         se_context_size: ${model.model_defaults.se_context_size}
         kernel_size_factor: ${model.model_defaults.kernel_size_factor}
-        use_dct: ${model.model_defaults.use_dct}
-        use_subset: ${model.model_defaults.use_subset}
-        dct_type: ${model.model_defaults.dct_type}
-
 
 
       - filters: ${model.model_defaults.filters}
@@ -374,9 +320,6 @@ model:
         se: ${model.model_defaults.se}
         se_context_size: ${model.model_defaults.se_context_size}
         kernel_size_factor: ${model.model_defaults.kernel_size_factor}
-        use_dct: ${model.model_defaults.use_dct}
-        use_subset: ${model.model_defaults.use_subset}
-        dct_type: ${model.model_defaults.dct_type}
 
 
 
@@ -391,9 +334,6 @@ model:
         se: ${model.model_defaults.se}
         se_context_size: ${model.model_defaults.se_context_size}
         kernel_size_factor: ${model.model_defaults.kernel_size_factor}
-        use_dct: ${model.model_defaults.use_dct}
-        use_subset: ${model.model_defaults.use_subset}
-        dct_type: ${model.model_defaults.dct_type}
 
 
 
@@ -408,9 +348,6 @@ model:
         se: ${model.model_defaults.se}
         se_context_size: ${model.model_defaults.se_context_size}
         kernel_size_factor: ${model.model_defaults.kernel_size_factor}
-        use_dct: ${model.model_defaults.use_dct}
-        use_subset: ${model.model_defaults.use_subset}
-        dct_type: ${model.model_defaults.dct_type}
 
 
 
@@ -425,9 +362,6 @@ model:
         se: ${model.model_defaults.se}
         se_context_size: ${model.model_defaults.se_context_size}
         kernel_size_factor: ${model.model_defaults.kernel_size_factor}
-        use_dct: ${model.model_defaults.use_dct}
-        use_subset: ${model.model_defaults.use_subset}
-        dct_type: ${model.model_defaults.dct_type}
 
 
 
@@ -442,9 +376,6 @@ model:
         se: ${model.model_defaults.se}
         se_context_size: ${model.model_defaults.se_context_size}
         kernel_size_factor: ${model.model_defaults.kernel_size_factor}
-        use_dct: ${model.model_defaults.use_dct}
-        use_subset: ${model.model_defaults.use_subset}
-        dct_type: ${model.model_defaults.dct_type}
 
 
 
@@ -459,9 +390,6 @@ model:
         se: ${model.model_defaults.se}
         se_context_size: ${model.model_defaults.se_context_size}
         kernel_size_factor: ${model.model_defaults.kernel_size_factor}
-        use_dct: ${model.model_defaults.use_dct}
-        use_subset: ${model.model_defaults.use_subset}
-        dct_type: ${model.model_defaults.dct_type}
 
 
 
@@ -476,9 +404,6 @@ model:
         se: ${model.model_defaults.se}
         se_context_size: ${model.model_defaults.se_context_size}
         kernel_size_factor: ${model.model_defaults.kernel_size_factor}
-        use_dct: ${model.model_defaults.use_dct}
-        use_subset: ${model.model_defaults.use_subset}
-        dct_type: ${model.model_defaults.dct_type}
 
 
   decoder:
