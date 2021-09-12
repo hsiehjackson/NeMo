@@ -115,6 +115,8 @@ class ASRManifestProcessor:
     ):
         self.parser = parser
 
+        print(manifest_filepath)
+
         self.collection = collections.ASRAudioText(
             manifests_files=manifest_filepath.split(','),
             parser=parser,
