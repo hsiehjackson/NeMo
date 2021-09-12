@@ -116,9 +116,12 @@ class ASRManifestProcessor:
         self.parser = parser
 
         print(manifest_filepath)
+        if not isinstance(manifest_filepath, list):
+            manifest_filepath = manifest_filepath.split(',')
+        print(manifest_filepath)
 
         self.collection = collections.ASRAudioText(
-            manifests_files=manifest_filepath.split(','),
+            manifests_files=manifest_filepath,
             parser=parser,
             min_duration=min_duration,
             max_duration=max_duration,
