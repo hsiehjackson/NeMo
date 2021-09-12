@@ -639,7 +639,7 @@ class NeMoModelCheckpoint(ModelCheckpoint):
 
         best_k_models = sorted(self.best_k_models, key=self.best_k_models.get, reverse=_reverse)
 
-        ### This section should be ok as rank zero will delete all excess checkpoints, since all other ranks are
+        """### This section should be ok as rank zero will delete all excess checkpoints, since all other ranks are
         ### instantiated after rank zero. models_to_delete should be 0 for all other ranks.
         models_to_delete = len(best_k_models) - self.save_top_k
         logging.debug(f'Number of models to delete: {models_to_delete}')
@@ -647,7 +647,7 @@ class NeMoModelCheckpoint(ModelCheckpoint):
             model = best_k_models.pop(-1)
             self.best_k_models.pop(model)
             self._del_model(model)
-            logging.debug(f"Removed checkpoint: {model}")
+            logging.debug(f"Removed checkpoint: {model}")"""
 
         self.kth_best_model_path = best_k_models[-1]
         self.best_model_path = best_k_models[0]
@@ -760,7 +760,7 @@ class NeMoModelCheckpoint(ModelCheckpoint):
                 and self.best_model_path != filepath
                 and app_state.data_parallel_rank == 0
             ):
-                self._del_model(self.best_model_path)
+                self._del_model(trainer, self.best_model_path)
 
             self.best_model_path = filepath
         else:
