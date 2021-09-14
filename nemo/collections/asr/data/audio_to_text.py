@@ -116,7 +116,8 @@ class ASRManifestProcessor:
         self.parser = parser
 
         print(manifest_filepath)
-        if not isinstance(manifest_filepath, list):
+        print(type(manifest_filepath))
+        if isinstance(manifest_filepath, str):
             manifest_filepath = manifest_filepath.split(',')
         print(manifest_filepath)
 

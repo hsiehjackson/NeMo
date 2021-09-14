@@ -82,7 +82,7 @@ model:
   encoder:
     _target_: nemo.collections.asr.modules.ConvASREncoder
     feat_in: *n_mels
-    activation: swish
+    activation: relu
     conv_mask: true
     init_mode: "tds_uniform"
 
