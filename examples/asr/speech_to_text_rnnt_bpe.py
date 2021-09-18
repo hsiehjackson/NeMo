@@ -75,8 +75,11 @@ def main(cfg):
     exp_manager(trainer, cfg.get("exp_manager", None))
     asr_model = EncDecRNNTBPEModel(cfg=cfg.model, trainer=trainer)
 
-    # Initialize the weights of the model from another model, if provided via config
-    asr_model.maybe_init_from_pretrained_checkpoint(cfg)
+    # Initialize the weights of the model from another model, if provided via config, unless we are continuing training
+    if trainer.resume_from_checkpoint == "None":
+        asr_model.maybe_init_from_pretrained_checkpoint(cfg)
+    else:
+        logging.info(f'Resuming training so not loading pre-trained checkpoint')
 
     trainer.fit(asr_model)
 
