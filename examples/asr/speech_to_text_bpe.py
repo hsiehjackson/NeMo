@@ -86,10 +86,11 @@ def main(cfg):
     asr_model = EncDecCTCModelBPE(cfg=cfg.model, trainer=trainer)
 
     # Initialize the weights of the model from another model, if provided via config, unless we are continuing training
-    if trainer.resume_from_checkpoint == "None":
-        asr_model.maybe_init_from_pretrained_checkpoint(cfg)
-    else:
-        logging.info(f'Resuming training so not loading pre-trained checkpoint')
+    logging.info(trainer.resume_from_checkpoint)
+    #if trainer.resume_from_checkpoint == "None":
+    asr_model.maybe_init_from_pretrained_checkpoint(cfg)
+    #else:
+    #    logging.info(f'Resuming training so not loading pre-trained checkpoint')
 
     trainer.fit(asr_model)
 
