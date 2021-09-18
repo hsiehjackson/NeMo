@@ -3,7 +3,7 @@
 # Default learning parameters in this config are set for effective batch size of 1k on 32 GPUs.
 # To train it with smaller batch sizes, you may need to re-tune the learning parameters or use higher accumulate_grad_batches.
 
-name: &name "ContextNet-8x-Stride-RNNT"
+name: &name "Citrinet-8x-Stride-RNNT"
 
 model:
   sample_rate: &sample_rate 16000
@@ -51,8 +51,8 @@ model:
     kernel_size_factor: 0.25
     # encoder / decoder values
     enc_hidden: 1024
-    pred_hidden: 1024
-    joint_hidden: 1024
+    pred_hidden: 640
+    joint_hidden: 640
 
   tokenizer:
     dir: ???  # path to directory which contains either tokenizer.model (bpe) or vocab.txt (for wpe)
