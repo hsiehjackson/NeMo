@@ -67,7 +67,7 @@ model:
 
   spec_augment:
     _target_: nemo.collections.asr.modules.SpectrogramAugmentation
-    freq_masks: 2
+    freq_masks: 4
     time_masks: 10
     freq_width: 27
     time_width: 0.05
