@@ -74,7 +74,7 @@ model:
 
   spec_augment:
     _target_: nemo.collections.asr.modules.SpectrogramAugmentation
-    freq_masks: 2  # should be kept at 2
+    freq_masks: 4
     time_masks: 5  # can be 5 for small-med models, 10 for larger models.
     freq_width: 27
     time_width: 0.05
