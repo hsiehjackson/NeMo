@@ -385,7 +385,7 @@ model:
       proj_dim: *dec_out
       combine_time_steps: 4
       codebook_size: 500
-      n_negatives: 500
+      n_negatives: 300
 
   loss_log_names: ["contr_4"]
 
