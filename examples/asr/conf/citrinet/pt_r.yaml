@@ -23,6 +23,7 @@ model:
     batch_size: 32
     trim_silence: false
     max_duration: 35.0
+    min_duration: 3.0
     shuffle: true
     is_tarred: false
     tarred_audio_filepaths: null
