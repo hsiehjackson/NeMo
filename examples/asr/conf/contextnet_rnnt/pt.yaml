@@ -43,7 +43,7 @@ model:
     pin_memory: true
 
   model_defaults:
-    filters: 512
+    filters: 1024
     repeat: 5
     dropout: 0.1
     separable: true
