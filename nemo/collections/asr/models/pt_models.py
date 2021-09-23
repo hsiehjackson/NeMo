@@ -61,6 +61,7 @@ class EncMultiDecPTModel(ModelPT, ExportableEncDecModel, ASRModuleMixin):
         if trainer is not None:
             self.world_size = trainer.num_nodes * trainer.num_gpus
 
+
         super().__init__(cfg=cfg, trainer=trainer)
         self.preprocessor = EncMultiDecPTModel.from_config_dict(self._cfg.preprocessor)
         self.encoder = EncMultiDecPTModel.from_config_dict(self._cfg.encoder)
