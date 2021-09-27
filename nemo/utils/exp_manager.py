@@ -75,6 +75,7 @@ class CallbackParams:
     postfix: str = ".nemo"
     save_best_model: bool = False
     always_save_nemo: bool = False
+    save_on_train_epoch_end: bool = False
 
 
 @dataclass
