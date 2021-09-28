@@ -16,7 +16,7 @@
 import pytorch_lightning as pl
 from omegaconf import OmegaConf
 
-from nemo.collections.asr.models.ctc_bpe_models import EncMultiDecPTModel
+from nemo.collections.asr.models.pt_models import EncMultiDecPTModel
 from nemo.core.config import hydra_runner
 from nemo.utils import logging
 from nemo.utils.exp_manager import exp_manager
