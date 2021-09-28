@@ -679,9 +679,9 @@ class NeMoModelCheckpoint(ModelCheckpoint):
             if 'state_dict' in checkpoint:
                 checkpoint = checkpoint['state_dict']
             # get a new instanace of the model
-            pl_module.load_state_dict(checkpoint, strict=True)
+            pl_module.load_state_dict(checkpoint, strict=False)
             pl_module.save_to(save_path=app_state.model_restore_path)
-            pl_module.load_state_dict(old_state_dict, strict=True)
+            pl_module.load_state_dict(old_state_dict, strict=False)
         else:
             pl_module.save_to(save_path=app_state.model_restore_path)
         return output
