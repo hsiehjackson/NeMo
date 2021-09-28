@@ -32,6 +32,7 @@ try:
         ECAPAEncoder,
         ParallelConvASREncoder,
         SpeakerDecoder,
+        ConvASRDecoderRecon,
     )
 except ModuleNotFoundError:
     from nemo.utils.exceptions import CheckInstall
@@ -43,4 +44,5 @@ except ModuleNotFoundError:
     class ECAPAEncoder(CheckInstall): pass
     class ParallelConvASREncoder(CheckInstall): pass
     class SpeakerDecoder(CheckInstall): pass
+    class ConvASRDecoderRecon(CheckInstall): pass
     # fmt: on

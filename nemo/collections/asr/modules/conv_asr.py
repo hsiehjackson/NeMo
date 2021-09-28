@@ -132,17 +132,17 @@ class ConvASREncoder(NeuralModule, Exportable):
         )
 
     def __init__(
-        self,
-        jasper,
-        activation: str,
-        feat_in: int,
-        normalization_mode: str = "batch",
-        residual_mode: str = "add",
-        norm_groups: int = -1,
-        conv_mask: bool = True,
-        frame_splicing: int = 1,
-        init_mode: Optional[str] = 'xavier_uniform',
-        quantize: bool = False,
+            self,
+            jasper,
+            activation: str,
+            feat_in: int,
+            normalization_mode: str = "batch",
+            residual_mode: str = "add",
+            norm_groups: int = -1,
+            conv_mask: bool = True,
+            frame_splicing: int = 1,
+            init_mode: Optional[str] = 'xavier_uniform',
+            quantize: bool = False,
     ):
         super().__init__()
         if isinstance(jasper, ListConfig):
@@ -205,6 +205,9 @@ class ConvASREncoder(NeuralModule, Exportable):
                     stride_last=stride_last,
                     future_context=future_context,
                     quantize=quantize,
+                    use_dct=lcfg.get('use_dct', False),
+                    use_subset=lcfg.get('use_subset', -1),
+                    dct_type=lcfg.get('dct_type', 1),
                 )
             )
             feat_in = lcfg['filters']
@@ -288,18 +291,18 @@ class ParallelConvASREncoder(NeuralModule, Exportable):
         )
 
     def __init__(
-        self,
-        jasper,
-        activation: str,
-        feat_in: int,
-        normalization_mode: str = "batch",
-        residual_mode: str = "add",
-        norm_groups: int = -1,
-        conv_mask: bool = True,
-        frame_splicing: int = 1,
-        init_mode: Optional[str] = 'xavier_uniform',
-        aggregation_mode: Optional[str] = None,
-        quantize: bool = False,
+            self,
+            jasper,
+            activation: str,
+            feat_in: int,
+            normalization_mode: str = "batch",
+            residual_mode: str = "add",
+            norm_groups: int = -1,
+            conv_mask: bool = True,
+            frame_splicing: int = 1,
+            init_mode: Optional[str] = 'xavier_uniform',
+            aggregation_mode: Optional[str] = None,
+            quantize: bool = False,
     ):
         super().__init__()
         if isinstance(jasper, ListConfig):
@@ -468,6 +471,84 @@ class ConvASRDecoder(NeuralModule, Exportable):
         return self._num_classes
 
 
+class ConvASRDecoderRecon(NeuralModule, Exportable):
+    """ASR Decoder for reconstructing masked regions of spectrogram
+    """
+
+    def save_to(self, save_path: str):
+        pass
+
+    @classmethod
+    def restore_from(cls, restore_path: str):
+        pass
+
+    @property
+    def input_types(self):
+        return OrderedDict({"encoder_output": NeuralType(('B', 'D', 'T'), AcousticEncodedRepresentation())})
+
+    @property
+    def output_types(self):
+        return OrderedDict({"spec_recon": NeuralType(('B', 'T', 'D'), SpectrogramType())})
+
+    def __init__(self, feat_in, feat_out, feat_hidden, stride_layers, kernel_size=11, init_mode="xavier_uniform"):
+        super().__init__()
+
+        self.feat_in = feat_in
+        self.feat_out = feat_out
+        self.feat_hidden = feat_hidden
+
+        self.decoder_layers = [nn.Conv1d(self.feat_in, self.feat_hidden, kernel_size=1, bias=True)]
+        for i in range(stride_layers):
+            self.decoder_layers.append(nn.ReLU())
+            self.decoder_layers.append(nn.ConvTranspose1d(self.feat_hidden, self.feat_hidden, kernel_size,
+                                                          stride=2,
+                                                          padding=(kernel_size - 3) // 2 + 1,
+                                                          output_padding=1,
+                                                          bias=True))
+            self.decoder_layers.append(nn.Conv1d(self.feat_hidden, self.feat_hidden, kernel_size=1, bias=True))
+            self.decoder_layers.append(nn.BatchNorm1d(self.feat_hidden, eps=1e-3, momentum=0.1))
+
+        self.decoder_layers.append(nn.ReLU())
+        self.decoder_layers.append(nn.Conv1d(self.feat_hidden, self.feat_out, kernel_size=1, bias=True))
+
+        self.decoder_layers = nn.Sequential(*self.decoder_layers)
+
+        self.apply(lambda x: init_weights(x, mode=init_mode))
+
+    @typecheck()
+    def forward(self, encoder_output):
+        return self.decoder_layers(encoder_output).transpose(-2, -1)
+
+    def input_example(self):
+        """
+        Generates input examples for tracing etc.
+        Returns:
+            A tuple of input examples.
+        """
+        bs = 8
+        seq = 64
+        input_example = torch.randn(bs, self._feat_in, seq).to(next(self.parameters()).device)
+        return tuple([input_example])
+
+    def _prepare_for_export(self, **kwargs):
+        m_count = 0
+        for m in self.modules():
+            if type(m).__name__ == "MaskedConv1d":
+                m.use_mask = False
+                m_count += 1
+        if m_count > 0:
+            logging.warning(f"Turned off {m_count} masked convolutions")
+        Exportable._prepare_for_export(self, **kwargs)
+
+    @property
+    def vocabulary(self):
+        return self.__vocabulary
+
+    @property
+    def num_classes_with_blank(self):
+        return self._num_classes
+
+
 class ConvASRDecoderClassification(NeuralModule, Exportable):
     """Simple ASR Decoder for use with classification models such as JasperNet and QuartzNet
 
@@ -493,12 +574,12 @@ class ConvASRDecoderClassification(NeuralModule, Exportable):
         return OrderedDict({"logits": NeuralType(('B', 'D'), LogitsType())})
 
     def __init__(
-        self,
-        feat_in: int,
-        num_classes: int,
-        init_mode: Optional[str] = "xavier_uniform",
-        return_logits: bool = True,
-        pooling_type='avg',
+            self,
+            feat_in: int,
+            num_classes: int,
+            init_mode: Optional[str] = "xavier_uniform",
+            return_logits: bool = True,
+            pooling_type='avg',
     ):
         super().__init__()
 
@@ -574,13 +655,13 @@ class ECAPAEncoder(NeuralModule, Exportable):
         )
 
     def __init__(
-        self,
-        feat_in: int,
-        filters: list,
-        kernel_sizes: list,
-        dilations: list,
-        scale: int = 8,
-        init_mode: str = 'xavier_uniform',
+            self,
+            feat_in: int,
+            filters: list,
+            kernel_sizes: list,
+            dilations: list,
+            scale: int = 8,
+            init_mode: str = 'xavier_uniform',
     ):
         super().__init__()
         self.layers = nn.ModuleList()
@@ -661,14 +742,14 @@ class SpeakerDecoder(NeuralModule, Exportable):
         )
 
     def __init__(
-        self,
-        feat_in: int,
-        num_classes: int,
-        emb_sizes: Optional[Union[int, list]] = 256,
-        pool_mode: str = 'xvector',
-        angular: bool = False,
-        attention_channels: int = 128,
-        init_mode: str = "xavier_uniform",
+            self,
+            feat_in: int,
+            num_classes: int,
+            emb_sizes: Optional[Union[int, list]] = 256,
+            pool_mode: str = 'xvector',
+            angular: bool = False,
+            attention_channels: int = 128,
+            init_mode: str = "xavier_uniform",
     ):
         super().__init__()
         self.angular = angular
@@ -701,7 +782,7 @@ class SpeakerDecoder(NeuralModule, Exportable):
         self.apply(lambda x: init_weights(x, mode=init_mode))
 
     def affine_layer(
-        self, inp_shape, out_shape, learn_mean=True, affine_type='conv',
+            self, inp_shape, out_shape, learn_mean=True, affine_type='conv',
     ):
         if affine_type == 'conv':
             layer = nn.Sequential(

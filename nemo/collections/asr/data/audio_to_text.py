@@ -115,8 +115,11 @@ class ASRManifestProcessor:
     ):
         self.parser = parser
 
+        if isinstance(manifest_filepath, str):
+            manifest_filepath = manifest_filepath.split(',')
+
         self.collection = collections.ASRAudioText(
-            manifests_files=manifest_filepath.split(','),
+            manifests_files=manifest_filepath,
             parser=parser,
             min_duration=min_duration,
             max_duration=max_duration,
@@ -1046,7 +1049,7 @@ class _TarredAudioToTextDataset(IterableDataset):
             logging.info("WebDataset will not shuffle files within the tar files.")
 
         self._dataset = (
-            self._dataset.rename(audio='wav', key='__key__')
+            self._dataset.rename(audio='wav;ogg', key='__key__')
             .to_tuple('audio', 'key')
             .pipe(self._filter)
             .map(f=self._build_sample)
