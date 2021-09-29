@@ -55,7 +55,10 @@ class ContrastiveLoss(Loss):
 
     def __init__(self, in_dim, proj_dim=128, combine_time_steps=1, n_negatives=100, quantized_targets=True,
                  codebook_size=300, prob_ppl_weight=0.1,
-                 logit_temp=0.1, reduce=True):
+                 logit_temp=0.1, reduce=True,
+                 sample_from_non_masked=False,
+                 sample_from_codebook=False,
+                 group_loss=False):
 
         super().__init__()
         self.quantized_targets = quantized_targets
@@ -73,6 +76,9 @@ class ContrastiveLoss(Loss):
         self.logit_temp = logit_temp
         self.reduce = reduce
         self.combine_time_steps = combine_time_steps
+        self.sample_from_non_masked = sample_from_non_masked
+        self.sample_from_codebook = sample_from_codebook
+        self.group_loss = group_loss
 
         if not self.quantized_targets:
             self.target_proj = nn.Linear(in_dim * combine_time_steps, proj_dim)
@@ -82,8 +88,8 @@ class ContrastiveLoss(Loss):
         if self.n_negatives == 0:
             return y.new(0)
 
-        #bsz, tsz, fsz = y.shape
-        #y = y.view(-1, fsz)  # BTC => (BxT)C
+        # bsz, tsz, fsz = y.shape
+        # y = y.view(-1, fsz)  # BTC => (BxT)C
 
         high = y.shape[0]
         with torch.no_grad():
@@ -100,10 +106,11 @@ class ContrastiveLoss(Loss):
         spec_in = spec_in.transpose(-2, -1)
         masks = masks.transpose(-2, -1)
         targets = spec_in
+        # BxTxC
 
         targets = targets.reshape(targets.shape[0], targets.shape[1] // self.combine_time_steps, -1)
         masks = masks.reshape(targets.shape)
-        #targets = self.target_proj(targets)
+        # targets = self.target_proj(targets)
 
         if self.quantized_targets:
             targets, prob_ppl_loss, cur_codebook_temp = self.quantizer(targets)
@@ -113,24 +120,50 @@ class ContrastiveLoss(Loss):
         masks = masks.mean(-1) > 0.8
         out_masked_only = out[masks]
         targets_masked_only = targets[masks]
+        # T'xC
+        # number of masked time steps to predict (T')
 
-        negatives, _ = self.sample_negatives(targets.reshape(targets.shape[0] * targets.shape[1], -1),
-                                             targets_masked_only.size(0))
+        if self.group_loss:
+            num_groups = self.quantizer.groups
+            negatives = self.quantizer.vars.reshape(num_groups, self.quantizer.num_vars, -1)
+            #GxNx(C//G)
+            negatives = negatives.transpose(0, 1)
+            #NxGx(C//G)
+            negatives = negatives.unsqueeze(1).expand(-1, out_masked_only.shape[1], -1, -1)
+            #NxT'xGx(C//G)
+            negatives = negatives.reshape(negatives.shape[0], -1, negatives.shape[-1])
+            #NxT'Gx(C//G)
 
-        # NxTxC
+            out_masked_only = out_masked_only.reshape(-1, out_masked_only.shape[-1] // num_groups)
+            targets_masked_only = targets_masked_only.reshape(-1, targets_masked_only.shape[-1] // num_groups)
+            # T'Gx(C//G)
+        elif self.sample_from_codebook:
+            #sample from the full codebook
+            negatives = self.quantizer.sample_from_codebook(self.n_negatives,
+                                                            targets_masked_only.size(0))
+        elif self.sample_from_non_masked:
+            #sample from all steps in batch
+            negatives, _ = self.sample_negatives(targets.reshape(targets.shape[0] * targets.shape[1], -1),  # BTxC
+                                                 targets_masked_only.size(0))  # T'
+        else:
+            #only sample from masked steps
+            negatives, _ = self.sample_negatives(targets_masked_only,  # T'xC
+                                                 targets_masked_only.size(0))  # T'
+        # NxT'xC
 
-        # Calculate similarity between logits and all targets, returning FxBxT(old)
+        # Calculate similarity between logits and all targets
         similarity_scores = self._calculate_similarity(out_masked_only, negatives, targets_masked_only)
-        # FxT ??
-
+        # (1+N)xT'
+        # cosine similarity of outs with targets + N negatives
 
         # Create targets of size T
         similarity_targets = out.new_zeros(similarity_scores.size(1), dtype=torch.long)
-        # T ?
-
+        # T'
+        # targets are 0, since it's the first, followed by N sampled negatives
 
         # Transpose similarity scores to TxF for loss
         similarity_scores = similarity_scores.transpose(0, 1)
+        # T'x(1+N)
 
         loss = F.cross_entropy(similarity_scores, similarity_targets, reduction="sum" if self.reduce else "none")
 
@@ -144,9 +177,13 @@ class ContrastiveLoss(Loss):
 
     def _calculate_similarity(self, logits, negatives, targets):
         neg_is_pos = (targets == negatives).all(-1)
+        # NxT' - true where the negative is actually the positive
         targets = targets.unsqueeze(0)
+        # 1xT'xC
         targets = torch.cat([targets, negatives], dim=0)
+        # (1+N)xT'XC
         logits = torch.cosine_similarity(logits.float(), targets.float(), dim=-1).type_as(logits)
+        # (1+N)xT'
         logits /= self.logit_temp
         if neg_is_pos.any():
             logits[1:][neg_is_pos] = float("-inf")
