@@ -130,7 +130,7 @@ class ContrastiveLoss(Loss):
             #GxNx(C//G)
             negatives = negatives.transpose(0, 1)
             #NxGx(C//G)
-            negatives = negatives.unsqueeze(1).expand(-1, out_masked_only.shape[1], -1, -1)
+            negatives = negatives.unsqueeze(1).expand(-1, out_masked_only.shape[0], -1, -1)
             #NxT'xGx(C//G)
             negatives = negatives.reshape(negatives.shape[0], -1, negatives.shape[-1])
             #NxT'Gx(C//G)
@@ -152,11 +152,11 @@ class ContrastiveLoss(Loss):
                                                  targets_masked_only.size(0))  # T'
             # NxT'xC
 
-        print(out_masked_only.shape)
-        print(targets_masked_only.shape)
-        print(negatives.shape)
-        print(self.quantizer.groups)
-        print(spec_in.shape)
+        #print(out_masked_only.shape)
+        #print(targets_masked_only.shape)
+        #print(negatives.shape)
+        #print(self.quantizer.groups)
+        #print(spec_in.shape)
 
         # Calculate similarity between logits and all targets
         similarity_scores = self._calculate_similarity(out_masked_only, negatives, targets_masked_only)
