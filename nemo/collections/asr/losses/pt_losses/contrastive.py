@@ -58,7 +58,7 @@ class ContrastiveLoss(Loss):
                  logit_temp=0.1, reduce=True,
                  sample_from_non_masked=False,
                  sample_from_codebook=False,
-                 group_loss=False):
+                 group_loss=False, num_groups=2):
 
         super().__init__()
         self.quantized_targets = quantized_targets
@@ -69,7 +69,8 @@ class ContrastiveLoss(Loss):
                 "_target_": "nemo.collections.asr.modules.wav2vec_modules.GumbelVectorQuantizer",
                 "dim": in_dim * combine_time_steps,
                 "vq_dim": proj_dim,
-                "num_vars": codebook_size
+                "num_vars": codebook_size,
+                "groups": num_groups
             }
             self.quantizer = hydra.utils.instantiate(config=quantizer_cfg)
         self.prob_ppl_weight = prob_ppl_weight
