@@ -588,7 +588,8 @@ class NeMoModelCheckpoint(ModelCheckpoint):
     """ Light wrapper around Lightning's ModelCheckpoint to force a saved checkpoint on train_end
     """
 
-    def __init__(self, always_save_nemo=False, save_best_model=False, postfix=".nemo", n_resume=False, **kwargs):
+    def __init__(self, always_save_nemo=False, save_best_model=False, postfix=".nemo", n_resume=False, trainer=None,
+                 **kwargs):
         # Parse and store "extended" parameters: save_best model and postfix.
         self.always_save_nemo = always_save_nemo
         self.save_best_model = save_best_model
@@ -605,9 +606,9 @@ class NeMoModelCheckpoint(ModelCheckpoint):
         super().__init__(**kwargs)
 
         if self.save_top_k != -1 and n_resume:
-            self.nemo_topk_check_previous_run()
+            self.nemo_topk_check_previous_run(trainer)
 
-    def nemo_topk_check_previous_run(self):
+    def nemo_topk_check_previous_run(self, trainer):
         try:
             self.best_k_models
             self.kth_best_model_path
@@ -646,7 +647,7 @@ class NeMoModelCheckpoint(ModelCheckpoint):
         for _ in range(models_to_delete):
             model = best_k_models.pop(-1)
             self.best_k_models.pop(model)
-            self._del_model(model)
+            self._del_model(trainer, model)
             logging.debug(f"Removed checkpoint: {model}")
 
         self.kth_best_model_path = best_k_models[-1]
@@ -735,7 +736,7 @@ class NeMoModelCheckpoint(ModelCheckpoint):
 
             # for model parallel we need to delete models for each model parallel rank
             if self.last_model_path and self.last_model_path != filepath and app_state.data_parallel_rank == 0:
-                self._del_model(self.last_model_path)
+                self._del_model(trainer, self.last_model_path)
 
             self.last_model_path = filepath
 
@@ -760,7 +761,7 @@ class NeMoModelCheckpoint(ModelCheckpoint):
                 and self.best_model_path != filepath
                 and app_state.data_parallel_rank == 0
             ):
-                self._del_model(self.best_model_path)
+                self._del_model(trainer, self.best_model_path)
 
             self.best_model_path = filepath
         else:
@@ -833,7 +834,7 @@ def configure_checkpointing(
         )
         params.every_n_val_epochs = params.period
 
-    checkpoint_callback = NeMoModelCheckpoint(n_resume=resume, **params)
+    checkpoint_callback = NeMoModelCheckpoint(n_resume=resume, trainer=trainer, **params)
     checkpoint_callback.last_model_path = trainer.checkpoint_connector.resume_checkpoint_path or ""
     trainer.callbacks.append(checkpoint_callback)
 
