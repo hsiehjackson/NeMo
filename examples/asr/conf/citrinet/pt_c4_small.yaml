@@ -43,7 +43,7 @@ model:
     se: true
     se_context_size: -1
     kernel_size_factor: 0.25
-    filters: 1024
+    filters: 384
 
 
   preprocessor:
@@ -62,7 +62,7 @@ model:
 
   spec_augment:
     _target_: nemo.collections.asr.modules.SpectrogramAugmentation
-    freq_masks: 2
+    freq_masks: 4
     time_masks: 10
     freq_width: 27
     time_width: 0.05
@@ -383,7 +383,7 @@ model:
 
 
 
-      - filters: &enc_final 1024
+      - filters: &enc_final 512
         repeat: 1
         kernel: [41]
         stride: [1]
@@ -401,19 +401,19 @@ model:
   decoders:
     - _target_: nemo.collections.asr.modules.ConvASRDecoderRecon
       feat_in: *enc_final
-      feat_hidden: 256
+      feat_hidden: 64
       feat_out: *dec_out
-      stride_layers: 0
+      stride_layers: 1
 
 
   losses:
     - _target_: nemo.collections.asr.losses.ContrastiveLoss
       in_dim: *n_mels
       proj_dim: *dec_out
-      combine_time_steps: 8
+      combine_time_steps: 4
       codebook_size: 300
 
-  loss_log_names: ["contr_8"]
+  loss_log_names: ["contr_4"]
 
 
   optim:
