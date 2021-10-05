@@ -350,7 +350,7 @@ model:
         se_context_size: ${model.model_defaults.se_context_size}
         kernel_size_factor: ${model.model_defaults.kernel_size_factor}
 
-      - filters: &enc_final 640
+      - filters: &enc_final 512
         repeat: 1
         kernel: [41]
         stride: [1]
