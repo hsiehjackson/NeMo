@@ -655,3 +655,30 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
 
         temporary_datalayer = self._setup_dataloader_from_config(config=DictConfig(dl_config))
         return temporary_datalayer
+
+    def configure_optimizers(self):
+        if self._cfg.get("starting_from_pretrained_encoder", False):
+            opt, sched = self.setup_optimization()
+
+            enc_mult = self.cfg.get("pretrained_encoder_lr_mult", 0.1)
+
+            enc_params = self.encoder.parameters()
+            dec_params = self.decoder.parameters()
+            #for ctc models always no other params?
+
+            original_lr = self.cfg.model.optim.lr
+
+            print(opt.param_group)
+            print("----")
+
+            del opt.param_group[0]
+            opt.add_param_group({'params': dec_params})
+            opt.add_param_group({'params': enc_params, 'lr': original_lr * enc_mult})
+
+            #change param groups in original opt??
+
+            print(opt.param_group)
+
+            return [opt], [sched]
+        else:
+            super().configure_optimizers()
