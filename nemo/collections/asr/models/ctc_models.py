@@ -164,7 +164,7 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
 
         with open_dict(self._cfg):
             if "feat_in" not in self._cfg.decoder or (
-                not self._cfg.decoder.feat_in and hasattr(self.encoder, '_feat_out')
+                    not self._cfg.decoder.feat_in and hasattr(self.encoder, '_feat_out')
             ):
                 self._cfg.decoder.feat_in = self.encoder._feat_out
             if "feat_in" not in self._cfg.decoder or not self._cfg.decoder.feat_in:
@@ -195,11 +195,11 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
 
     @torch.no_grad()
     def transcribe(
-        self,
-        paths2audio_files: List[str],
-        batch_size: int = 4,
-        logprobs: bool = False,
-        return_hypotheses: bool = False,
+            self,
+            paths2audio_files: List[str],
+            batch_size: int = 4,
+            logprobs: bool = False,
+            return_hypotheses: bool = False,
     ) -> List[str]:
         """
         Uses greedy decoding to transcribe audio files. Use this method for debugging and prototyping.
@@ -373,7 +373,7 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
         # Instantiate tarred dataset loader or normal dataset loader
         if config.get('is_tarred', False):
             if ('tarred_audio_filepaths' in config and config['tarred_audio_filepaths'] is None) or (
-                'manifest_filepath' in config and config['manifest_filepath'] is None
+                    'manifest_filepath' in config and config['manifest_filepath'] is None
             ):
                 logging.warning(
                     "Could not load dataset as `manifest_filepath` was None or "
@@ -512,7 +512,7 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
 
     @typecheck()
     def forward(
-        self, input_signal=None, input_signal_length=None, processed_signal=None, processed_signal_length=None
+            self, input_signal=None, input_signal_length=None, processed_signal=None, processed_signal_length=None
     ):
         """
         Forward pass of the model.
@@ -660,25 +660,19 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
         if self._cfg.get("starting_from_pretrained_encoder", False):
             opt, sched = self.setup_optimization()
 
-            enc_mult = self.cfg.get("pretrained_encoder_lr_mult", 0.1)
+            enc_mult = self._cfg.get("pretrained_encoder_lr_mult", 0.1)
 
             enc_params = self.encoder.parameters()
             dec_params = self.decoder.parameters()
-            #for ctc models always no other params?
+            # for ctc models always no other params?
 
-            original_lr = self.cfg.model.optim.lr
+            original_lr = opt.defaults['lr']
 
-            logging.info(opt.param_group)
-            logging.info("----")
-
-            del opt.param_group[0]
+            del opt.param_groups[0]
             opt.add_param_group({'params': dec_params})
             opt.add_param_group({'params': enc_params, 'lr': original_lr * enc_mult})
 
-            #change param groups in original opt??
-
-            logging.info(opt.param_group)
-
             return [opt], [sched]
         else:
-            super().configure_optimizers()
+            return super().configure_optimizers()
+
