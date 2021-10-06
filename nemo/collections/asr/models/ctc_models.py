@@ -668,8 +668,8 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
 
             original_lr = self.cfg.model.optim.lr
 
-            print(opt.param_group)
-            print("----")
+            logging.info(opt.param_group)
+            logging.info("----")
 
             del opt.param_group[0]
             opt.add_param_group({'params': dec_params})
@@ -677,7 +677,7 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
 
             #change param groups in original opt??
 
-            print(opt.param_group)
+            logging.info(opt.param_group)
 
             return [opt], [sched]
         else:
