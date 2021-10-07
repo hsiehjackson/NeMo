@@ -38,7 +38,7 @@ model:
     kernel_size_factor: 0.25
     filters: 1024
     # encoder / decoder / joint values
-    enc_hidden: 640
+    enc_hidden: 1024
     pred_hidden: 640
     joint_hidden: 640
 
