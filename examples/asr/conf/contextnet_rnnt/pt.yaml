@@ -55,10 +55,6 @@ model:
     pred_hidden: 640
     joint_hidden: 640
 
-  tokenizer:
-    dir: ???  # path to directory which contains either tokenizer.model (bpe) or vocab.txt (for wpe)
-    type: ???  # Can be either bpe or wpe
-
   preprocessor:
     _target_: nemo.collections.asr.modules.AudioToMelSpectrogramPreprocessor
     sample_rate: *sample_rate
