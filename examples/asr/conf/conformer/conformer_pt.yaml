@@ -121,7 +121,7 @@ model:
 
   decoders:
     - _target_: nemo.collections.asr.modules.ConvASRDecoderRecon
-      feat_in: ${model.model_defaults.enc_hidden}
+      feat_in: ${model.encoder.d_model}
       feat_hidden: 128
       feat_out: *dec_out
       stride_layers: 1
