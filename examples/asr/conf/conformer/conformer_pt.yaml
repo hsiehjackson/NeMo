@@ -124,7 +124,7 @@ model:
       feat_in: ${model.encoder.d_model}
       feat_hidden: 128
       feat_out: *dec_out
-      stride_layers: 1
+      stride_layers: 0
 
 
   losses:

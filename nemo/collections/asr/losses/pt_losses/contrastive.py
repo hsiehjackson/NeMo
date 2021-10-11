@@ -152,11 +152,6 @@ class ContrastiveLoss(Loss):
                                                  targets_masked_only.size(0))  # T'
             # NxT'xC
 
-        #print(out_masked_only.shape)
-        #print(targets_masked_only.shape)
-        #print(negatives.shape)
-        #print(self.quantizer.groups)
-        #print(spec_in.shape)
 
         # Calculate similarity between logits and all targets
         similarity_scores = self._calculate_similarity(out_masked_only, negatives, targets_masked_only)
