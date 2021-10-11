@@ -135,7 +135,7 @@ model:
       codebook_size: 300
       n_negatives: 100
 
-    loss_log_names: [ "contr_4" ]
+  loss_log_names: [ "contr_4" ]
 
   optim:
     name: adamw
