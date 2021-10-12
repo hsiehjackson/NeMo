@@ -85,7 +85,7 @@ class SpecReconLoss(Loss):
         else:
             targets = self.target_proj(targets)
 
-        masks = torch.round(masks.mean(-1))
+        masks = torch.round(masks.mean(-1)).long()
         out_masked_only = out[masks]
         targets_masked_only = targets[masks]
         # T'xC
