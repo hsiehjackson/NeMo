@@ -118,7 +118,7 @@ class ContrastiveLoss(Loss):
         else:
             targets = self.target_proj(targets)
 
-        masks = masks.mean(-1) > 0.8
+        masks = torch.round(masks.mean(-1))
         out_masked_only = out[masks]
         targets_masked_only = targets[masks]
         # T'xC
