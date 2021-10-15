@@ -56,7 +56,7 @@ class ContrastiveLoss(Loss):
     def __init__(self, in_dim, proj_dim=128, combine_time_steps=1, n_negatives=100, quantized_targets=True,
                  codebook_size=300, prob_ppl_weight=0.1,
                  logit_temp=0.1, reduce=True,
-                 sample_from_non_masked=False,
+                 sample_from_non_masked=True,
                  sample_from_codebook=False,
                  group_loss=False, num_groups=2):
 
