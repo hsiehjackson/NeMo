@@ -458,7 +458,7 @@ exp_manager:
   checkpoint_callback_params:
     monitor: "val_loss"
     mode: "min"
-    save_top_k: 3
+    save_top_k: 1
   create_wandb_logger: false
   wandb_logger_kwargs:
     name: null

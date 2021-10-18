@@ -183,9 +183,9 @@ exp_manager:
   create_checkpoint_callback: true
   checkpoint_callback_params:
     # in case of multiple validation sets, first one is used
-    monitor: "val_wer"
+    monitor: "val_loss"
     mode: "min"
-    save_top_k: 3
+    save_top_k: 1
 
   # you need to set these two to True to continue the training
   resume_if_exists: false
