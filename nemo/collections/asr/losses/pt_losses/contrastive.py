@@ -175,6 +175,9 @@ class ContrastiveLoss(Loss):
             prob_ppl_loss = self.prob_ppl_weight * prob_ppl_loss * sample_size
             loss += prob_ppl_loss
 
+        if not isinstance(loss, torch.Tensor):
+            loss = torch.Tensor([0])
+
         return loss
 
     def _calculate_similarity(self, logits, negatives, targets):
