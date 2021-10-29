@@ -22,7 +22,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from omegaconf import DictConfig, OmegaConf, open_dict
-from pytorch_lightning import Trainer
+from pytorch_lightning import Trainerf
 from tqdm.auto import tqdm
 
 from nemo.collections.asr.data import audio_to_text_dataset
@@ -284,11 +284,11 @@ class EncMultiDecPTModel(ModelPT, ExportableEncDecModel, ASRModuleMixin):
         signal, signal_len, transcript, transcript_len = batch
         spectrograms, spec_masks, decoder_outs = self.forward(input_signal=signal, input_signal_length=signal_len)
 
-        return_dict = {'extra': (spectrograms, spec_masks, decoder_outs)}
+        return_dict = {}
 
         log = {'learning_rate': self._optimizer.param_groups[0]['lr']}
 
-        total_loss = 0
+        total_loss = torch.Tensor([0]).to(device=spectrograms.device)
 
         for i, out in enumerate(decoder_outs):
             loss_name = self.loss_log_names[i]
@@ -311,9 +311,9 @@ class EncMultiDecPTModel(ModelPT, ExportableEncDecModel, ASRModuleMixin):
         signal, signal_len, transcript, transcript_len = batch
         spectrograms, spec_masks, decoder_outs = self.forward(input_signal=signal, input_signal_length=signal_len)
 
-        return_dict = {'extra': (spectrograms, spec_masks, decoder_outs)}
+        return_dict = {}
 
-        total_loss = 0
+        total_loss = torch.Tensor([0]).to(device=spectrograms.device)
 
         for i, out in enumerate(decoder_outs):
             loss_name = self.loss_log_names[i]
