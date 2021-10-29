@@ -22,7 +22,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from omegaconf import DictConfig, OmegaConf, open_dict
-from pytorch_lightning import Trainerf
 from tqdm.auto import tqdm
 
 from nemo.collections.asr.data import audio_to_text_dataset
