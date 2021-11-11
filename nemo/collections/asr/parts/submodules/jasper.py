@@ -164,12 +164,14 @@ def get_asymtric_padding(kernel_size, stride, dilation, future_context):
 
 
 @torch.jit.script
-def _se_pool_step_script(x, context_window: int):
+def _se_pool_step_script(x: torch.Tensor, lengths: torch.Tensor, mask: torch.Tensor, context_window: int):
     timesteps = x.shape[-1]
     if timesteps < context_window:
-        y = F.adaptive_avg_pool1d(x, 1)
+        y = torch.sum(x, dim=-1, keepdim=True) / mask.sum(dim=-1, keepdim=True)
     else:
+        # TODO: Fix scaling for locl pool
         y = F.avg_pool1d(x, context_window, 1)  # [B, C, T - context_window + 1]
+
     return y
 
 
@@ -386,12 +388,12 @@ class SqueezeExcite(nn.Module):
             )
         self.gap = nn.AdaptiveAvgPool1d(1)
 
-    def forward(self, x):
+    def forward(self, x, lengths):
         # The use of negative indices on the transpose allow for expanded SqueezeExcite
         # Computes in float32 to avoid instabilities during training with AMP.
         with torch.cuda.amp.autocast(enabled=False):
             x = x.float()
-            y = self._se_pool_step(x)
+            y = self._se_pool_step(x, lengths)
             y = y.transpose(1, -1)  # [B, T - context_window + 1, C]
             y = self.fc(y)  # [B, T - context_window + 1, C]
             y = y.transpose(1, -1)  # [B, C, T - context_window + 1]
@@ -399,13 +401,19 @@ class SqueezeExcite(nn.Module):
             y = F.interpolate(y, size=x.shape[-1], mode=self.interpolation_mode)
 
         y = torch.sigmoid(y)
-        return x * y
+        return x * y, lengths
 
-    def _se_pool_step(self, x):
+    def _se_pool_step(self, x, lengths):
+        mask = torch.zeros_like(x, dtype=torch.bool)
+        for bidx, length in enumerate(lengths):
+            mask[bidx, :, length:] = 1
+        x.masked_fill_(mask, 0.0)
+        mask = (~mask).float()
+
         if self.context_window < 0:
-            y = self.pool(x)
+            y = torch.sum(x, dim=-1, keepdim=True) / mask.sum(dim=-1, keepdim=True)
         else:
-            y = _se_pool_step_script(x, self.context_window)
+            y = _se_pool_step_script(x, lengths, mask, self.context_window)
         return y
 
     def change_context_window(self, context_window: int):
@@ -433,7 +441,7 @@ class SqueezeExcite(nn.Module):
 
         if self.context_window < 0:
             if PYTORCH_QUANTIZATION_AVAILABLE and self._quantize:
-                if not isinstance(self.pool, quant_nn.QuantAdaptiveAvgPool1d):
+                if not isinstance(self.pool, quant_nn.QuantAdaptiveAvgPool1d(1)):
                     self.pool = quant_nn.QuantAdaptiveAvgPool1d(1)  # context window = T
 
             elif not PYTORCH_QUANTIZATION_AVAILABLE and self._quantize:
@@ -902,7 +910,7 @@ class JasperBlock(nn.Module):
             # if we're doing masked convolutions, we need to pass in and
             # possibly update the sequence lengths
             # if (i % 4) == 0 and self.conv_mask:
-            if isinstance(l, MaskedConv1d):
+            if isinstance(l, (MaskedConv1d, SqueezeExcite)):
                 out, lens = l(out, lens)
             else:
                 out = l(out)
