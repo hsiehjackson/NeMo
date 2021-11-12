@@ -55,9 +55,11 @@ class SpecAugment(nn.Module, Typing):
         return {"augmented_spec": NeuralType(('B', 'D', 'T'), SpectrogramType())}
 
     def __init__(
-        self, freq_masks=0, time_masks=0, freq_width=10, time_width=10, rng=None, mask_value=0.0,
+        self, freq_masks=0, time_masks=0, freq_width=10, time_width=10, rng=None, mask_value=0.0, same_for_all=False,
     ):
         super().__init__()
+
+        logging.debug("Not using Numba for SpecAugment")
 
         self._rng = random.Random() if rng is None else rng
 
@@ -77,30 +79,54 @@ class SpecAugment(nn.Module, Typing):
 
             self.adaptive_temporal_width = True
 
+        self.same_for_all = same_for_all
+
     @typecheck()
     @torch.no_grad()
     def forward(self, input_spec, length):
         sh = input_spec.shape
 
-        for idx in range(sh[0]):
+        if self.same_for_all:
+            for i in range(self.time_masks):
+                if self.adaptive_temporal_width:
+                    time_width = max(1, int(sh[2] * self.time_width))
+                else:
+                    time_width = self.time_width
+
+                y_left = self._rng.randint(0, max(1, sh[2] - time_width))
+
+                w = self._rng.randint(0, time_width)
+
+                input_spec[:, :, y_left : y_left + w] = self.mask_value
+
             for i in range(self.freq_masks):
                 x_left = self._rng.randint(0, sh[1] - self.freq_width)
 
                 w = self._rng.randint(0, self.freq_width)
 
-                input_spec[idx, x_left : x_left + w, :] = self.mask_value
+                input_spec[:, x_left : x_left + w, :] = self.mask_value
 
-            for i in range(self.time_masks):
-                if self.adaptive_temporal_width:
-                    time_width = max(1, int(length[idx] * self.time_width))
-                else:
-                    time_width = self.time_width
+        else:
 
-                y_left = self._rng.randint(0, max(1, length[idx] - time_width))
+            for idx in range(sh[0]):
+                for i in range(self.freq_masks):
+                    x_left = self._rng.randint(0, sh[1] - self.freq_width)
 
-                w = self._rng.randint(0, time_width)
+                    w = self._rng.randint(0, self.freq_width)
 
-                input_spec[idx, :, y_left : y_left + w] = self.mask_value
+                    input_spec[idx, x_left : x_left + w, :] = self.mask_value
+
+                for i in range(self.time_masks):
+                    if self.adaptive_temporal_width:
+                        time_width = max(1, int(length[idx] * self.time_width))
+                    else:
+                        time_width = self.time_width
+
+                    y_left = self._rng.randint(0, max(1, length[idx] - time_width))
+
+                    w = self._rng.randint(0, time_width)
+
+                    input_spec[idx, :, y_left : y_left + w] = self.mask_value
 
         return input_spec
 

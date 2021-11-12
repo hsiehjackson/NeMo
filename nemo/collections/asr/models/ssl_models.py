@@ -67,6 +67,9 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
 
         self.spec_augmentation = SpeechEncDecSelfSupervisedModel.from_config_dict(self._cfg.spec_augment)
 
+        self.compress = self._cfg.get("compress_spectrograms", False)
+        self.compression_glue_steps = self._cfg.get("compression_glue_steps", 10)
+
     def _setup_dataloader_from_config(self, config: Optional[Dict]):
         if 'augmentor' in config:
             augmentor = process_augmentations(config['augmentor'])
@@ -254,11 +257,57 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
         for idx, proc_len in enumerate(processed_signal_length):
             spec_masks[idx, :, proc_len:] = 0.0
 
+        compressed_spectrograms, compressed_lengths = self.compress_spectrograms(
+            masked_spectrograms, processed_signal_length, spec_masks
+        )
+
         encoded, encoded_len = self.encoder(audio_signal=processed_signal, length=processed_signal_length)
 
         outputs = self.decoder_ssl(encoder_output=encoded)
 
         return spectrograms, spec_masks, outputs
+
+    def compress_spectrograms(self, masked_spectrograms, processed_signal_length, spec_masks):
+
+        print(1)
+        print(spec_masks.shape)
+        print(processed_signal_length)
+
+        masked_steps = (spec_masks.mean(dim=(0, 1)) > 0.99).float().nonzero().reshape(-1)
+
+        print(2)
+        print(masked_steps.shape)
+        print(masked_steps)
+
+        new_spec = spec_masks.new_zeros(spec_masks.shape[0], spec_masks.shape[1], 1)
+
+        cur_t = 0
+        skipped_steps = 0
+        added_steps = 0
+        for step in masked_steps:
+            if step <= cur_t + 1:
+                skipped_steps += step - cur_t + 1
+                cur_t = step + 1
+                continue
+            new_spec = torch.cat((new_spec, masked_spectrograms[:, :, cur_t : step - 1]), dim=-1)
+            new_spec = torch.cat(
+                (
+                    new_spec,
+                    spec_masks.new_zeros(spec_masks.shape[0], spec_masks.shape[1], self.compression_glue_steps),
+                ),
+                dim=-1,
+            )
+
+        print(3)
+        print(new_spec.shape)
+        print(skipped_steps)
+        print(added_steps)
+
+        compressed_lengths = processed_signal_length - skipped_steps + added_steps
+        print(compressed_lengths)
+        print("end")
+
+        return new_spec, compressed_lengths
 
     # PTL-specific methods
     def training_step(self, batch, batch_nb):
