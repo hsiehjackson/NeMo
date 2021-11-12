@@ -298,6 +298,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
                 dim=-1,
             )
             cur_t = step + 1
+            added_steps += self.compression_glue_steps
 
         new_spec = torch.cat((new_spec, masked_spectrograms[:, :, cur_t: spec_masks.shape[2] - 1]), dim=-1)
 
