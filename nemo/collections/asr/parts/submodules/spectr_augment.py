@@ -20,6 +20,7 @@ import torch.nn as nn
 from nemo.core.classes import Typing, typecheck
 from nemo.core.neural_types import LengthsType, NeuralType, SpectrogramType
 
+from nemo.utils import logging
 
 class SpecAugment(nn.Module, Typing):
     """
