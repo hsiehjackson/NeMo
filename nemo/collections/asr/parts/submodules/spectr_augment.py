@@ -95,13 +95,13 @@ class SpecAugment(nn.Module, Typing):
                 else:
                     time_width = self.time_width
 
-                y_left = self._rng.randint(self.time_min_start, max(1, sh[2] - time_width))
+                y_left = self._rng.randint(self.time_min_start, max(1, sh[2]))
 
                 w = self._rng.randint(0, time_width)
 
-                print(y_left, w)
+                print(y_left, min(y_left + w, sh[2]), w)
 
-                input_spec[:, :, y_left : y_left + w] = self.mask_value
+                input_spec[:, :, y_left : min(y_left + w, sh[2])] = self.mask_value
 
             for i in range(self.freq_masks):
                 x_left = self._rng.randint(0, sh[1] - self.freq_width)
@@ -130,7 +130,7 @@ class SpecAugment(nn.Module, Typing):
 
                     w = self._rng.randint(0, time_width)
 
-                    input_spec[idx, :, y_left : y_left + w] = self.mask_value
+                    input_spec[idx, :, y_left : min(y_left + w, length[idx])] = self.mask_value
 
         return input_spec
 
