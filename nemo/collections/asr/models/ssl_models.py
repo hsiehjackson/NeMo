@@ -325,6 +325,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
         print(sum(lens_list))
 
         compressed_lengths = processed_signal_length - skipped_steps + added_steps
+        #TODO: fix to not count cuts past the end of segment
         print(compressed_lengths)
         print("end")
 

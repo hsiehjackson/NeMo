@@ -470,6 +470,8 @@ class SpectrogramAugmentation(NeuralModule):
         mask_value=0.0,
         use_numba_spec_augment: bool = True,
         same_for_all=False,
+        time_min_width=0,
+        freq_min_width=0,
     ):
         super().__init__()
 
@@ -487,6 +489,8 @@ class SpectrogramAugmentation(NeuralModule):
                 rng=rng,
                 mask_value=mask_value,
                 same_for_all=same_for_all,
+                time_min_width=time_min_width,
+                freq_min_width=freq_min_width,
             )
         else:
             self.spec_augment = lambda input_spec, length: input_spec

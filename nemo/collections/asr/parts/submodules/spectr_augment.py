@@ -56,7 +56,8 @@ class SpecAugment(nn.Module, Typing):
         return {"augmented_spec": NeuralType(('B', 'D', 'T'), SpectrogramType())}
 
     def __init__(
-        self, freq_masks=0, time_masks=0, freq_width=10, time_width=10, rng=None, mask_value=0.0, same_for_all=False, time_min_start=10,
+        self, freq_masks=0, time_masks=0, freq_width=10, time_width=10, rng=None, mask_value=0.0, same_for_all=False,
+            time_min_start=10, time_min_width=0, freq_min_width=0, use_min_len=True,
     ):
         super().__init__()
 
@@ -68,7 +69,9 @@ class SpecAugment(nn.Module, Typing):
         self.time_masks = time_masks
 
         self.freq_width = freq_width
+        self.freq_min_width = freq_min_width
         self.time_width = time_width
+        self.time_min_width = time_min_width
 
         self.mask_value = mask_value
 
@@ -81,6 +84,7 @@ class SpecAugment(nn.Module, Typing):
             self.adaptive_temporal_width = True
 
         self.same_for_all = same_for_all
+        self.use_min_len = use_min_len
         self.time_min_start = time_min_start
 
     @typecheck()
@@ -89,24 +93,32 @@ class SpecAugment(nn.Module, Typing):
         sh = input_spec.shape
 
         if self.same_for_all:
+
+            if self.use_min_len:
+                len = min(length)
+            else:
+                len = sh[2]
+
             for i in range(self.time_masks):
                 if self.adaptive_temporal_width:
-                    time_width = max(1, int(sh[2] * self.time_width))
+                    time_width = max(1, int(len * self.time_width))
+                    time_min_width = max(1, int(len * self.time_min_width))
                 else:
                     time_width = self.time_width
+                    time_min_width = self.time_min_width
 
-                y_left = self._rng.randint(self.time_min_start, max(1, sh[2]))
+                y_left = self._rng.randint(self.time_min_start, max(1, len))
 
-                w = self._rng.randint(0, time_width)
+                w = self._rng.randint(time_min_width, time_width)
 
-                print(y_left, min(y_left + w, sh[2]), w)
+                print(y_left, min(y_left + w, len), w)
 
-                input_spec[:, :, y_left : min(y_left + w, sh[2])] = self.mask_value
+                input_spec[:, :, y_left : min(y_left + w, len)] = self.mask_value
 
             for i in range(self.freq_masks):
                 x_left = self._rng.randint(0, sh[1] - self.freq_width)
 
-                w = self._rng.randint(0, self.freq_width)
+                w = self._rng.randint(self.freq_min_width, self.freq_width)
 
                 input_spec[:, x_left : x_left + w, :] = self.mask_value
 
@@ -116,19 +128,21 @@ class SpecAugment(nn.Module, Typing):
                 for i in range(self.freq_masks):
                     x_left = self._rng.randint(0, sh[1] - self.freq_width)
 
-                    w = self._rng.randint(0, self.freq_width)
+                    w = self._rng.randint(self.freq_min_width, self.freq_width)
 
                     input_spec[idx, x_left : x_left + w, :] = self.mask_value
 
                 for i in range(self.time_masks):
                     if self.adaptive_temporal_width:
                         time_width = max(1, int(length[idx] * self.time_width))
+                        time_min_width = max(1, int(length[idx] * self.time_min_width))
                     else:
                         time_width = self.time_width
+                        time_min_width =  self.time_min_width
 
                     y_left = self._rng.randint(self.time_min_start, max(1, length[idx] - time_width))
 
-                    w = self._rng.randint(0, time_width)
+                    w = self._rng.randint(time_min_width, time_width)
 
                     input_spec[idx, :, y_left : min(y_left + w, length[idx])] = self.mask_value
 
