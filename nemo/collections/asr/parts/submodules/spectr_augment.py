@@ -56,11 +56,11 @@ class SpecAugment(nn.Module, Typing):
         return {"augmented_spec": NeuralType(('B', 'D', 'T'), SpectrogramType())}
 
     def __init__(
-        self, freq_masks=0, time_masks=0, freq_width=10, time_width=10, rng=None, mask_value=0.0, same_for_all=False,
+        self, freq_masks=0, time_masks=0, freq_width=10, time_width=10, rng=None, mask_value=0.0, same_for_all=False, time_min_start=0,
     ):
         super().__init__()
 
-        logging.debug("Not using Numba for SpecAugment")
+        logging.info("Not using Numba for SpecAugment")
 
         self._rng = random.Random() if rng is None else rng
 
@@ -81,6 +81,7 @@ class SpecAugment(nn.Module, Typing):
             self.adaptive_temporal_width = True
 
         self.same_for_all = same_for_all
+        self.time_min_start = time_min_start
 
     @typecheck()
     @torch.no_grad()
@@ -94,9 +95,11 @@ class SpecAugment(nn.Module, Typing):
                 else:
                     time_width = self.time_width
 
-                y_left = self._rng.randint(0, max(1, sh[2] - time_width))
+                y_left = self._rng.randint(self.time_min_start, max(1, sh[2] - time_width))
 
                 w = self._rng.randint(0, time_width)
+
+                print(y_left, w)
 
                 input_spec[:, :, y_left : y_left + w] = self.mask_value
 
@@ -123,7 +126,7 @@ class SpecAugment(nn.Module, Typing):
                     else:
                         time_width = self.time_width
 
-                    y_left = self._rng.randint(0, max(1, length[idx] - time_width))
+                    y_left = self._rng.randint(self.time_min_start, max(1, length[idx] - time_width))
 
                     w = self._rng.randint(0, time_width)
 

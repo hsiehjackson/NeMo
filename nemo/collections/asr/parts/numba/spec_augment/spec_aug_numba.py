@@ -222,7 +222,7 @@ class SpecAugmentNumba(nn.Module, Typing):
         super().__init__()
         # Message to mention that numba specaugment kernel will be available
         # if input device is CUDA and lengths are provided
-        logging.debug("Numba SpecAugment kernel is available")
+        logging.info("Numba SpecAugment kernel is available")
 
         self.freq_masks = freq_masks
         self.time_masks = time_masks
