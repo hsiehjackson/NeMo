@@ -281,7 +281,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
 
         new_spec = spec_masks.new_zeros(spec_masks.shape[0], spec_masks.shape[1], 1)
 
-        lens_list = [1]
+        lens_list = []
 
         cur_t = 0
         skipped_steps = 0
@@ -292,6 +292,9 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
                 lens_list[-1] += step - cur_t + 1
                 cur_t = step + 1
                 continue
+            if len(lens_list) > 0:
+                lens_list[-1] += 1
+                skipped_steps += 1
             new_spec = torch.cat((new_spec, masked_spectrograms[:, :, cur_t : step - 1]), dim=-1)
             new_spec = torch.cat(
                 (
@@ -306,12 +309,17 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
             lens_list.append(0)
 
         new_spec = torch.cat((new_spec, masked_spectrograms[:, :, cur_t: spec_masks.shape[2] - 1]), dim=-1)
+        lens_list.append(spec_masks.shape[2] - cur_t)
 
         print(3)
         print(new_spec.shape)
         print(skipped_steps)
         print(added_steps)
         print(lens_list)
+        print(sum(lens_list))
+        lens_list[1::2] = [self.compression_glue_steps] * (len(lens_list) // 2)
+        print(lens_list)
+        print(sum(lens_list))
 
         compressed_lengths = processed_signal_length - skipped_steps + added_steps
         print(compressed_lengths)

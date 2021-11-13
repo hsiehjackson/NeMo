@@ -56,7 +56,7 @@ class SpecAugment(nn.Module, Typing):
         return {"augmented_spec": NeuralType(('B', 'D', 'T'), SpectrogramType())}
 
     def __init__(
-        self, freq_masks=0, time_masks=0, freq_width=10, time_width=10, rng=None, mask_value=0.0, same_for_all=False, time_min_start=0,
+        self, freq_masks=0, time_masks=0, freq_width=10, time_width=10, rng=None, mask_value=0.0, same_for_all=False, time_min_start=10,
     ):
         super().__init__()
 
