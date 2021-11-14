@@ -75,6 +75,8 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
         self.compression_glue_steps = self._cfg.get("compression_glue_steps", 16)
         self.stride_for_compress = self._cfg.get("stride_for_compress", 8)
 
+        self.log_sizes = self._cfg.get("log_sizes", False)
+
     def _setup_dataloader_from_config(self, config: Optional[Dict]):
         if 'augmentor' in config:
             augmentor = process_augmentations(config['augmentor'])
@@ -267,15 +269,17 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
 
         masked_spectrograms = processed_signal.detach()
         spec_masks = torch.logical_and(masked_spectrograms < 1e-5, masked_spectrograms > -1e-5).float()
-        # logging.info("after spec " + str(masked_spectrograms.shape))
+        if self.log_sizes:
+            logging.info("after spec " + str(masked_spectrograms.shape))
 
         if self.compress:
             compressed_spectrograms, compressed_lengths, compress_lens_list = self.compress_spectrograms(
                 masked_spectrograms, processed_signal_length, spec_masks
             )
             del masked_spectrograms
-            # logging.info("after compress " + str(compressed_spectrograms.shape))
-            # logging.info(str(compress_lens_list))
+            if self.log_sizes:
+                logging.info("after compress " + str(compressed_spectrograms.shape))
+                logging.info(str(compress_lens_list))
 
         for idx, proc_len in enumerate(processed_signal_length):
             spec_masks[idx, :, proc_len:] = 0.0
