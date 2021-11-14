@@ -249,9 +249,12 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
                 input_signal=input_signal, length=input_signal_length,
             )
 
+
         if self.compress:
+            print(processed_signal_length)
             for i in range(processed_signal_length.shape[0]):
                 processed_signal_length[i] += (self.stride_for_compress - processed_signal_length[i] % self.stride_for_compress)
+            print(processed_signal_length)
 
         spectrograms = processed_signal.detach().clone()
 
