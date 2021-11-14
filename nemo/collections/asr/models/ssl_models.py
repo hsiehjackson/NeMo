@@ -267,15 +267,15 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
 
         masked_spectrograms = processed_signal.detach()
         spec_masks = torch.logical_and(masked_spectrograms < 1e-5, masked_spectrograms > -1e-5).float()
-        #logging.info("after spec " + str(masked_spectrograms.shape))
+        # logging.info("after spec " + str(masked_spectrograms.shape))
 
         if self.compress:
             compressed_spectrograms, compressed_lengths, compress_lens_list = self.compress_spectrograms(
                 masked_spectrograms, processed_signal_length, spec_masks
             )
             del masked_spectrograms
-            #logging.info("after compress " + str(compressed_spectrograms.shape))
-            #logging.info(str(compress_lens_list))
+            # logging.info("after compress " + str(compressed_spectrograms.shape))
+            # logging.info(str(compress_lens_list))
 
         for idx, proc_len in enumerate(processed_signal_length):
             spec_masks[idx, :, proc_len:] = 0.0
@@ -285,15 +285,15 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
         else:
             encoded, encoded_len = self.encoder(audio_signal=compressed_spectrograms, length=compressed_lengths)
 
-        #logging.info("after encoder " + str(encoded.shape))
+        # logging.info("after encoder " + str(encoded.shape))
 
         if self.compress:
             encoded = self.decompress_spectrograms(encoded, compress_lens_list)
-            #logging.info("after decompress " + str(encoded.shape))
+            # logging.info("after decompress " + str(encoded.shape))
 
         outputs = self.decoder_ssl(encoder_output=encoded)
 
-        #logging.info("after decoder " + str(outputs.shape))
+        # logging.info("after decoder " + str(outputs.shape))
 
         return spectrograms, spec_masks, outputs
 

@@ -595,21 +595,23 @@ class CropOrPadSpectrogramAugmentation(NeuralModule):
     def restore_from(cls, restore_path: str):
         pass
 
+
 import random
+
 
 class StepMaskFixedAmount(NeuralModule):
     """
         Masks a fixed percentage of spectrogram time steps.
         """
 
-    def __init__(self, step_stride=8, masked_ratio=0.8, mask_value=0.):
+    def __init__(self, step_stride=8, masked_ratio=0.8, mask_value=0.0):
         super(StepMaskFixedAmount, self).__init__()
         self.step_stride = step_stride
         self.masked_ratio = masked_ratio
 
     @typecheck()
     @torch.no_grad()
-    def forward(self, input_signal, length):
+    def forward(self, input_spec, length):
 
         min_len = int(min(length))
 
@@ -618,17 +620,16 @@ class StepMaskFixedAmount(NeuralModule):
         masked_steps = random.sample(steps, self.masked_ratio * len(steps))
 
         for step in masked_steps:
-            input_signal[:, :, step * self.step_stride : (step + 1) * self.step_stride] = self.mask_value
+            input_spec[:, :, step * self.step_stride : (step + 1) * self.step_stride] = self.mask_value
 
-
-        return input_signal
+        return input_spec
 
     @property
     def input_types(self):
         """Returns definitions of module output ports.
         """
         return {
-            "input_signal": NeuralType(('B', 'D', 'T'), SpectrogramType()),
+            "input_spec": NeuralType(('B', 'D', 'T'), SpectrogramType()),
             "length": NeuralType(tuple('B'), LengthsType()),
         }
 
