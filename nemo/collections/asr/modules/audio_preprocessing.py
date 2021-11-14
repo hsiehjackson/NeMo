@@ -595,6 +595,51 @@ class CropOrPadSpectrogramAugmentation(NeuralModule):
     def restore_from(cls, restore_path: str):
         pass
 
+import random
+
+class StepMaskFixedAmount(NeuralModule):
+    """
+        Masks a fixed percentage of spectrogram time steps.
+        """
+
+    def __init__(self, step_stride=8, masked_ratio=0.8, mask_value=0.):
+        super(StepMaskFixedAmount, self).__init__()
+        self.step_stride = step_stride
+        self.masked_ratio = masked_ratio
+
+    @typecheck()
+    @torch.no_grad()
+    def forward(self, input_signal, length):
+
+        min_len = int(min(length))
+
+        steps = range(min_len // self.step_stride)
+
+        masked_steps = random.sample(steps, self.masked_ratio * len(steps))
+
+        for step in masked_steps:
+            input_signal[:, :, step * self.step_stride : (step + 1) * self.step_stride] = self.mask_value
+
+
+        return input_signal
+
+    @property
+    def input_types(self):
+        """Returns definitions of module output ports.
+        """
+        return {
+            "input_signal": NeuralType(('B', 'D', 'T'), SpectrogramType()),
+            "length": NeuralType(tuple('B'), LengthsType()),
+        }
+
+    @property
+    def output_types(self):
+        """Returns definitions of module output ports.
+        """
+        return {
+            "augmented_spec": NeuralType(('B', 'D', 'T'), SpectrogramType()),
+        }
+
 
 @dataclass
 class AudioToMelSpectrogramPreprocessorConfig:

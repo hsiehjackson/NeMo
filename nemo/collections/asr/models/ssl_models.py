@@ -66,6 +66,10 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
         self.loss = SpeechEncDecSelfSupervisedModel.from_config_dict(self._cfg.loss)
 
         self.spec_augmentation = SpeechEncDecSelfSupervisedModel.from_config_dict(self._cfg.spec_augment)
+        if "extra_augment" in self._cfg:
+            self.extra_augmentation = SpeechEncDecSelfSupervisedModel.from_config_dict(self._cfg.extra_augment)
+        else:
+            self.extra_augmentation = None
 
         self.compress = self._cfg.get("compress_spectrograms", False)
         self.compression_glue_steps = self._cfg.get("compression_glue_steps", 16)
@@ -258,6 +262,8 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
         spectrograms = processed_signal.detach().clone()
 
         processed_signal = self.spec_augmentation(input_spec=processed_signal, length=processed_signal_length)
+        if self.extra_augmentation is not None:
+            processed_signal = self.extra_augmentation(input_spec=processed_signal, length=processed_signal_length)
 
         masked_spectrograms = processed_signal.detach()
         spec_masks = torch.logical_and(masked_spectrograms < 1e-5, masked_spectrograms > -1e-5).float()
@@ -305,6 +311,9 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
         for step in masked_steps:
             if step <= cur_t + 1:
                 skipped_steps += step - cur_t + 1
+                if len(lens_list) == 0:
+                    lens_list.append(0)
+                    lens_list.append(0)
                 lens_list[-1] += step - cur_t + 1
                 cur_t = step + 1
                 continue
