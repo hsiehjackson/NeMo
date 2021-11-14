@@ -70,10 +70,15 @@ model:
     _target_: nemo.collections.asr.modules.SpectrogramAugmentation
     same_for_all: true
     freq_masks: 4
-    time_masks: 5
+    time_masks: 0
     freq_width: 27
     time_width: 0.3
     time_min_width: 0.1
+
+  extra_augment:
+    _target_: nemo.collections.asr.modules.StepMaskFixedAmount
+    step_stride: 8
+    masked_ratio: 0.75
 
   encoder:
     _target_: nemo.collections.asr.modules.ConvASREncoder
