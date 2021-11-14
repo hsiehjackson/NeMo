@@ -313,12 +313,12 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
         skipped_steps = 0
         added_steps = 0
         for step in masked_steps:
-            if step <= cur_t + 1:
-                skipped_steps += step - cur_t + 1
+            if step == cur_t:
+                skipped_steps += 1
                 if len(lens_list) == 0:
                     lens_list.append(0)
                     lens_list.append(0)
-                lens_list[-1] += step - cur_t + 1
+                lens_list[-1] += 1
                 cur_t = step + 1
                 continue
             if len(lens_list) > 0:
