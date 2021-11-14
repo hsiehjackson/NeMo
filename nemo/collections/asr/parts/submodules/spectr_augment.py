@@ -127,8 +127,6 @@ class SpecAugment(nn.Module, Typing):
                 w = self._rng.randint(time_min_width, time_width)
                 w = w + (self.snap_time_to_grid - w % self.snap_time_to_grid)
 
-                print(y_left, min(y_left + w, len), w)
-
                 input_spec[:, :, y_left : min(y_left + w, len)] = self.mask_value
 
             for i in range(self.freq_masks):
