@@ -617,7 +617,7 @@ class StepMaskFixedAmount(NeuralModule):
 
         steps = range(min_len // self.step_stride)
 
-        masked_steps = random.sample(steps, self.masked_ratio * len(steps))
+        masked_steps = random.sample(steps, int(self.masked_ratio * len(steps)))
 
         for step in masked_steps:
             input_spec[:, :, step * self.step_stride : (step + 1) * self.step_stride] = self.mask_value
