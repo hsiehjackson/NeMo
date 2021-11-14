@@ -68,7 +68,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
         self.spec_augmentation = SpeechEncDecSelfSupervisedModel.from_config_dict(self._cfg.spec_augment)
 
         self.compress = self._cfg.get("compress_spectrograms", False)
-        self.compression_glue_steps = self._cfg.get("compression_glue_steps", 10)
+        self.compression_glue_steps = self._cfg.get("compression_glue_steps", 16)
         self.stride_for_compress = self._cfg.get("stride_for_compress", 8)
 
     def _setup_dataloader_from_config(self, config: Optional[Dict]):
@@ -343,7 +343,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
                 new_spec = torch.cat((new_spec, encoded[:, :, cur_t : cur_t + cur_len]), dim=-1)
                 cur_t += cur_len
             else:
-                new_spec = torch.cat((new_spec, torch.new_zeros(encoded.shape[0], encoded.shape[1], cur_len)), dim=-1)
+                new_spec = torch.cat((new_spec, encoded.new_zeros(encoded.shape[0], encoded.shape[1], cur_len)), dim=-1)
                 cur_t += self.compression_glue_steps
         new_spec = new_spec[:, :, 1:]
         del encoded
