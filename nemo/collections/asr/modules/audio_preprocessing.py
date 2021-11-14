@@ -608,6 +608,7 @@ class StepMaskFixedAmount(NeuralModule):
         super(StepMaskFixedAmount, self).__init__()
         self.step_stride = step_stride
         self.masked_ratio = masked_ratio
+        self.mask_value = mask_value
 
     @typecheck()
     @torch.no_grad()
