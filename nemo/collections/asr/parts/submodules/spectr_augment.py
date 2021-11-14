@@ -57,7 +57,7 @@ class SpecAugment(nn.Module, Typing):
 
     def __init__(
         self, freq_masks=0, time_masks=0, freq_width=10, time_width=10, rng=None, mask_value=0.0, same_for_all=False,
-            time_min_start=10, time_min_width=0, freq_min_width=0, use_min_len=True,
+            time_min_start=10, time_min_width=0, freq_min_width=0, use_min_len=True, snap_time_to_grid=16,
     ):
         super().__init__()
 
@@ -86,6 +86,7 @@ class SpecAugment(nn.Module, Typing):
         self.same_for_all = same_for_all
         self.use_min_len = use_min_len
         self.time_min_start = time_min_start
+        self.snap_time_to_grid = snap_time_to_grid
 
     @typecheck()
     @torch.no_grad()
@@ -108,8 +109,12 @@ class SpecAugment(nn.Module, Typing):
                     time_min_width = self.time_min_width
 
                 y_left = self._rng.randint(self.time_min_start, max(1, len))
+                y_left = y_left + (self.snap_time_to_grid - y_left % self.snap_time_to_grid)
+                y_left = min(y_left, len - 1)
+
 
                 w = self._rng.randint(time_min_width, time_width)
+                w = w + (self.snap_time_to_grid - w % self.snap_time_to_grid)
 
                 print(y_left, min(y_left + w, len), w)
 
@@ -140,9 +145,12 @@ class SpecAugment(nn.Module, Typing):
                         time_width = self.time_width
                         time_min_width =  self.time_min_width
 
-                    y_left = self._rng.randint(self.time_min_start, max(1, length[idx] - time_width))
+                    y_left = self._rng.randint(self.time_min_start, max(1, length[idx]))
+                    y_left = y_left + (self.snap_time_to_grid - y_left % self.snap_time_to_grid)
+                    y_left = min(y_left, length[idx] - 1)
 
                     w = self._rng.randint(time_min_width, time_width)
+                    w = w + (self.snap_time_to_grid - w % self.snap_time_to_grid)
 
                     input_spec[idx, :, y_left : min(y_left + w, length[idx])] = self.mask_value
 

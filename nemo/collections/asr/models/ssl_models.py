@@ -69,6 +69,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
 
         self.compress = self._cfg.get("compress_spectrograms", False)
         self.compression_glue_steps = self._cfg.get("compression_glue_steps", 10)
+        self.stride_for_compress = self._cfg.get("stride_for_compress", 8)
 
     def _setup_dataloader_from_config(self, config: Optional[Dict]):
         if 'augmentor' in config:
@@ -257,30 +258,39 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
         #for idx, proc_len in enumerate(processed_signal_length):
         #    spec_masks[idx, :, proc_len:] = 0.0
 
-        compressed_spectrograms, compressed_lengths = self.compress_spectrograms(
-            masked_spectrograms, processed_signal_length, spec_masks
-        )
+        print("after spec", masked_spectrograms.shape)
+
+        if self.compress:
+            compressed_spectrograms, compressed_lengths, compress_lens_list = self.compress_spectrograms(
+                masked_spectrograms, processed_signal_length, spec_masks
+            )
+            del masked_spectrograms
+            print("after compress", compressed_spectrograms.shape)
+            print(compress_lens_list)
 
         for idx, proc_len in enumerate(processed_signal_length):
             spec_masks[idx, :, proc_len:] = 0.0
 
-        encoded, encoded_len = self.encoder(audio_signal=processed_signal, length=processed_signal_length)
+        if not self.compress:
+            encoded, encoded_len = self.encoder(audio_signal=processed_signal, length=processed_signal_length)
+        else:
+            encoded, encoded_len = self.encoder(audio_signal=compressed_spectrograms, length=compressed_lengths)
+
+        print("after encoder", encoded.shape)
+
+        if self.compress:
+            encoded = self.decompress_spectrograms(encoded, compress_lens_list)
+            print("after decompress", encoded.shape)
 
         outputs = self.decoder_ssl(encoder_output=encoded)
+
+        print("after decoder", outputs.shape)
 
         return spectrograms, spec_masks, outputs
 
     def compress_spectrograms(self, masked_spectrograms, processed_signal_length, spec_masks):
 
-        print(1)
-        print(spec_masks.shape)
-        print(processed_signal_length)
-
         masked_steps = (spec_masks.mean(dim=(0, 1)) > 0.99).float().nonzero().reshape(-1)
-
-        print(2)
-        print(masked_steps.shape)
-        print(masked_steps)
 
         new_spec = spec_masks.new_zeros(spec_masks.shape[0], spec_masks.shape[1], 1)
 
@@ -288,7 +298,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
 
         cur_t = 0
         skipped_steps = 0
-        added_steps = 1
+        added_steps = 0
         for step in masked_steps:
             if step <= cur_t + 1:
                 skipped_steps += step - cur_t + 1
@@ -314,22 +324,31 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
         new_spec = torch.cat((new_spec, masked_spectrograms[:, :, cur_t: spec_masks.shape[2] - 1]), dim=-1)
         lens_list.append(spec_masks.shape[2] - cur_t)
 
-        print(3)
-        print(new_spec.shape)
-        print(skipped_steps)
-        print(added_steps)
-        print(lens_list)
-        print(sum(lens_list))
-        lens_list[1::2] = [self.compression_glue_steps] * (len(lens_list) // 2)
-        print(lens_list)
-        print(sum(lens_list))
+        new_spec = new_spec[:, :, 1:]
 
         compressed_lengths = processed_signal_length - skipped_steps + added_steps
-        #TODO: fix to not count cuts past the end of segment
-        print(compressed_lengths)
-        print("end")
 
-        return new_spec, compressed_lengths
+        return new_spec, compressed_lengths, lens_list
+
+    def decompress_spectrograms(self, encoded, compress_lens_list):
+
+        new_spec = encoded.new_zeros(encoded.shape[0], encoded.shape[1], 1)
+
+        cur_t = 0
+
+        for i, cur_len in enumerate(compress_lens_list):
+            cur_len //= self.stride_for_compress
+            is_true_spec = i % 2 == 0
+            if is_true_spec:
+                new_spec = torch.cat((new_spec, encoded[:, :, cur_t : cur_t + cur_len]), dim=-1)
+                cur_t += cur_len
+            else:
+                new_spec = torch.cat((new_spec, torch.new_zeros(encoded.shape[0], encoded.shape[1], cur_len)), dim=-1)
+                cur_t += self.compression_glue_steps
+        new_spec = new_spec[:, :, 1:]
+        del encoded
+
+        return new_spec
 
     # PTL-specific methods
     def training_step(self, batch, batch_nb):
