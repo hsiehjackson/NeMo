@@ -347,7 +347,8 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
 
         print("---starting decompress---warning---")
         for i, cur_len in enumerate(compress_lens_list):
-            cur_len = int(cur_len) // self.stride_for_compress
+            cur_len = int(cur_len)
+            cur_len = cur_len // self.stride_for_compress + int(cur_len % self.stride_for_compress != 0)
             print(cur_len)
             is_true_spec = i % 2 == 0
             if is_true_spec:
