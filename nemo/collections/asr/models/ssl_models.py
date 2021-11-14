@@ -355,7 +355,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
                 cur_t += cur_len
             else:
                 new_spec = torch.cat((new_spec, encoded.new_zeros(encoded.shape[0], encoded.shape[1], cur_len)), dim=-1)
-                cur_t += self.compression_glue_steps
+                cur_t += self.compression_glue_steps // self.stride_for_compress
             print(new_spec.shape)
         new_spec = new_spec[:, :, 1:]
         del encoded
