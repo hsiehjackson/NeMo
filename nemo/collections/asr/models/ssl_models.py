@@ -250,12 +250,10 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
             )
 
         if self.compress:
-            print(processed_signal_length)
             for i in range(processed_signal_length.shape[0]):
                 processed_signal_length[i] += (
                     self.stride_for_compress - processed_signal_length[i] % self.stride_for_compress
                 )
-            print(processed_signal_length)
 
         spectrograms = processed_signal.detach().clone()
 
@@ -263,9 +261,6 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
 
         masked_spectrograms = processed_signal.detach()
         spec_masks = torch.logical_and(masked_spectrograms < 1e-5, masked_spectrograms > -1e-5).float()
-        # for idx, proc_len in enumerate(processed_signal_length):
-        #    spec_masks[idx, :, proc_len:] = 0.0
-
         print("after spec", masked_spectrograms.shape)
 
         if self.compress:
@@ -346,14 +341,14 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
 
         cur_t = 0
 
-        print("---starting decompress---warning---")
+        #print("---starting decompress---warning---")
         for i, cur_len in enumerate(compress_lens_list):
             is_true_spec = i % 2 == 0
             cur_len = int(cur_len)
             cur_len = cur_len // self.stride_for_compress + int(
                 cur_len % self.stride_for_compress != 0 and is_true_spec
             )
-            print(cur_len)
+            #print(cur_len)
             if is_true_spec:
                 new_spec = torch.cat((new_spec, encoded[:, :, cur_t : cur_t + cur_len]), dim=-1)
                 cur_t += cur_len
@@ -362,7 +357,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
                     (new_spec, encoded.new_zeros(encoded.shape[0], encoded.shape[1], cur_len)), dim=-1
                 )
                 cur_t += self.compression_glue_steps // self.stride_for_compress
-            print(new_spec.shape)
+            #print(new_spec.shape)
         new_spec = new_spec[:, :, 1:]
         del encoded
 
