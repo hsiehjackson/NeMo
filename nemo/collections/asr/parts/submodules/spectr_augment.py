@@ -22,6 +22,7 @@ from nemo.core.neural_types import LengthsType, NeuralType, SpectrogramType
 
 from nemo.utils import logging
 
+
 class SpecAugment(nn.Module, Typing):
     """
     Zeroes out(cuts) random continuous horisontal or
@@ -56,8 +57,19 @@ class SpecAugment(nn.Module, Typing):
         return {"augmented_spec": NeuralType(('B', 'D', 'T'), SpectrogramType())}
 
     def __init__(
-        self, freq_masks=0, time_masks=0, freq_width=10, time_width=10, rng=None, mask_value=0.0, same_for_all=False,
-            time_min_start=10, time_min_width=0, freq_min_width=0, use_min_len=True, snap_time_to_grid=16,
+        self,
+        freq_masks=0,
+        time_masks=0,
+        freq_width=10,
+        time_width=10,
+        rng=None,
+        mask_value=0.0,
+        same_for_all=False,
+        time_min_start=10,
+        time_min_width=0,
+        freq_min_width=0,
+        use_min_len=True,
+        snap_time_to_grid=8,
     ):
         super().__init__()
 
@@ -112,7 +124,6 @@ class SpecAugment(nn.Module, Typing):
                 y_left = y_left + (self.snap_time_to_grid - y_left % self.snap_time_to_grid)
                 y_left = min(y_left, len - 1)
 
-
                 w = self._rng.randint(time_min_width, time_width)
                 w = w + (self.snap_time_to_grid - w % self.snap_time_to_grid)
 
@@ -143,7 +154,7 @@ class SpecAugment(nn.Module, Typing):
                         time_min_width = max(1, int(length[idx] * self.time_min_width))
                     else:
                         time_width = self.time_width
-                        time_min_width =  self.time_min_width
+                        time_min_width = self.time_min_width
 
                     y_left = self._rng.randint(self.time_min_start, max(1, length[idx]))
                     y_left = y_left + (self.snap_time_to_grid - y_left % self.snap_time_to_grid)

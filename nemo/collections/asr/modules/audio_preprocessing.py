@@ -472,6 +472,7 @@ class SpectrogramAugmentation(NeuralModule):
         same_for_all=False,
         time_min_width=0,
         freq_min_width=0,
+        snap_time_to_grid=8,
     ):
         super().__init__()
 
@@ -491,6 +492,7 @@ class SpectrogramAugmentation(NeuralModule):
                 same_for_all=same_for_all,
                 time_min_width=time_min_width,
                 freq_min_width=freq_min_width,
+                snap_time_to_grid=snap_time_to_grid,
             )
         else:
             self.spec_augment = lambda input_spec, length: input_spec

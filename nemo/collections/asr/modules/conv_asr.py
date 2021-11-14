@@ -494,9 +494,7 @@ class ConvASRDecoderReconstruction(NeuralModule, Exportable):
         super().__init__()
 
         if ((stride_layers + non_stride_layers) > 0) and (kernel_size < 3 or kernel_size % 2 == 0):
-            raise ValueError(
-                "Kernel size in this decoder needs to be >= 3 and odd when using at least 1 conv layer."
-            )
+            raise ValueError("Kernel size in this decoder needs to be >= 3 and odd when using at least 1 conv layer.")
 
         activation = jasper_activations[activation]()
 
@@ -530,7 +528,7 @@ class ConvASRDecoderReconstruction(NeuralModule, Exportable):
                     padding=(kernel_size - 3) // 2 + 1,
                     output_padding=1,
                     bias=True,
-                    groups=self.feat_hidden
+                    groups=self.feat_hidden,
                 )
             )
             self.decoder_layers.append(nn.Conv1d(self.feat_hidden, self.feat_hidden, kernel_size=1, bias=True))

@@ -249,6 +249,10 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
                 input_signal=input_signal, length=input_signal_length,
             )
 
+        if self.compress:
+            for i in range(processed_signal_length.shape[0]):
+                processed_signal_length[i] += (self.stride_for_compress - processed_signal_length[i] % self.stride_for_compress)
+
         spectrograms = processed_signal.detach().clone()
 
         processed_signal = self.spec_augmentation(input_spec=processed_signal, length=processed_signal_length)
@@ -320,7 +324,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
             cur_t = step + 1
             added_steps += self.compression_glue_steps
             lens_list.append(0)
-
+        if cur_t < spec_masks.shape[2]:
         new_spec = torch.cat((new_spec, masked_spectrograms[:, :, cur_t: spec_masks.shape[2] - 1]), dim=-1)
         lens_list.append(spec_masks.shape[2] - cur_t)
 
