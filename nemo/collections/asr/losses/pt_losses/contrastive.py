@@ -145,18 +145,12 @@ class ContrastiveLoss(Loss):
         masks = masks.mean(-1) > self.mask_threshold
 
         if 0 < self.limit_mask_steps < masks.sum():
-            print(masks.shape)
             masks_shape = masks.shape
             masks_flat = masks.reshape(-1)
-            print(masks_flat.shape)
-            print(masks_flat.sum())
             masks_sampled = torch.multinomial(masks_flat.float(), self.limit_mask_steps)
             masks_flat[:] = 0
             masks_flat[masks_sampled] = 1.
-            print(masks_flat.shape)
-            print(masks_flat.sum())
             masks = masks_flat.reshape(masks_shape)
-            print(masks_flat.shape)
 
 
         out_masked_only = decoder_outputs[masks]
