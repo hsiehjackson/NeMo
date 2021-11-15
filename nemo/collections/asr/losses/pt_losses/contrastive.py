@@ -150,7 +150,7 @@ class ContrastiveLoss(Loss):
             masks_flat = masks.reshape(-1)
             print(masks_flat.shape)
             print(masks_flat.sum())
-            masks_sampled = torch.multinomial(masks_flat, self.limit_mask_steps)
+            masks_sampled = torch.multinomial(masks_flat.float(), self.limit_mask_steps)
             masks_flat[:] = 0
             masks_flat[masks_sampled] = 1.
             print(masks_flat.shape)
