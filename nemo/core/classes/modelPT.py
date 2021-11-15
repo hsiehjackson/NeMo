@@ -892,9 +892,10 @@ class ModelPT(LightningModule, Model):
             with open_dict(cfg):
                 # Restore model
                 model_path = cfg.pop('init_from_nemo_model')
-                restored_model = self.restore_from(
-                    model_path, map_location=map_location, strict=cfg.get("init_strict", True)
-                )
+                if not cfg.get("init_only_state_dict", False):
+                    restored_model = self.restore_from(
+                        model_path, map_location=map_location, strict=cfg.get("init_strict", True)
+                    )
 
                 # Restore checkpoint into current model
                 self.load_state_dict(restored_model.state_dict(), strict=False)
