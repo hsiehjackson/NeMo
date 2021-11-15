@@ -289,15 +289,18 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
         else:
             encoded, encoded_len = self.encoder(audio_signal=compressed_spectrograms, length=compressed_lengths)
 
-        # logging.info("after encoder " + str(encoded.shape))
+        if self.log_sizes:
+            logging.info("after encoder " + str(encoded.shape))
 
         if self.compress:
             encoded = self.decompress_spectrograms(encoded, compress_lens_list)
-            # logging.info("after decompress " + str(encoded.shape))
+            if self.log_sizes:
+                logging.info("after decompress " + str(encoded.shape))
 
         outputs = self.decoder_ssl(encoder_output=encoded)
 
-        # logging.info("after decoder " + str(outputs.shape))
+        if self.log_sizes:
+            logging.info("after decoder " + str(outputs.shape))
 
         return spectrograms, spec_masks, outputs
 
@@ -361,7 +364,6 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
             cur_len = cur_len // self.stride_for_compress + int(
                 cur_len % self.stride_for_compress != 0 and is_true_spec
             )
-            # print(cur_len)
             if is_true_spec:
                 new_spec = torch.cat((new_spec, encoded[:, :, cur_t : cur_t + cur_len]), dim=-1)
                 cur_t += cur_len
@@ -370,7 +372,8 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
                     (new_spec, encoded.new_zeros(encoded.shape[0], encoded.shape[1], cur_len)), dim=-1
                 )
                 cur_t += self.compression_glue_steps // self.stride_for_compress
-            # print(new_spec.shape)
+            if self.log_sizes:
+                logging.info(str(cur_len) + " " + str(new_spec.shape))
         new_spec = new_spec[:, :, 1:]
         del encoded
 
