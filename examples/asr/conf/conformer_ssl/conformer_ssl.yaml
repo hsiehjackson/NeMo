@@ -126,7 +126,6 @@ model:
     proj_dim: *dec_out
     combine_time_steps: 4
     codebook_size: 1200
-    n_negatives: 100
 
 
   optim:
