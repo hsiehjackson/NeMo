@@ -17,7 +17,7 @@ model:
   sample_rate: &sample_rate 16000
 
   compress_spectrograms: true
-  compression_glue_steps: 32
+  compression_glue_steps: 0
   stride_for_compress: 8
 
   train_ds:
@@ -78,7 +78,7 @@ model:
   extra_augment:
     _target_: nemo.collections.asr.modules.StepMaskFixedAmount
     step_stride: 8
-    masked_ratio: 0.75
+    masked_ratio: 0.6
 
   encoder:
     _target_: nemo.collections.asr.modules.ConvASREncoder
