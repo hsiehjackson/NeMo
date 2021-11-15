@@ -111,7 +111,7 @@ model:
 
   dec_out: &dec_out 128
 
-  decoders:
+  decoder:
     _target_: nemo.collections.asr.modules.ConvASRDecoderRecon
     feat_in: ${model.encoder.d_model}
     feat_hidden: 128
