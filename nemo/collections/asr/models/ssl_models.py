@@ -327,7 +327,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
             #if len(lens_list) > 0:
             #    lens_list[-1] += 1
             #    skipped_steps += 1
-            new_spec = torch.cat((new_spec, masked_spectrograms[:, :, cur_t : step - 1]), dim=-1)
+            new_spec = torch.cat((new_spec, masked_spectrograms[:, :, cur_t : step]), dim=-1)
             new_spec = torch.cat(
                 (
                     new_spec,
@@ -357,7 +357,6 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
 
         cur_t = 0
 
-        # print("---starting decompress---warning---")
         for i, cur_len in enumerate(compress_lens_list):
             is_true_spec = i % 2 == 0
             cur_len = int(cur_len)
