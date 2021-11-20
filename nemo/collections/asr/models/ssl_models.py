@@ -280,6 +280,8 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
             if self.log_sizes:
                 logging.info("after compress " + str(compressed_spectrograms.shape))
                 logging.info(str(compress_lens_list))
+            #if self.combine:
+
 
         for idx, proc_len in enumerate(processed_signal_length):
             spec_masks[idx, :, proc_len:] = 0.0
@@ -371,8 +373,8 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
                     (new_spec, encoded.new_zeros(encoded.shape[0], encoded.shape[1], cur_len)), dim=-1
                 )
                 cur_t += self.compression_glue_steps // self.stride_for_compress
-            if self.log_sizes:
-                logging.info(str(cur_len) + " " + str(new_spec.shape))
+            #if self.log_sizes:
+            #    logging.info(str(cur_len) + " " + str(new_spec.shape))
         new_spec = new_spec[:, :, 1:]
         del encoded
 
