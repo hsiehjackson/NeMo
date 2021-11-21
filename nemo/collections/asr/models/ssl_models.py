@@ -310,10 +310,10 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
         if self.compress:
             if self.combine > 1:
                 logging.info("lens after encoder " + str(encoded_len))
-                compressed_spectrograms = compressed_spectrograms.transpose(1, 2)
+                encoded = encoded.transpose(1, 2)
                 cur_shape = encoded.shape
-                compressed_spectrograms = compressed_spectrograms.reshape((cur_shape[0] * self.combine, cur_shape[1] // self.combine) + cur_shape[2:])
-                compressed_spectrograms = compressed_spectrograms.transpose(1, 2)
+                encoded = encoded.reshape((cur_shape[0] * self.combine, cur_shape[1] // self.combine) + cur_shape[2:])
+                encoded = encoded.transpose(1, 2)
                 encoded_len = old_lengths
                 logging.info("returning to old lengths " + str(encoded_len))
 
