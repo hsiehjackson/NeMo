@@ -279,7 +279,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
         if self.log_sizes:
             logging.info("after spec " + str(masked_spectrograms.shape))
 
-        batch_combine = 1
+        batch_combine = self.combine
         if self.combine > 1:
             if masked_spectrograms.shape[0] % self.combine != 0:
                 new_bs = masked_spectrograms.shape[0] // self.combine * self.combine
@@ -290,7 +290,6 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
                     spec_masks = spec_masks[:new_bs]
                     processed_signal_length = processed_signal_length[:new_bs]
                     spectrograms = spectrograms[:new_bs]
-                    batch_combine = self.combine
 
 
         if self.compress:
