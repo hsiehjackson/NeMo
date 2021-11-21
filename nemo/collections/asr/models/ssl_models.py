@@ -279,6 +279,18 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
         if self.log_sizes:
             logging.info("after spec " + str(masked_spectrograms.shape))
 
+
+        if self.combine > 1:
+            if masked_spectrograms.shape[0] % self.combine != 0:
+                new_bs = masked_spectrograms.shape[0] // self.combine * self.combine
+                if new_bs == 0:
+                    batch_combine = 1
+                else:
+                    masked_spectrograms = masked_spectrograms[:new_bs]
+                    batch_combine = self.combine
+        else:
+            batch_combine = 1
+
         if self.compress:
             compressed_spectrograms, compressed_lengths, compress_lens_list = self.compress_spectrograms(
                 masked_spectrograms, processed_signal_length, spec_masks
@@ -288,6 +300,11 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
                 logging.info("after compress " + str(compressed_spectrograms.shape))
                 logging.info(str(compress_lens_list))
             if self.combine > 1:
+                if compressed_spectrograms.shape[0] % self.combine != 0:
+                    new_bs = compressed_spectrograms.shape[0] // self.combine * self.combine
+                    if new_bs == 0:
+
+            if batch_combine > 1:
                 logging.info("pre-combine lengths " + str(compressed_lengths))
                 compressed_spectrograms = compressed_spectrograms.transpose(1, 2)
                 cur_shape = compressed_spectrograms.shape
@@ -310,7 +327,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
             logging.info("after encoder " + str(encoded.shape))
 
         if self.compress:
-            if self.combine > 1:
+            if batch_combine > 1:
                 if self.log_sizes:
                     logging.info("lens after encoder " + str(encoded_len))
                 encoded = F.pad(encoded, [0, self.combine - encoded.shape[-1] % self.combine])
