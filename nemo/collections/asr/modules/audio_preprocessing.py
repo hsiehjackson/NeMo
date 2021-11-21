@@ -604,28 +604,36 @@ class StepMaskFixedAmount(NeuralModule):
         Masks a fixed percentage of spectrogram time steps.
         """
 
-    def __init__(self, step_stride=8, masked_ratio=0.8, mask_value=0.0):
+    def __init__(self, step_stride=8, masked_ratio=0.8, mask_value=0.0, same_for_all=True, use_len=True):
         super(StepMaskFixedAmount, self).__init__()
         self.step_stride = step_stride
         self.masked_ratio = masked_ratio
         self.mask_value = mask_value
+        self.same_for_all = same_for_all
+        self.use_len = use_len
 
     @typecheck()
     @torch.no_grad()
     def forward(self, input_spec, length):
 
-        min_len = int(min(length))
+        if self.same_for_all:
+            if self.use_len:
+                l = int(min(length))
+            else:
+                l = input_spec.shape[2]
+            steps = range(min_len // self.step_stride)
+            masked_steps = random.sample(steps, int(self.masked_ratio * len(steps)))
 
-        steps = range(min_len // self.step_stride)
+            for step in masked_steps:
+                input_spec[:, :, step * self.step_stride : (step + 1) * self.step_stride] = self.mask_value
+        else:
+            for idx in range(input_spec.shape[0]):
+                cur_len = length[idx]
+                steps = range(cur_len // self.step_stride)
+                masked_steps = random.sample(steps, int(self.masked_ratio * len(steps)))
 
-        masked_steps = random.sample(steps, int(self.masked_ratio * len(steps)))
-
-        #logging.info(str(min_len))
-        #logging.info(str(steps))
-        #logging.info(str(masked_steps))
-
-        for step in masked_steps:
-            input_spec[:, :, step * self.step_stride : (step + 1) * self.step_stride] = self.mask_value
+                for step in masked_steps:
+                    input_spec[idx, :, step * self.step_stride: (step + 1) * self.step_stride] = self.mask_value
 
         return input_spec
 

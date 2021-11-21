@@ -68,7 +68,7 @@ class SpecAugment(nn.Module, Typing):
         time_min_start=10,
         time_min_width=0,
         freq_min_width=0,
-        use_min_len=True,
+        use_len=True,
         snap_time_to_grid=8,
     ):
         super().__init__()
@@ -96,7 +96,7 @@ class SpecAugment(nn.Module, Typing):
             self.adaptive_temporal_width = True
 
         self.same_for_all = same_for_all
-        self.use_min_len = use_min_len
+        self.use_len = use_len
         self.time_min_start = time_min_start
         self.snap_time_to_grid = snap_time_to_grid
 
@@ -107,7 +107,7 @@ class SpecAugment(nn.Module, Typing):
 
         if self.same_for_all:
 
-            if self.use_min_len:
+            if self.use_len:
                 len = min(length)
             else:
                 len = sh[2]

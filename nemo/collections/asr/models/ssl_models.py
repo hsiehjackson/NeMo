@@ -68,7 +68,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
         self.loss = SpeechEncDecSelfSupervisedModel.from_config_dict(self._cfg.loss)
 
         self.spec_augmentation = SpeechEncDecSelfSupervisedModel.from_config_dict(self._cfg.spec_augment)
-        if "extra_augment" in self._cfg:
+        if "extra_augment" in self._cfg and self._cfg.extra_augment.masked_ratio > 0:
             self.extra_augmentation = SpeechEncDecSelfSupervisedModel.from_config_dict(self._cfg.extra_augment)
         else:
             self.extra_augmentation = None
