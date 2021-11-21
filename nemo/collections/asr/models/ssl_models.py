@@ -260,7 +260,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
             )
 
         #tmp!!
-        processed_signal_length = torch.ones(processed_signal_length.shape).int() * processed_signal.shape[-1]
+        #processed_signal_length = torch.ones(processed_signal_length.shape).int() * processed_signal.shape[-1]
 
         if self.compress:
             for i in range(processed_signal_length.shape[0]):
