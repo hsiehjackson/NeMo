@@ -15,6 +15,8 @@ from math import ceil
 from typing import Dict, Optional, Union
 
 import torch
+import torch.nn.functional as F
+
 from omegaconf import DictConfig, open_dict
 from pytorch_lightning import Trainer
 
@@ -309,13 +311,18 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
 
         if self.compress:
             if self.combine > 1:
-                logging.info("lens after encoder " + str(encoded_len))
+                if self.log_sizes:
+                    logging.info("lens after encoder " + str(encoded_len))
+                encoded = F.pad(encoded, [0, self.combine - encoded.shape[-1] % self.combine])
+                if self.log_sizes:
+                    logging.info("shape after padding " + str(encoded.shape))
                 encoded = encoded.transpose(1, 2)
                 cur_shape = encoded.shape
                 encoded = encoded.reshape((cur_shape[0] * self.combine, cur_shape[1] // self.combine) + cur_shape[2:])
                 encoded = encoded.transpose(1, 2)
                 encoded_len = old_lengths
-                logging.info("returning to old lengths " + str(encoded_len))
+                if self.log_sizes:
+                    logging.info("returning to old lengths " + str(encoded_len))
 
             encoded = self.decompress_spectrograms(encoded, compress_lens_list)
             if self.log_sizes:
