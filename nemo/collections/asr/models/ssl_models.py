@@ -74,6 +74,8 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
         self.compress = self._cfg.get("compress_spectrograms", False)
         self.compression_glue_steps = self._cfg.get("compression_glue_steps", 16)
         self.stride_for_compress = self._cfg.get("stride_for_compress", 8)
+        self.combine = self._cfg.get("combine", 1)
+
 
         self.log_sizes = self._cfg.get("log_sizes", False)
 
@@ -280,7 +282,13 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
             if self.log_sizes:
                 logging.info("after compress " + str(compressed_spectrograms.shape))
                 logging.info(str(compress_lens_list))
-            #if self.combine:
+            if self.combine > 1:
+                logging.info("pre-combine lengths " + str(compressed_lengths))
+                cur_shape = compressed_spectrograms.shape
+                compressed_spectrograms = compressed_spectrograms.reshape((cur_shape[0] // self.combine,) + cur_shape[1:-1] + (cur_shape[-1] * self.combine,))
+                old_lengths = compressed_lengths.clone()
+                compressed_lengths = torch.ones(compressed_lengths.shape).to(device=compressed_spectrograms.device) * (cur_shape[-1] * self.combine)
+                logging.info("new lens " + str(compressed_lengths))
 
 
         for idx, proc_len in enumerate(processed_signal_length):
@@ -295,14 +303,23 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
             logging.info("after encoder " + str(encoded.shape))
 
         if self.compress:
+            if self.combine > 1:
+                logging.info("lens after encoder " + str(encoded_len))
+                cur_shape = encoded.shape
+                encoded = encoded.reshape((cur_shape[0] * self.combine,) + cur_shape[1:-1] + (cur_shape[-1] // self.combine,))
+                encoded_len = old_lengths
+                logging.info("returning to old lengths " + str(encoded_len))
+
             encoded = self.decompress_spectrograms(encoded, compress_lens_list)
             if self.log_sizes:
                 logging.info("after decompress " + str(encoded.shape))
+
 
         outputs = self.decoder_ssl(encoder_output=encoded)
 
         if self.log_sizes:
             logging.info("after decoder " + str(outputs.shape))
+            logging.info("------------------------------------")
 
         return spectrograms, spec_masks, outputs
 
