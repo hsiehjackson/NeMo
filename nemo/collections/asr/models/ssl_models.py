@@ -287,7 +287,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
                 cur_shape = compressed_spectrograms.shape
                 compressed_spectrograms = compressed_spectrograms.reshape((cur_shape[0] // self.combine,) + cur_shape[1:-1] + (cur_shape[-1] * self.combine,))
                 old_lengths = compressed_lengths.clone()
-                compressed_lengths = torch.ones(compressed_lengths.shape).to(device=compressed_spectrograms.device) * (cur_shape[-1] * self.combine)
+                compressed_lengths = torch.ones(compressed_lengths.shape[0] // self.combine).to(device=compressed_spectrograms.device).int() * (cur_shape[-1] * self.combine)
                 logging.info("new lens " + str(compressed_lengths))
 
 
