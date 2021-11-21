@@ -299,10 +299,6 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
             if self.log_sizes:
                 logging.info("after compress " + str(compressed_spectrograms.shape))
                 logging.info(str(compress_lens_list))
-            if self.combine > 1:
-                if compressed_spectrograms.shape[0] % self.combine != 0:
-                    new_bs = compressed_spectrograms.shape[0] // self.combine * self.combine
-                    if new_bs == 0:
 
             if batch_combine > 1:
                 logging.info("pre-combine lengths " + str(compressed_lengths))
