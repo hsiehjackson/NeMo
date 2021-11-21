@@ -289,6 +289,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
                     masked_spectrograms = masked_spectrograms[:new_bs]
                     spec_masks = spec_masks[:new_bs]
                     processed_signal_length = processed_signal_length[:new_bs]
+                    spectrograms = spectrograms[:new_bs]
                     batch_combine = self.combine
 
 
