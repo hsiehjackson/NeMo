@@ -45,10 +45,10 @@ model:
     se_context_size: -1
     kernel_size_factor: 0.25
     #filters: 1024
-    filters_1: 256
-    filters_2: 512
-    filters_3: 1024
-    filters_4: 2048
+    filters_1: 512
+    filters_2: 1024
+    filters_3: 2048
+    filters_4: 4096
     decoder_out_channels: 256
 
   preprocessor:
