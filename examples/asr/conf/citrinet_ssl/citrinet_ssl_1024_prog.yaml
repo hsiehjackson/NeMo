@@ -49,6 +49,7 @@ model:
     filters_2: 512
     filters_3: 1024
     filters_4: 2048
+    decoder_out_channels: 256
 
   tokenizer:
     dir: ???  # path to directory which contains either tokenizer.model (bpe) or vocab.txt (for wpe)
