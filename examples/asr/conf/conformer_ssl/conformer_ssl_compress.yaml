@@ -87,7 +87,7 @@ model:
     step_stride: 128
     masked_ratio: 0.5
     same_for_all: true
-    use_len: false
+    use_len: true
 
   encoder:
     _target_: nemo.collections.asr.modules.ConformerEncoder

@@ -262,7 +262,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
         #tmp!!
         #processed_signal_length = torch.ones(processed_signal_length.shape).int() * processed_signal.shape[-1]
 
-        if self.compress:
+        if self.compress and self.training:
             for i in range(processed_signal_length.shape[0]):
                 processed_signal_length[i] += (
                     self.stride_for_compress - processed_signal_length[i] % self.stride_for_compress
@@ -292,7 +292,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
                     spectrograms = spectrograms[:new_bs]
 
 
-        if self.compress:
+        if self.compress and self.training:
             compressed_spectrograms, compressed_lengths, compress_lens_list = self.compress_spectrograms(
                 masked_spectrograms, processed_signal_length, spec_masks
             )
@@ -317,15 +317,15 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
         for idx, proc_len in enumerate(processed_signal_length):
             spec_masks[idx, :, proc_len:] = 0.0
 
-        if not self.compress:
-            encoded, encoded_len = self.encoder(audio_signal=processed_signal, length=processed_signal_length)
-        else:
+        if self.compress and self.training:
             encoded, encoded_len = self.encoder(audio_signal=compressed_spectrograms, length=compressed_lengths)
+        else:
+            encoded, encoded_len = self.encoder(audio_signal=processed_signal, length=processed_signal_length)
 
         if self.log_sizes:
             logging.info("after encoder " + str(encoded.shape))
 
-        if self.compress:
+        if self.compress and self.training:
             if batch_combine > 1:
                 if self.log_sizes:
                     logging.info("lens after encoder " + str(encoded_len))
