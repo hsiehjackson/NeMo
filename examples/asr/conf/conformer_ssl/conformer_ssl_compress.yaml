@@ -75,16 +75,19 @@ model:
 
   spec_augment:
     _target_: nemo.collections.asr.modules.SpectrogramAugmentation
-    freq_masks: 4 # set to zero to disable it
-    # you may use lower time_masks for smaller models to have a faster convergence
-    time_masks: 0 # set to zero to disable it
+    freq_masks: 4
+    time_masks: 0
     freq_width: 27
     time_width: 0.05
+    same_for_all: true
+    use_len: false
 
   extra_augment:
     _target_: nemo.collections.asr.modules.StepMaskFixedAmount
-    step_stride: 32
-    masked_ratio: 0.6
+    step_stride: 128
+    masked_ratio: 0.5
+    same_for_all: true
+    use_len: false
 
   encoder:
     _target_: nemo.collections.asr.modules.ConformerEncoder
@@ -135,7 +138,6 @@ model:
     proj_dim: *dec_out
     combine_time_steps: 4
     codebook_size: 1200
-    limit_mask_steps: 1000
 
   optim:
     name: novograd
