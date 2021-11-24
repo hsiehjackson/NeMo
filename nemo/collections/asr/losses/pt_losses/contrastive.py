@@ -204,7 +204,7 @@ class ContrastiveLoss(Loss):
         sample_size = similarity_targets.numel()
 
         if self.prob_ppl_weight != 0 and self.quantized_targets:
-            prob_ppl_loss = self.prob_ppl_weight * prob_ppl_loss * sample_size
+            prob_ppl_loss = self.prob_ppl_weight * prob_ppl_loss
             loss += prob_ppl_loss
 
         if not isinstance(loss, torch.Tensor):
