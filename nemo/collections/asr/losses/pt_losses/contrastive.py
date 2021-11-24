@@ -52,7 +52,7 @@ class ContrastiveLoss(Loss):
         codebook_size: int = 320,
         prob_ppl_weight: float = 0.1,
         logit_temp: float = 0.1,
-        reduce: str = "sum",
+        reduce: str = "mean",
         sample_from_non_masked: bool = True,
         sample_from_codebook: bool = False,
         group_loss: bool = False,
