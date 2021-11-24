@@ -52,7 +52,7 @@ class ContrastiveLoss(Loss):
         codebook_size: int = 320,
         prob_ppl_weight: float = 0.1,
         logit_temp: float = 0.1,
-        reduce: str = "mean",
+        reduce: str = "sum",
         sample_from_non_masked: bool = True,
         sample_from_codebook: bool = False,
         group_loss: bool = False,
@@ -62,6 +62,7 @@ class ContrastiveLoss(Loss):
         quantizer_temp_decay: float = 0.999995,
         mask_threshold: float = 0.8,
         limit_mask_steps = 0,
+        multiplier: int = 32,
     ):
         """
         Loss function representing the contrastive task of identifying the true latent speech representation of
@@ -201,11 +202,16 @@ class ContrastiveLoss(Loss):
 
         loss = F.cross_entropy(similarity_scores, similarity_targets, reduction=self.reduce)
 
-        sample_size = similarity_targets.numel()
-
         if self.prob_ppl_weight != 0 and self.quantized_targets:
+            sample_size = similarity_targets.numel()
             prob_ppl_loss = self.prob_ppl_weight * prob_ppl_loss
+            if reduce == "sum":
+                prob_ppl_loss *= sample_size
             loss += prob_ppl_loss
+
+        loss /= loss.shape[0]
+
+        loss *= self.multiplier
 
         if not isinstance(loss, torch.Tensor):
             loss = torch.Tensor([0]).to(device=decoder_outputs.device)
