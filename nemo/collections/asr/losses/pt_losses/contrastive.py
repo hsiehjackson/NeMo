@@ -210,7 +210,7 @@ class ContrastiveLoss(Loss):
                 prob_ppl_loss *= sample_size
             loss += prob_ppl_loss
 
-        loss /= loss.shape[0]
+        loss /= spec_in.shape[0]
 
         loss *= self.multiplier
 
