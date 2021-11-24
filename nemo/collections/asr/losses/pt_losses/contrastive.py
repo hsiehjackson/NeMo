@@ -114,6 +114,7 @@ class ContrastiveLoss(Loss):
         self.group_loss = group_loss
         self.mask_threshold = mask_threshold
         self.limit_mask_steps = limit_mask_steps
+        self.multiplier = multiplier
 
         if not self.quantized_targets:
             self.target_proj = nn.Linear(in_dim * combine_time_steps, proj_dim)
@@ -205,7 +206,7 @@ class ContrastiveLoss(Loss):
         if self.prob_ppl_weight != 0 and self.quantized_targets:
             sample_size = similarity_targets.numel()
             prob_ppl_loss = self.prob_ppl_weight * prob_ppl_loss
-            if reduce == "sum":
+            if self.reduce == "sum":
                 prob_ppl_loss *= sample_size
             loss += prob_ppl_loss
 
