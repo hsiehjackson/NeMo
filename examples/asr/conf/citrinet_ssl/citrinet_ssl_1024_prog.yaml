@@ -11,7 +11,7 @@
 # for larger models from 10x time masking to 5x or 2x time masking.
 # For further details regarding Citrinet, visit - https://docs.nvidia.com/deeplearning/nemo/user-guide/docs/en/main/asr/configs.html#citrinet
 
-name: &name "Citrinet-1024-SSL-Contrastive"
+name: &name "Citrinet-Prog-SSL-Contrastive"
 
 model:
   sample_rate: &sample_rate 16000
@@ -49,7 +49,7 @@ model:
     filters_2: 1024
     filters_3: 2048
     filters_4: 4096
-    decoder_out_channels: 256
+    decoder_out_channels: 128
 
   preprocessor:
     _target_: nemo.collections.asr.modules.AudioToMelSpectrogramPreprocessor
@@ -67,7 +67,7 @@ model:
 
   spec_augment:
     _target_: nemo.collections.asr.modules.SpectrogramAugmentation
-    freq_masks: 2
+    freq_masks: 4
     time_masks: 0
     freq_width: 27
     time_width: 0.05
@@ -76,8 +76,8 @@ model:
 
   extra_augment:
     _target_: nemo.collections.asr.modules.StepMaskFixedAmount
-    step_stride: 32
-    masked_ratio: 0.75
+    step_stride: 128
+    masked_ratio: 0.5
     same_for_all: true
     use_len: false
 
