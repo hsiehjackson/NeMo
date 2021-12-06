@@ -943,6 +943,29 @@ class ModelPT(LightningModule, Model):
 
                 del ckpt
 
+        if 'init_from_second_nemo_model' in cfg and cfg.init_from_second_nemo_model is not None:
+            with open_dict(cfg):
+                # Restore model
+                model_path = cfg.pop('init_from_second_nemo_model')
+                model_part = cfg.pop('init_part_from_second_nemo_model', "")
+                restored_model = self.restore_from(
+                    model_path, map_location=map_location, strict=False,
+                    override_config_path=None
+                )
+                logging.info(str(list(restored_model.state_dict().items())[:10]))
+                dict_to_load = {k: v for k, v in restored_model.state_dict().items() if k.startswith(model_part)}
+                logging.info(str(list(dict_to_load.items())[:10]))
+
+                # Restore checkpoint part into current model
+
+                self.load_state_dict(dict_to_load, strict=False)
+                if model_part != "":
+                    logging.info(f'Model checkpoint part `{model_part}` restored from second nemo file with path : `{model_path}`')
+                else:
+                    logging.info(f'Model checkpoint restored from second nemo file with path : `{model_path}`')
+
+                del restored_model
+
     def teardown(self, stage: str):
         """
         Called at the end of fit and test.
