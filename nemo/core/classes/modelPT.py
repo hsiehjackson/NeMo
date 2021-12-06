@@ -894,7 +894,7 @@ class ModelPT(LightningModule, Model):
                 model_path = cfg.pop('init_from_nemo_model')
                 restored_model = self.restore_from(
                     model_path, map_location=map_location, strict=cfg.get("init_strict", True),
-                    override_config_path=cfg if cfg.get("override_internal_config", False) else None
+                    override_config_path=None#cfg if cfg.get("override_internal_config", False) else None
                 )
 
                 # Restore checkpoint into current model
@@ -952,9 +952,9 @@ class ModelPT(LightningModule, Model):
                     model_path, map_location=map_location, strict=False,
                     override_config_path=None
                 )
-                logging.info(str(list(restored_model.state_dict().items())[:10]))
+                logging.info(str(list(restored_model.state_dict().keys())[:20]))
                 dict_to_load = {k: v for k, v in restored_model.state_dict().items() if k.startswith(model_part)}
-                logging.info(str(list(dict_to_load.items())[:10]))
+                logging.info(str(list(dict_to_load.keys())[:20]))
 
                 # Restore checkpoint part into current model
 
