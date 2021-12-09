@@ -58,6 +58,7 @@ model:
     freq_width: 27
     time_width: 0.05
 
+
   encoder:
     _target_: nemo.collections.asr.modules.ConvASREncoder
     feat_in: *n_mels

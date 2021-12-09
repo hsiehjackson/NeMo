@@ -11,7 +11,7 @@
 # for larger models from 10x time masking to 5x or 2x time masking.
 # For further details regarding Citrinet, visit - https://docs.nvidia.com/deeplearning/nemo/user-guide/docs/en/main/asr/configs.html#citrinet
 
-name: &name "Citrinet-1024-SSL-Contrastive"
+name: &name "Citrinet-Prog-SSL-Contrastive"
 
 model:
   sample_rate: &sample_rate 16000
@@ -44,9 +44,11 @@ model:
     se: true
     se_context_size: -1
     kernel_size_factor: 0.25
-    filters: 1024
+    filters_1: 512
+    filters_2: 1024
+    filters_3: 2048
+    filters_4: 4096
     decoder_out_channels: 128
-
 
   preprocessor:
     _target_: nemo.collections.asr.modules.AudioToMelSpectrogramPreprocessor
@@ -77,7 +79,7 @@ model:
     conv_mask: true
 
     jasper:
-      - filters: ${model.model_defaults.filters}
+      - filters: ${model.model_defaults.filters_1}
         repeat: 1
         kernel: [5]
         stride: [1]
@@ -90,7 +92,7 @@ model:
 
 
 
-      - filters: ${model.model_defaults.filters}
+      - filters: ${model.model_defaults.filters_1}
         repeat: ${model.model_defaults.repeat}
         kernel: [11]
         stride: [2]
@@ -106,7 +108,7 @@ model:
 
 
 
-      - filters: ${model.model_defaults.filters}
+      - filters: ${model.model_defaults.filters_1}
         repeat: ${model.model_defaults.repeat}
         kernel: [13]
         stride: [1]
@@ -120,7 +122,7 @@ model:
 
 
 
-      - filters: ${model.model_defaults.filters}
+      - filters: ${model.model_defaults.filters_1}
         repeat: ${model.model_defaults.repeat}
         kernel: [15]
         stride: [1]
@@ -134,7 +136,7 @@ model:
 
 
 
-      - filters: ${model.model_defaults.filters}
+      - filters: ${model.model_defaults.filters_1}
         repeat: ${model.model_defaults.repeat}
         kernel: [17]
         stride: [1]
@@ -148,7 +150,7 @@ model:
 
 
 
-      - filters: ${model.model_defaults.filters}
+      - filters: ${model.model_defaults.filters_1}
         repeat: ${model.model_defaults.repeat}
         kernel: [19]
         stride: [1]
@@ -162,7 +164,7 @@ model:
 
 
 
-      - filters: ${model.model_defaults.filters}
+      - filters: ${model.model_defaults.filters_1}
         repeat: ${model.model_defaults.repeat}
         kernel: [21]
         stride: [1]
@@ -176,7 +178,7 @@ model:
 
 
 
-      - filters: ${model.model_defaults.filters}
+      - filters: ${model.model_defaults.filters_1}
         repeat: ${model.model_defaults.repeat}
         kernel: [13]
         stride: [2]  # *stride
@@ -192,7 +194,7 @@ model:
 
 
 
-      - filters: ${model.model_defaults.filters}
+      - filters: ${model.model_defaults.filters_2}
         repeat: ${model.model_defaults.repeat}
         kernel: [15]
         stride: [1]
@@ -206,7 +208,7 @@ model:
 
 
 
-      - filters: ${model.model_defaults.filters}
+      - filters: ${model.model_defaults.filters_2}
         repeat: ${model.model_defaults.repeat}
         kernel: [17]
         stride: [1]
@@ -219,7 +221,8 @@ model:
         kernel_size_factor: ${model.model_defaults.kernel_size_factor}
 
 
-      - filters: ${model.model_defaults.filters}
+
+      - filters: ${model.model_defaults.filters_2}
         repeat: ${model.model_defaults.repeat}
         kernel: [19]
         stride: [1]
@@ -232,7 +235,8 @@ model:
         kernel_size_factor: ${model.model_defaults.kernel_size_factor}
 
 
-      - filters: ${model.model_defaults.filters}
+
+      - filters: ${model.model_defaults.filters_2}
         repeat: ${model.model_defaults.repeat}
         kernel: [21]
         stride: [1]
@@ -245,7 +249,8 @@ model:
         kernel_size_factor: ${model.model_defaults.kernel_size_factor}
 
 
-      - filters: ${model.model_defaults.filters}
+
+      - filters: ${model.model_defaults.filters_2}
         repeat: ${model.model_defaults.repeat}
         kernel: [23]
         stride: [1]
@@ -259,7 +264,7 @@ model:
 
 
 
-      - filters: ${model.model_defaults.filters}
+      - filters: ${model.model_defaults.filters_2}
         repeat: ${model.model_defaults.repeat}
         kernel: [25]
         stride: [1]
@@ -273,7 +278,7 @@ model:
 
 
 
-      - filters: ${model.model_defaults.filters}
+      - filters: ${model.model_defaults.filters_2}
         repeat: ${model.model_defaults.repeat}
         kernel: [25]
         stride: [2]  # stride
@@ -288,8 +293,7 @@ model:
         kernel_size_factor: ${model.model_defaults.kernel_size_factor}
 
 
-
-      - filters: ${model.model_defaults.filters}
+      - filters: ${model.model_defaults.filters_3}
         repeat: ${model.model_defaults.repeat}
         kernel: [27]
         stride: [1]
@@ -302,7 +306,8 @@ model:
         kernel_size_factor: ${model.model_defaults.kernel_size_factor}
 
 
-      - filters: ${model.model_defaults.filters}
+
+      - filters: ${model.model_defaults.filters_3}
         repeat: ${model.model_defaults.repeat}
         kernel: [29]
         stride: [1]
@@ -316,7 +321,7 @@ model:
 
 
 
-      - filters: ${model.model_defaults.filters}
+      - filters: ${model.model_defaults.filters_3}
         repeat: ${model.model_defaults.repeat}
         kernel: [31]
         stride: [1]
@@ -330,7 +335,7 @@ model:
 
 
 
-      - filters: ${model.model_defaults.filters}
+      - filters: ${model.model_defaults.filters_3}
         repeat: ${model.model_defaults.repeat}
         kernel: [33]
         stride: [1]
@@ -344,7 +349,7 @@ model:
 
 
 
-      - filters: ${model.model_defaults.filters}
+      - filters: ${model.model_defaults.filters_3}
         repeat: ${model.model_defaults.repeat}
         kernel: [35]
         stride: [1]
@@ -358,7 +363,7 @@ model:
 
 
 
-      - filters: ${model.model_defaults.filters}
+      - filters: ${model.model_defaults.filters_3}
         repeat: ${model.model_defaults.repeat}
         kernel: [37]
         stride: [1]
@@ -372,7 +377,7 @@ model:
 
 
 
-      - filters: ${model.model_defaults.filters}
+      - filters: ${model.model_defaults.filters_3}
         repeat: ${model.model_defaults.repeat}
         kernel: [39]
         stride: [1]
@@ -386,7 +391,7 @@ model:
 
 
 
-      - filters: &enc_final 1024
+      - filters: ${model.model_defaults.filters_4}
         repeat: 1
         kernel: [41]
         stride: [1]
@@ -401,7 +406,7 @@ model:
 
   decoder:
     _target_: nemo.collections.asr.modules.ConvASRDecoderReconstruction
-    feat_in: *enc_final
+    feat_in: ${model.model_defaults.filters_4}
     feat_hidden: 128
     feat_out: ${model.model_defaults.decoder_out_channels}
     stride_layers: 1

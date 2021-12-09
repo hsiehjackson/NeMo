@@ -1,4 +1,4 @@
-# This config contains the default values for self-supervised pre-training of a Citrinet model with contrastive loss.
+# This config contains the default values for training a Citrinet model with CTC loss and BPE-based vocabulary.
 # Default learning parameters in this config are set for effective batch size of 1k on 32 GPUs.
 # To train it with smaller batch sizes, you may need to re-tune the learning parameters or use higher accumulate_grad_batches.
 # If training for a short time, you can also reduce weight decay to 0.
@@ -11,18 +11,18 @@
 # for larger models from 10x time masking to 5x or 2x time masking.
 # For further details regarding Citrinet, visit - https://docs.nvidia.com/deeplearning/nemo/user-guide/docs/en/main/asr/configs.html#citrinet
 
-name: &name "Citrinet-1024-SSL-Contrastive"
+name: &name "Citrinet-1024-8x-Stride"
 
 model:
   sample_rate: &sample_rate 16000
+  log_prediction: true # enables logging sample predictions in the output during training
 
   train_ds:
     manifest_filepath: ???
     sample_rate: 16000
     batch_size: 32
     trim_silence: false
-    max_duration: 35.0
-    min_duration: 3.0
+    max_duration: 20.0
     shuffle: true
     is_tarred: false
     tarred_audio_filepaths: null
@@ -34,8 +34,13 @@ model:
     batch_size: 32
     shuffle: false
     use_start_end_token: false
-    max_duration: 35.0
-    min_duration: 3.0
+
+  test_ds:
+    manifest_filepath: null
+    sample_rate: 16000
+    batch_size: 32
+    shuffle: false
+    use_start_end_token: false
 
   model_defaults:
     repeat: 5
@@ -44,9 +49,14 @@ model:
     se: true
     se_context_size: -1
     kernel_size_factor: 0.25
-    filters: 1024
-    decoder_out_channels: 128
+    filters_1: 512
+    filters_2: 1024
+    filters_3: 2048
+    filters_4: 4096
 
+  tokenizer:
+    dir: ???  # path to directory which contains either tokenizer.model (bpe) or vocab.txt (for wpe)
+    type: ???  # Can be either bpe or wpe
 
   preprocessor:
     _target_: nemo.collections.asr.modules.AudioToMelSpectrogramPreprocessor
@@ -64,11 +74,10 @@ model:
 
   spec_augment:
     _target_: nemo.collections.asr.modules.SpectrogramAugmentation
-    freq_masks: 4
+    freq_masks: 2
     time_masks: 10
     freq_width: 27
     time_width: 0.05
-
 
   encoder:
     _target_: nemo.collections.asr.modules.ConvASREncoder
@@ -77,7 +86,7 @@ model:
     conv_mask: true
 
     jasper:
-      - filters: ${model.model_defaults.filters}
+      - filters: ${model.model_defaults.filters_1}
         repeat: 1
         kernel: [5]
         stride: [1]
@@ -90,7 +99,7 @@ model:
 
 
 
-      - filters: ${model.model_defaults.filters}
+      - filters: ${model.model_defaults.filters_1}
         repeat: ${model.model_defaults.repeat}
         kernel: [11]
         stride: [2]
@@ -106,7 +115,7 @@ model:
 
 
 
-      - filters: ${model.model_defaults.filters}
+      - filters: ${model.model_defaults.filters_1}
         repeat: ${model.model_defaults.repeat}
         kernel: [13]
         stride: [1]
@@ -120,7 +129,7 @@ model:
 
 
 
-      - filters: ${model.model_defaults.filters}
+      - filters: ${model.model_defaults.filters_1}
         repeat: ${model.model_defaults.repeat}
         kernel: [15]
         stride: [1]
@@ -134,7 +143,7 @@ model:
 
 
 
-      - filters: ${model.model_defaults.filters}
+      - filters: ${model.model_defaults.filters_1}
         repeat: ${model.model_defaults.repeat}
         kernel: [17]
         stride: [1]
@@ -148,7 +157,7 @@ model:
 
 
 
-      - filters: ${model.model_defaults.filters}
+      - filters: ${model.model_defaults.filters_1}
         repeat: ${model.model_defaults.repeat}
         kernel: [19]
         stride: [1]
@@ -162,7 +171,7 @@ model:
 
 
 
-      - filters: ${model.model_defaults.filters}
+      - filters: ${model.model_defaults.filters_1}
         repeat: ${model.model_defaults.repeat}
         kernel: [21]
         stride: [1]
@@ -176,7 +185,7 @@ model:
 
 
 
-      - filters: ${model.model_defaults.filters}
+      - filters: ${model.model_defaults.filters_1}
         repeat: ${model.model_defaults.repeat}
         kernel: [13]
         stride: [2]  # *stride
@@ -192,7 +201,7 @@ model:
 
 
 
-      - filters: ${model.model_defaults.filters}
+      - filters: ${model.model_defaults.filters_2}
         repeat: ${model.model_defaults.repeat}
         kernel: [15]
         stride: [1]
@@ -206,7 +215,7 @@ model:
 
 
 
-      - filters: ${model.model_defaults.filters}
+      - filters: ${model.model_defaults.filters_2}
         repeat: ${model.model_defaults.repeat}
         kernel: [17]
         stride: [1]
@@ -219,7 +228,8 @@ model:
         kernel_size_factor: ${model.model_defaults.kernel_size_factor}
 
 
-      - filters: ${model.model_defaults.filters}
+
+      - filters: ${model.model_defaults.filters_2}
         repeat: ${model.model_defaults.repeat}
         kernel: [19]
         stride: [1]
@@ -232,7 +242,8 @@ model:
         kernel_size_factor: ${model.model_defaults.kernel_size_factor}
 
 
-      - filters: ${model.model_defaults.filters}
+
+      - filters: ${model.model_defaults.filters_2}
         repeat: ${model.model_defaults.repeat}
         kernel: [21]
         stride: [1]
@@ -245,7 +256,8 @@ model:
         kernel_size_factor: ${model.model_defaults.kernel_size_factor}
 
 
-      - filters: ${model.model_defaults.filters}
+
+      - filters: ${model.model_defaults.filters_2}
         repeat: ${model.model_defaults.repeat}
         kernel: [23]
         stride: [1]
@@ -259,7 +271,7 @@ model:
 
 
 
-      - filters: ${model.model_defaults.filters}
+      - filters: ${model.model_defaults.filters_2}
         repeat: ${model.model_defaults.repeat}
         kernel: [25]
         stride: [1]
@@ -273,7 +285,7 @@ model:
 
 
 
-      - filters: ${model.model_defaults.filters}
+      - filters: ${model.model_defaults.filters_2}
         repeat: ${model.model_defaults.repeat}
         kernel: [25]
         stride: [2]  # stride
@@ -288,8 +300,7 @@ model:
         kernel_size_factor: ${model.model_defaults.kernel_size_factor}
 
 
-
-      - filters: ${model.model_defaults.filters}
+      - filters: ${model.model_defaults.filters_3}
         repeat: ${model.model_defaults.repeat}
         kernel: [27]
         stride: [1]
@@ -302,7 +313,8 @@ model:
         kernel_size_factor: ${model.model_defaults.kernel_size_factor}
 
 
-      - filters: ${model.model_defaults.filters}
+
+      - filters: ${model.model_defaults.filters_3}
         repeat: ${model.model_defaults.repeat}
         kernel: [29]
         stride: [1]
@@ -316,7 +328,7 @@ model:
 
 
 
-      - filters: ${model.model_defaults.filters}
+      - filters: ${model.model_defaults.filters_3}
         repeat: ${model.model_defaults.repeat}
         kernel: [31]
         stride: [1]
@@ -330,7 +342,7 @@ model:
 
 
 
-      - filters: ${model.model_defaults.filters}
+      - filters: ${model.model_defaults.filters_3}
         repeat: ${model.model_defaults.repeat}
         kernel: [33]
         stride: [1]
@@ -344,7 +356,7 @@ model:
 
 
 
-      - filters: ${model.model_defaults.filters}
+      - filters: ${model.model_defaults.filters_3}
         repeat: ${model.model_defaults.repeat}
         kernel: [35]
         stride: [1]
@@ -358,7 +370,7 @@ model:
 
 
 
-      - filters: ${model.model_defaults.filters}
+      - filters: ${model.model_defaults.filters_3}
         repeat: ${model.model_defaults.repeat}
         kernel: [37]
         stride: [1]
@@ -372,7 +384,7 @@ model:
 
 
 
-      - filters: ${model.model_defaults.filters}
+      - filters: ${model.model_defaults.filters_3}
         repeat: ${model.model_defaults.repeat}
         kernel: [39]
         stride: [1]
@@ -386,7 +398,7 @@ model:
 
 
 
-      - filters: &enc_final 1024
+      - filters: ${model.model_defaults.filters_4}
         repeat: 1
         kernel: [41]
         stride: [1]
@@ -400,19 +412,10 @@ model:
 
 
   decoder:
-    _target_: nemo.collections.asr.modules.ConvASRDecoderReconstruction
-    feat_in: *enc_final
-    feat_hidden: 128
-    feat_out: ${model.model_defaults.decoder_out_channels}
-    stride_layers: 1
-
-
-  loss:
-    _target_: nemo.collections.asr.losses.ContrastiveLoss
-    in_dim: *n_mels
-    proj_dim: ${model.model_defaults.decoder_out_channels}
-    combine_time_steps: 4
-    codebook_size: 1200
+    _target_: nemo.collections.asr.modules.ConvASRDecoder
+    feat_in: ${model.model_defaults.filters_4}
+    num_classes: -1  # filled with vocabulary size from tokenizer at runtime
+    vocabulary: []  # filled with vocabulary from tokenizer at runtime
 
 
   optim:
@@ -455,9 +458,9 @@ exp_manager:
   create_tensorboard_logger: true
   create_checkpoint_callback: true
   checkpoint_callback_params:
-    monitor: "val_loss"
+    monitor: "val_wer"
     mode: "min"
-    save_top_k: 1
+    save_top_k: 3
   create_wandb_logger: false
   wandb_logger_kwargs:
     name: null
