@@ -948,13 +948,14 @@ class ModelPT(LightningModule, Model):
                 # Restore model
                 model_path = cfg.pop('init_from_second_nemo_model')
                 model_part = cfg.pop('init_part_from_second_nemo_model', "")
+                exclude = cfg.pop('init_exclude_from_second_nemo_model', "!!!")
                 restored_model = self.restore_from(
                     model_path, map_location=map_location, strict=False,
                     override_config_path=None
                 )
-                logging.info(str(list(restored_model.state_dict().keys())[:20]))
-                dict_to_load = {k: v for k, v in restored_model.state_dict().items() if k.startswith(model_part)}
-                logging.info(str(list(dict_to_load.keys())[:20]))
+                logging.info(str(list(restored_model.state_dict().keys())))
+                dict_to_load = {k: v for k, v in restored_model.state_dict().items() if k.startswith(model_part) and exclude not in k}
+                logging.info(str(list(dict_to_load.keys())))
 
                 # Restore checkpoint part into current model
 
@@ -963,6 +964,8 @@ class ModelPT(LightningModule, Model):
                     logging.info(f'Model checkpoint part `{model_part}` restored from second nemo file with path : `{model_path}`')
                 else:
                     logging.info(f'Model checkpoint restored from second nemo file with path : `{model_path}`')
+                if exclude != "!!!":
+                    logging.info(f'Excluded parameters containing `{exclude}`')
 
                 del restored_model
 
