@@ -149,7 +149,7 @@ model:
       combine_time_steps: 8
       codebook_size: 1200
 
-    loss_log_names: [ "c2", "c4", "c8" ]
+  loss_log_names: [ "c2", "c4", "c8" ]
 
   optim:
     name: adamw
