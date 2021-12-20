@@ -107,21 +107,21 @@ model:
   dec_out: &dec_out 128
 
   decoders:
-    - _target_: nemo.collections.asr.modules.ConvASRDecoderRecon
+    - _target_: nemo.collections.asr.modules.ConvASRDecoderReconstruction
       feat_in: ${model.encoder.d_model}
       feat_hidden: 128
       feat_out: *dec_out
       stride_layers: 1
       non_stride_layers: 1
 
-    - _target_: nemo.collections.asr.modules.ConvASRDecoderRecon
+    - _target_: nemo.collections.asr.modules.ConvASRDecoderReconstruction
       feat_in: ${model.encoder.d_model}
       feat_hidden: 128
       feat_out: *dec_out
       stride_layers: 0
       non_stride_layers: 2
 
-    - _target_: nemo.collections.asr.modules.ConvASRDecoderRecon
+    - _target_: nemo.collections.asr.modules.ConvASRDecoderReconstruction
       feat_in: ${model.encoder.d_model}
       feat_hidden: 128
       feat_out: *dec_out
