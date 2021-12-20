@@ -54,6 +54,9 @@ class SpeechEncMultiDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
         self.preprocessor = SpeechEncMultiDecSelfSupervisedModel.from_config_dict(self._cfg.preprocessor)
         self.encoder = SpeechEncMultiDecSelfSupervisedModel.from_config_dict(self._cfg.encoder)
 
+        self.decoders = []
+        self.losses = []
+
         if hasattr(self._cfg, 'loss_alphas'):
             self.loss_alphas = self._cfg.loss_alphas
         else:
