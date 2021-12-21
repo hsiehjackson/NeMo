@@ -219,7 +219,7 @@ class SpeechEncMultiDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
             "decoder_outs": NeuralType(('B', 'T', 'D'), VoidType()),
         }
 
-    #@typecheck()
+    # @typecheck()
     def forward(
         self, input_signal=None, input_signal_length=None, processed_signal=None, processed_signal_length=None
     ):
@@ -289,7 +289,7 @@ class SpeechEncMultiDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
             tensorboard_logs["train_loss_" + loss_name] = loss_val
             total_loss += loss_val * self.loss_alphas[i]
 
-        #total_loss = sum of all
+        # total_loss = sum of all
 
         tensorboard_logs['train_loss'] = total_loss
 
