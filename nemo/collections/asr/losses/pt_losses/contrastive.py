@@ -63,7 +63,7 @@ class ContrastiveLoss(Loss):
         mask_threshold: float = 0.8,
         norm_by_batchsize: bool = False,
         norm_by_target_number: bool = False,
-        mult_factor: float = 16000.,
+        mult_factor: float = 1., #16000
     ):
         """
         Loss function representing the contrastive task of identifying the true latent speech representation of
