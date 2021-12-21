@@ -206,11 +206,9 @@ class ContrastiveLoss(Loss):
 
         if self.norm_by_batchsize:
             loss /= decoder_outputs.shape[0]
-            print(decoder_outputs.shape)
 
         if self.norm_by_target_number:
             loss /= targets_masked_only.shape[0]
-            print(targets_masked_only.shape)
 
         if self.mult_factor:
             loss *= self.mult_factor
