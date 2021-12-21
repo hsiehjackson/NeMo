@@ -789,7 +789,7 @@ class NeMoModelCheckpoint(ModelCheckpoint):
 
     def on_train_end(self, trainer, pl_module):
         print(trainer.callback_metrics)
-        print(trainer.callbacks_metrics["val_loss"].isnan)
+        print(trainer.callback_metrics["val_loss"].isnan)
 
         if trainer.fast_dev_run or trainer.callback_metrics["val_loss"].isnan() == True:
             return None
