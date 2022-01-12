@@ -147,6 +147,8 @@ class AudioText(_Collection):
                 num_filtered += 1
                 continue
 
+            #TODO
+            #option to get tokens directly
             text_tokens = parser(text)
             if text_tokens is None:
                 duration_filtered += duration
