@@ -466,6 +466,7 @@ class SpectrogramAugmentation(NeuralModule):
         rect_masks=0,
         rect_time=5,
         rect_freq=20,
+        same_time_masks=False,
         rng=None,
         mask_value=0.0,
         use_numba_spec_augment: bool = True,
@@ -483,6 +484,7 @@ class SpectrogramAugmentation(NeuralModule):
                 time_masks=time_masks,
                 freq_width=freq_width,
                 time_width=time_width,
+                same_time_masks=same_time_masks,
                 rng=rng,
                 mask_value=mask_value,
             )
