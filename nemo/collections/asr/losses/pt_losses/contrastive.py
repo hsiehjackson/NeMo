@@ -151,7 +151,9 @@ class ContrastiveLoss(Loss):
             masks = masks.mean(dim=(0, -1)) > self.mask_threshold
             out_masked_only = decoder_outputs[:, masks]
             targets_masked_only = targets[:, masks]
+            print(masks)
             print(masks.shape, out_masked_only.shape, targets_masked_only.shape)
+            print()
 
             # BxT'xC
             # number of masked time steps to predict (T')
