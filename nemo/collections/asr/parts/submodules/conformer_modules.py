@@ -15,7 +15,8 @@
 import torch
 from torch import nn as nn
 from torch.nn import LayerNorm
-from nemo.collections.asr.parts.mixins import AccessMixin
+from nemo.core.classes.mixins import AccessMixin
+
 
 from nemo.collections.asr.parts.submodules.multi_head_attention import (
     MultiHeadAttention,
