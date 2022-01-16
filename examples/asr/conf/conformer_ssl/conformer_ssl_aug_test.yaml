@@ -69,7 +69,7 @@ model:
     _target_: nemo.collections.asr.modules.TestAugmentation
     time_aligned: false
     patch_size: 1
-    drop_rate: 0.6
+    drop_rate: 0.5
 
   encoder:
     _target_: nemo.collections.asr.modules.ConformerEncoder

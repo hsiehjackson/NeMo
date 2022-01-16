@@ -53,6 +53,7 @@ __all__ = [
     'AudioToMFCCPreprocessor',
     'SpectrogramAugmentation',
     'CropOrPadSpectrogramAugmentation',
+    'TestAugmentation',
 ]
 
 
