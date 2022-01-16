@@ -22,6 +22,8 @@ from nemo.collections.asr.parts.utils import asr_module_utils
 from nemo.collections.common import tokenizers
 from nemo.utils import logging
 
+import torch
+
 
 _ACCESS_CFG = DictConfig({})
 
