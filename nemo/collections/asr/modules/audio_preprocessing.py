@@ -517,6 +517,49 @@ class SpectrogramAugmentation(NeuralModule):
             augmented_spec = self.spec_augment(input_spec=augmented_spec, length=length)
         return augmented_spec
 
+class TestAugmentation(NeuralModule):
+
+    @property
+    def input_types(self):
+        """Returns definitions of module input types
+        """
+        return {
+            "input_spec": NeuralType(('B', 'D', 'T'), SpectrogramType()),
+            "length": NeuralType(tuple('B'), LengthsType()),
+        }
+
+    @property
+    def output_types(self):
+        """Returns definitions of module output types
+        """
+        return {"augmented_spec": NeuralType(('B', 'D', 'T'), SpectrogramType())}
+
+    def __init__(
+        self,
+        time_aligned=False,
+        patch_size=1,
+        drop_rate=0.5,
+    ):
+        super().__init__()
+        self.time_aligned = time_aligned
+        self.patch_size = patch_size
+        self.drop_rate = drop_rate
+
+    @typecheck()
+    def forward(self, input_spec, length):
+        augmented_spec = input_spec
+        bs = augmented_spec.shape[0]
+
+        if self.time_aligned:
+            augmented_spec = augmented_spec.view(bs, augmented_spec.shape[1] * self.patch_size, -1)
+            augmented_spec[:, :, ::2] = 0.
+            augmented_spec = augmented_spec.view(bs, augmented_spec.shape[1] // self.patch_size, -1)
+            ###
+        else:
+            augmented_spec = F.dropout(augmented_spec, p=self.drop_rate)
+
+        return augmented_spec
+
 
 class CropOrPadSpectrogramAugmentation(NeuralModule):
     """
