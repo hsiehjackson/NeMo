@@ -241,6 +241,8 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
                 " with ``processed_signal`` and ``processed_signal_len`` arguments."
             )
 
+        input_signal_length = torch.clamp(input_signal_length, min=4000)
+
         if not has_processed_signal:
             processed_signal, processed_signal_length = self.preprocessor(
                 input_signal=input_signal, length=input_signal_length,
