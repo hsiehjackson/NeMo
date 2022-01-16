@@ -12,18 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-from abc import ABC, abstractmethod
-from typing import List
-
-from omegaconf import DictConfig, OmegaConf, open_dict
-
-from nemo.collections.asr.parts.utils import asr_module_utils
-from nemo.collections.common import tokenizers
-from nemo.utils import logging
+from abc import ABC
+from contextlib import contextmanager
+from enum import Enum
+from typing import Dict, Iterator, List, Optional, Union
 
 import torch
-
 
 _ACCESS_CFG = DictConfig({})
 
