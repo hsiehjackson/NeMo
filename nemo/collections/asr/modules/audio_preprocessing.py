@@ -557,7 +557,7 @@ class TestAugmentation(NeuralModule):
             augmented_spec = augmented_spec.view(bs, augmented_spec.shape[1] // self.patch_size, -1)
             ###
         else:
-            augmented_spec = F.dropout(augmented_spec, p=self.drop_rate)
+            augmented_spec = torch.nn.functional.dropout(augmented_spec, p=self.drop_rate)
 
         return augmented_spec
 
