@@ -553,9 +553,9 @@ class TestAugmentation(NeuralModule):
 
         if self.time_aligned:
             augmented_spec = augmented_spec.transpose(-2, -1)
-            augmented_spec = augmented_spec.view(bs, -1, augmented_spec.shape[2] * self.patch_size)
+            augmented_spec = augmented_spec.reshape(bs, -1, augmented_spec.shape[2] * self.patch_size)
             augmented_spec[:, ::2, :] = 0.
-            augmented_spec = augmented_spec.view(bs, -1, augmented_spec.shape[2] // self.patch_size)
+            augmented_spec = augmented_spec.reshape(bs, -1, augmented_spec.shape[2] // self.patch_size)
             augmented_spec = augmented_spec.transpose(-2, -1)
         else:
             augmented_spec = torch.nn.functional.dropout(augmented_spec, p=self.drop_rate)
