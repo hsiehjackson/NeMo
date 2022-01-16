@@ -53,7 +53,7 @@ class ContrastiveLoss(Loss):
             prob_ppl_weight: float = 0.1,
             logit_temp: float = 0.1,
             reduce: str = "sum",
-            sample_from_same_utterance_only=True,
+            sample_from_same_utterance_only = True,
             sample_from_non_masked: bool = True,
             sample_from_codebook: bool = False,
             group_loss: bool = False,
@@ -147,6 +147,7 @@ class ContrastiveLoss(Loss):
             targets = self.target_proj(targets)
 
         if self.sample_from_same_utterance_only:
+            print(masks.shape, decoder_outputs.shape, targets.shape)
             masks = masks.mean(dim=(0, -1)) > self.mask_threshold
             out_masked_only = decoder_outputs[:, masks]
             targets_masked_only = targets[:, masks]
