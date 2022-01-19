@@ -942,12 +942,12 @@ class ModelPT(LightningModule, Model):
 
                 del ckpt
 
-        if 'init_from_second_nemo_model' in cfg and cfg.init_from_second_nemo_model is not None:
+        if 'init_from_other_nemo_model' in cfg and cfg.init_from_second_nemo_model is not None:
             with open_dict(cfg):
                 # Restore model
-                model_path = cfg.pop('init_from_second_nemo_model')
-                model_part = cfg.pop('init_part_from_second_nemo_model', "")
-                exclude = cfg.pop('init_exclude_from_second_nemo_model', "!!!")
+                model_path = cfg.pop('init_from_other_nemo_model')
+                model_part = cfg.pop('init_from_other_nemo_model.subparts', "")
+                exclude = cfg.pop('init_from_other_nemo_model.excluded', "!!!")
                 restored_model = self.restore_from(
                     model_path, map_location=map_location, strict=False, override_config_path=None
                 )
@@ -962,11 +962,11 @@ class ModelPT(LightningModule, Model):
                 self.load_state_dict(dict_to_load, strict=False)
                 if model_part != "":
                     logging.info(
-                        f'Model checkpoint part `{model_part}` restored from second nemo file with path : `{model_path}`'
+                        f'Model checkpoint part `{model_part}` restored from other nemo file with path : `{model_path}`'
                     )
                 else:
-                    logging.info(f'Model checkpoint restored from second nemo file with path : `{model_path}`')
-                if exclude is not None:
+                    logging.info(f'Model checkpoint restored from other nemo file with path : `{model_path}`')
+                if exclude != "!!!":
                     logging.info(f'Excluded parameters containing `{exclude}`')
 
     def teardown(self, stage: str):
