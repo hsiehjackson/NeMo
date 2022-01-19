@@ -942,7 +942,7 @@ class ModelPT(LightningModule, Model):
 
                 del ckpt
 
-        if 'init_from_other_nemo_model' in cfg and cfg.init_from_second_nemo_model is not None:
+        if 'init_from_other_nemo_model' in cfg and cfg.init_from_other_nemo_model is not None:
             with open_dict(cfg):
                 # Restore model
                 model_path = cfg.pop('init_from_other_nemo_model')
