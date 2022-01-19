@@ -91,6 +91,11 @@ class ModelPT(LightningModule, Model):
         # Convert config to support Hydra 1.0+ instantiation
         cfg = model_utils.maybe_update_config_version(cfg)
 
+        if 'model' in cfg:
+            raise ValueError(
+                "Creating model config node is forbidden due to collision problem when loading from checkpoint."
+            )
+
         if 'target' not in cfg:
             # This is for Jarvis service.
             OmegaConf.set_struct(cfg, False)
@@ -860,13 +865,15 @@ class ModelPT(LightningModule, Model):
 
         Initializations:
             init_from_nemo_model: Str path to a .nemo model in order to load state_dict from single nemo file;
-            if loading from multiple files, pass in a list where each elements has the following field:
+                if loading from multiple files, pass in a list where each elements has the following fields:
+
                 path: Str path to .nemo model
-                parts_to_load: Optional list of strings, at least one of which needs to be contained in parameter name
+
+                parts_to_load: List of strings, at least one of which needs to be contained in parameter name
                 to be loaded from this .nemo file
+
                 excluded: Optional list of strings, which can be used to exclude any parameter containing one of
                 these strings from being loaded from this .nemo file
-
 
             init_from_pretrained_model: Str name of a pretrained model checkpoint (obtained via cloud).
                 The model will be downloaded (or a cached copy will be used), instantiated and then
@@ -875,13 +882,26 @@ class ModelPT(LightningModule, Model):
             init_from_ptl_ckpt: Str name of a Pytorch Lightning checkpoint file. It will be loaded and
                 the state dict will extracted.
 
+            init_from_other_nemo_model: Str path to an additional .nemo model, which can be use to
+            instantiate/overwrite a part of the state dict
+
+            init_from_other_nemo_model.subparts: Optional str that needs to be contained in
+            parameter name for the parameter to be loaded from second nemo file
+
+            init_from_other_nemo_model.excluded: Optional str that needs to be not contained in
+            parameter name for the parameter to be loaded from second nemo file
+
         Args:
             cfg: The config used to instantiate the model. It need only contain one of the above keys.
             map_location: str or torch.device() which represents where the intermediate state dict
                 (from the pretrained model or checkpoint) will be loaded.
 
         """
-        args = ['init_from_nemo_model', 'init_from_pretrained_model', 'init_from_ptl_ckpt']
+        args = [
+            'init_from_nemo_model',
+            'init_from_pretrained_model',
+            'init_from_ptl_ckpt',
+        ]
         arg_matches = [(1 if arg in cfg and arg is not None else 0) for arg in args]
 
         if sum(arg_matches) == 0:
@@ -915,7 +935,7 @@ class ModelPT(LightningModule, Model):
                             model_path, map_location=map_location, strict=cfg.get("init_strict", True)
                         )
 
-                        parts = model_load_cfg.pop('parts', [])
+                        parts = model_load_cfg.pop('parts_to_load', [])
                         excluded = model_load_cfg.pop('excluded', [])
 
                         # create dict
@@ -935,6 +955,7 @@ class ModelPT(LightningModule, Model):
                             f'Model checkpoint partially restored from nemo file with path : `{model_path}``'
                         )
                         del restored_model
+
 
         if 'init_from_pretrained_model' in cfg and cfg.init_from_pretrained_model is not None:
             with open_dict(cfg):
@@ -976,32 +997,6 @@ class ModelPT(LightningModule, Model):
 
                 del ckpt
 
-        if 'init_from_other_nemo_model' in cfg and cfg.init_from_other_nemo_model is not None:
-            with open_dict(cfg):
-                # Restore model
-                model_path = cfg.pop('init_from_other_nemo_model')
-                model_part = cfg.pop('init_from_other_nemo_model.subparts', "")
-                exclude = cfg.pop('init_from_other_nemo_model.excluded', "!!!")
-                restored_model = self.restore_from(
-                    model_path, map_location=map_location, strict=False, override_config_path=None
-                )
-                dict_to_load = {
-                    k: v
-                    for k, v in restored_model.state_dict().items()
-                    if k.startswith(model_part) and exclude not in k
-                }
-
-                # Restore checkpoint part into current model
-
-                self.load_state_dict(dict_to_load, strict=False)
-                if model_part != "":
-                    logging.info(
-                        f'Model checkpoint part `{model_part}` restored from other nemo file with path : `{model_path}`'
-                    )
-                else:
-                    logging.info(f'Model checkpoint restored from other nemo file with path : `{model_path}`')
-                if exclude != "!!!":
-                    logging.info(f'Excluded parameters containing `{exclude}`')
 
     def teardown(self, stage: str):
         """
