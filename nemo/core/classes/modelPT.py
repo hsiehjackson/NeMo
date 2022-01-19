@@ -919,7 +919,9 @@ class ModelPT(LightningModule, Model):
                     del restored_model
                 else:
                     model_load_list = cfg.init_from_nemo_model
+                    print(model_load_list)
                     for model_load_cfg in model_load_list:
+                        print(model_load_cfg)
                         model_path = model_load_cfg.path
                         # Restore model
                         restored_model = self.restore_from(
