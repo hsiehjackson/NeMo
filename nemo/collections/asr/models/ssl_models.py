@@ -289,3 +289,13 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
         val_loss_mean = torch.stack([x['val_loss'] for x in outputs]).mean()
         tensorboard_logs = {'val_loss': val_loss_mean}
         return {'val_loss': val_loss_mean, 'log': tensorboard_logs}
+
+    def get_feats(self, input_signal, input_signal_length, layer_name):
+
+        self.eval()
+        with torch.no_grad():
+            self.forward(input_signal, input_signal_length)
+
+        registry = self.get_module_registry()
+
+
