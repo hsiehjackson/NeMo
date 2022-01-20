@@ -934,13 +934,17 @@ class ModelPT(LightningModule, Model):
                         # create dict
                         dict_to_load = {}
                         for k, v in restored_model.state_dict().items():
+                            should_add = True
                             for p in parts:
-                                if not p in k:
-                                    continue
+                                if not (p in k):
+                                    should_add = False
+                                    break
                             for e in excluded:
                                 if e in k:
-                                    continue
-                            dict_to_load[k] = v
+                                    should_add = False
+                                    break
+                            if should_add:
+                                dict_to_load[k] = v
 
                         # Restore checkpoint part into current model
                         self.load_state_dict(dict_to_load, strict=False)
