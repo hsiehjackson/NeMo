@@ -82,8 +82,9 @@ class AccessMixin(ABC):
         """
         Recursively reset the registry of distillation tensors to clear up memory.
         """
-        del self._registry
-        self._registry = []
+        if hasattr(self, '_registry'):
+            del self._registry
+            self._registry = []
         for _, m in self.named_modules():
             if hasattr(m, '_registry') and len(m._registry) > 0:
                 m.reset_registry()
