@@ -33,19 +33,19 @@ class AccessMixin(ABC):
 
     def __init__(self):
         super().__init__()
-        self._registry = {}
+        self._registry = []
 
     def setup_layer_access(self, access_config):
         global _ACCESS_CFG
         _ACCESS_CFG = access_config
 
     def register_accessible_tensor(
-            self, tensor, name
+            self, tensor
     ):
         if self.access_cfg.get('convert_to_cpu', False):
             tensor = tensor.cpu()
 
-        self._registry[name] = tensor
+        self._registry.append(tensor)
 
     @classmethod
     def get_module_registry(
@@ -74,6 +74,15 @@ class AccessMixin(ABC):
             if hasattr(m, '_registry'):
                 module_registry[name] = m._registry
         return module_registry
+
+    def reset_registry(self):
+        """
+        Recursively reset the registry of distillation tensors to clear up memory.
+        """
+        self._registry.clear()
+        for _, m in self.named_modules():
+            if hasattr(m, '_registry') and len(m._registry) > 0:
+                m.reset_registry()
 
     @property
     def access_cfg(self):
