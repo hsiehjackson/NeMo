@@ -40,12 +40,12 @@ class AccessMixin(ABC):
         _ACCESS_CFG = access_config
 
     def register_accessible_tensor(
-            self, tensor, tensor_name
+            self, tensor, name
     ):
-        if self.distill_cfg.get('convert_to_cpu', False):
+        if self.access_cfg.get('convert_to_cpu', False):
             tensor = tensor.cpu()
 
-        self._registry[tensor] = tensor
+        self._registry[name] = tensor
 
     @classmethod
     def get_module_registry(
