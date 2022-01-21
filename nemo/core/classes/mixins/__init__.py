@@ -12,4 +12,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from nemo.core.classes.mixins.access_mixins import AccessMixin
+from nemo.core.classes.mixins.access_mixins import AccessMixin, set_access_cfg
