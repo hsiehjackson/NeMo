@@ -45,6 +45,9 @@ class AccessMixin(ABC):
         if self.access_cfg.get('convert_to_cpu', False):
             tensor = tensor.cpu()
 
+        if not hasattr(self, '_registry'):
+            self._registry = []
+
         self._registry.append(tensor)
 
     @classmethod
