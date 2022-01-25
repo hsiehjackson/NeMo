@@ -294,14 +294,18 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
         self.eval()
         self.reset_registry()
 
+        processed_signal, processed_signal_length = self.preprocessor(
+            input_signal=input_signal, length=input_signal_length,
+        )
+
         with torch.no_grad():
-            self(input_signal=input_signal, input_signal_length=input_signal_length)
+            self(processed_signal=processed_signal, processed_signal_length=processed_signal_length)
 
         reg = self.get_module_registry(self.encoder)
 
         for k, v in reg.items():
             if layer_name in k:
-                return v[-1]
+                return v[-1][:processed_signal_length // self._cfg.loss.combine_time_steps]
 
         return None
 
