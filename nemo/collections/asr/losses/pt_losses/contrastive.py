@@ -183,6 +183,8 @@ class ContrastiveLoss(Loss):
             # T'BxC and NxT'BxC
 
         else:
+            print(masks.shape)
+            print(masks.mean(-1).shape)
             print(masks.mean(-1))
             masks = masks.mean(-1) > self.mask_threshold
             out_masked_only = decoder_outputs[masks]
