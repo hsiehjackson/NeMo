@@ -543,13 +543,13 @@ class TestAugmentation(NeuralModule):
         time_aligned=False,
         patch_size=1,
         drop_rate=0.5,
-        removed_dropped=False,
+        remove_dropped=False,
     ):
         super().__init__()
         self.time_aligned = time_aligned
         self.patch_size = patch_size
         self.drop_rate = drop_rate
-        self.remove_dropped = removed_dropped
+        self.remove_dropped = remove_dropped
 
     @typecheck()
     def forward(self, input_spec, length):
