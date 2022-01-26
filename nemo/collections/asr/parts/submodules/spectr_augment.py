@@ -87,7 +87,6 @@ class SpecAugment(nn.Module, Typing):
         min_len = torch.min(length)
 
         if self.same_time_masks:
-            print(111)
             for i in range(self.time_masks):
                 if self.adaptive_temporal_width:
                     time_width = max(1, int(min_len * self.time_width))
@@ -109,7 +108,6 @@ class SpecAugment(nn.Module, Typing):
                 input_spec[idx, x_left : x_left + w, :] = self.mask_value
 
             if not self.same_time_masks:
-                print(222)
 
                 for i in range(self.time_masks):
                     if self.adaptive_temporal_width:
@@ -123,7 +121,6 @@ class SpecAugment(nn.Module, Typing):
 
                     input_spec[idx, :, y_left : y_left + w] = self.mask_value
 
-        print(input_spec.mean(-1))
 
         return input_spec
 
