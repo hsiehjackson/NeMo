@@ -588,7 +588,7 @@ class TestAugmentation(NeuralModule):
 
                 augmented_spec = input_spec.new_zeros(input_spec.shape[0], 2, input_spec.shape[1], input_spec.shape[2])
 
-                masks = augmented_spec.clone()
+                masks = augmented_spec.detach().clone()
                 masks[:, 0, :, :] = 1.
 
                 augmented_spec[:, 1, :, :] = input_spec
