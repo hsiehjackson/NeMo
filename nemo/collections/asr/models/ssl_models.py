@@ -323,7 +323,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
 
         for k, v in reg.items():
             if layer_name in k:
-                return v[-1][..., :processed_signal_length // self._cfg.loss.combine_time_steps]
+                feats = v[-1]
 
         return None
 
