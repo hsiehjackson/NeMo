@@ -594,7 +594,7 @@ class TestAugmentation(NeuralModule):
             augmented_spec = input_spec
 
 
-        return augmented_spec, out_length
+        return augmented_spec, augmented_length
 
 
 class CropOrPadSpectrogramAugmentation(NeuralModule):
