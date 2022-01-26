@@ -147,14 +147,18 @@ class ContrastiveLoss(Loss):
             targets = self.target_proj(targets)
 
         if self.sample_from_same_utterance_only:
-            #print(masks.shape, decoder_outputs.shape, targets.shape)
-            #print(masks.mean(dim=(0, -1)))
+            print(masks.shape, decoder_outputs.shape, targets.shape)
+            print(masks.mean(dim=-1).shape)
+            print(masks.mean(dim=(0, -1)).shape)
+
+            print(masks.mean(dim=-1))
+            print(masks.mean(dim=(0, -1)))
             masks = masks.mean(dim=(0, -1)) > self.mask_threshold
             out_masked_only = decoder_outputs[:, masks]
             targets_masked_only = targets[:, masks]
-            #print(masks)
-            #print(masks.shape, out_masked_only.shape, targets_masked_only.shape)
-            #print()
+            print(masks)
+            print(masks.shape, out_masked_only.shape, targets_masked_only.shape)
+            print()
 
             # BxT'xC
             # number of masked time steps to predict (T')
