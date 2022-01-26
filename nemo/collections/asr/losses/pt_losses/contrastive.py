@@ -153,11 +153,11 @@ class ContrastiveLoss(Loss):
             print(masks.mean(dim=(0, -1)).shape)
 
             print(masks.mean(dim=-1))
-            print(masks.mean[0](dim=-1))
-            print(masks.mean[1](dim=-1))
-            print(masks.mean[2](dim=-1))
-            print(masks.mean[3](dim=-1))
-            print(masks.mean[4](dim=-1))
+            print(masks[0].mean(dim=-1))
+            print(masks[1].mean(dim=-1))
+            print(masks[2].mean(dim=-1))
+            print(masks[3].mean(dim=-1))
+            print(masks[4].mean(dim=-1))
 
 
             print(masks.mean(dim=(0, -1)))
