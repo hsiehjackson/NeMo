@@ -195,13 +195,22 @@ class ContrastiveLoss(Loss):
             # T'BxC and NxT'BxC
 
         else:
-            #print(masks.shape)
-            #print(masks.mean(-1).shape)
-            #print(masks.mean(-1))
+            print(masks.shape, decoder_outputs.shape, targets.shape)
+            print(masks[0].mean(dim=-1).shape)
+            print(masks.mean(dim=-1))
+            print(masks[0].mean(dim=-1))
+            print(masks[1].mean(dim=-1))
+            print(masks[2].mean(dim=-1))
+            print(masks[3].mean(dim=-1))
+            print(masks[4].mean(dim=-1))
+            #print(masks.shape, out_masked_only.shape, targets_masked_only.shape)
+            #print()
+
             masks = masks.mean(-1) > self.mask_threshold
             out_masked_only = decoder_outputs[masks]
             targets_masked_only = targets[masks]
-            #print(masks.shape, out_masked_only.shape, targets_masked_only.shape)
+            print(masks.shape, out_masked_only.shape, targets_masked_only.shape)
+            print()
             # T'xC
             # number of masked time steps to predict (T')
 
