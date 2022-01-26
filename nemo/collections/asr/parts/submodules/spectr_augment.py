@@ -123,6 +123,8 @@ class SpecAugment(nn.Module, Typing):
 
                     input_spec[idx, :, y_left : y_left + w] = self.mask_value
 
+        print(input_spec.mean(-1))
+
         return input_spec
 
 
