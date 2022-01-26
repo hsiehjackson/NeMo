@@ -578,7 +578,7 @@ class TestAugmentation(NeuralModule):
         bs = input_spec.shape[0]
         augmented_length = length
         masks = None
-        patch_size_corrected = self.patch_size / self.encoder_stride
+        patch_size_corrected = self.patch_size // self.encoder_stride
 
         if self.remove_dropped:
             #...
