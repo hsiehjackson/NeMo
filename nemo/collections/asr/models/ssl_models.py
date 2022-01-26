@@ -323,7 +323,8 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
 
         for k, v in reg.items():
             if layer_name in k:
-                return v[-1]
+                return v[-1], processed_signal_length / 4
+                #change later
 
         return None
 
