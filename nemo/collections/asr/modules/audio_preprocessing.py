@@ -456,8 +456,8 @@ class SpectrogramAugmentation(NeuralModule):
     def output_types(self):
         """Returns definitions of module output types
         """
-        return {"augmented_spec": NeuralType(('B', 'D', 'T'), SpectrogramType()),
-                "augmented_length": NeuralType(tuple('B'), LengthsType()),}
+        return {"augmented_spec": NeuralType(('B', 'D', 'T'), SpectrogramType())}
+                #"augmented_length": NeuralType(tuple('B'), LengthsType()),}
 
     def __init__(
         self,
@@ -510,7 +510,7 @@ class SpectrogramAugmentation(NeuralModule):
     @typecheck()
     def forward(self, input_spec, length):
         augmented_spec = self.spec_cutout(input_spec=input_spec)
-        augmented_length = length
+        #augmented_length = length
 
         # To run the Numba kernel, correct numba version is required as well as
         # tensor must be on GPU and length must be provided
@@ -518,7 +518,7 @@ class SpectrogramAugmentation(NeuralModule):
             augmented_spec = self.spec_augment_numba(input_spec=augmented_spec, length=length)
         else:
             augmented_spec = self.spec_augment(input_spec=augmented_spec, length=length)
-        return augmented_spec, augmented_length
+        return augmented_spec#, augmented_length
 
 class TestAugmentation(NeuralModule):
 
