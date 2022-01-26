@@ -148,10 +148,18 @@ class ContrastiveLoss(Loss):
 
         if self.sample_from_same_utterance_only:
             print(masks.shape, decoder_outputs.shape, targets.shape)
-            print(masks.mean(dim=-1).shape)
+            print(masks[0].mean(dim=-1).shape)
+
             print(masks.mean(dim=(0, -1)).shape)
 
             print(masks.mean(dim=-1))
+            print(masks.mean[0](dim=-1))
+            print(masks.mean[1](dim=-1))
+            print(masks.mean[2](dim=-1))
+            print(masks.mean[3](dim=-1))
+            print(masks.mean[4](dim=-1))
+
+
             print(masks.mean(dim=(0, -1)))
             masks = masks.mean(dim=(0, -1)) > self.mask_threshold
             out_masked_only = decoder_outputs[:, masks]
