@@ -266,8 +266,12 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
         print(encoded.shape)
 
         if hasattr(self.spec_augmentation, 'backward'):
-            encoded, encoded_len = \
+            encoded, encoded_len, masks = \
                 self.spec_augmentation.backward(input_spec=encoded, length=encoded_len)
+            if self._cfg.get("spec_augment.remove_dropped", False):
+                spec_masks = masks
+
+            print(spec_masks.shape)
 
         print(encoded.shape)
 

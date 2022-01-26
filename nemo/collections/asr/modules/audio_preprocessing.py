@@ -575,6 +575,7 @@ class TestAugmentation(NeuralModule):
     def backward(self, input_spec, length):
         bs = input_spec.shape[0]
         augmented_length = length
+        masks = None
 
         if self.remove_dropped:
             #...
@@ -584,17 +585,25 @@ class TestAugmentation(NeuralModule):
 
                 augmented_spec = input_spec.new_zeros(input_spec.shape[0], 2, input_spec.shape[1], input_spec.shape[2])
 
+                masks = augmented_spec.clone()
+                masks[:, 0, :, :] = 1.
+
                 augmented_spec[:, 1, :, :] = input_spec
                 augmented_spec = augmented_spec.transpose(1, 2)
                 augmented_spec = augmented_spec.reshape(augmented_spec.shape[0], -1, augmented_spec.shape[-1] // self.patch_size)
                 augmented_spec = augmented_spec.transpose(-2, -1)
+
+                masks = masks.transpose(1, 2)
+                masks = masks.reshape(masks.shape[0], -1,
+                                      masks.shape[-1] // self.patch_size)
+                masks = masks.transpose(-2, -1)
 
                 augmented_length *= 2
         else:
             augmented_spec = input_spec
 
 
-        return augmented_spec, augmented_length
+        return augmented_spec, augmented_length, masks
 
 
 class CropOrPadSpectrogramAugmentation(NeuralModule):
