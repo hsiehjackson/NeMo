@@ -251,8 +251,10 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
 
         #print(processed_signal.shape)
 
-        processed_signal, processed_signal_length = \
-            self.spec_augmentation(input_spec=processed_signal, length=processed_signal_length)
+        processed_signal = self.spec_augmentation(input_spec=processed_signal, length=processed_signal_length)
+
+        #processed_signal, processed_signal_length = \
+        #    self.spec_augmentation(input_spec=processed_signal, length=processed_signal_length)
 
         #print(processed_signal.shape)
 
