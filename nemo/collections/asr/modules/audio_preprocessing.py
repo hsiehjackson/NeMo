@@ -573,6 +573,7 @@ class TestAugmentation(NeuralModule):
         return augmented_spec, augmented_length
 
     def backward(self, input_spec, length):
+        bs = input_spec.shape[0]
         augmented_length = length
 
         if self.remove_dropped:
