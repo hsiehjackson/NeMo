@@ -594,12 +594,12 @@ class TestAugmentation(NeuralModule):
                 augmented_spec[:, 1, :, :] = input_spec
                 augmented_spec = augmented_spec.transpose(1, 2)
                 augmented_spec = augmented_spec.reshape(augmented_spec.shape[0], -1, augmented_spec.shape[-1] // patch_size_corrected)
-                augmented_spec = augmented_spec.transpose(-2, -1)
+                augmented_spec = augmented_spec.transpose(-2, -1).contiguous()
 
                 masks = masks.transpose(1, 2)
                 masks = masks.reshape(masks.shape[0], -1,
                                       masks.shape[-1] // patch_size_corrected)
-                masks = masks.transpose(-2, -1)
+                masks = masks.transpose(-2, -1).contiguous()
 
                 augmented_length *= 2
         else:
