@@ -53,7 +53,7 @@ class ContrastiveLoss(Loss):
             prob_ppl_weight: float = 0.1,
             logit_temp: float = 0.1,
             reduce: str = "sum",
-            sample_from_same_utterance_only = True,
+            sample_from_same_utterance_only: bool = False,
             sample_from_non_masked: bool = True,
             sample_from_codebook: bool = False,
             group_loss: bool = False,
