@@ -323,7 +323,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
 
         for k, v in reg.items():
             if layer_name in k:
-                feats = v[-1]
+                return v[-1]
 
         return None
 
