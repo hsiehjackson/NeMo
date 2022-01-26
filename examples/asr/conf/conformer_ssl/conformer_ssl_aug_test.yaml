@@ -62,14 +62,14 @@ model:
     log: true
     frame_splicing: 1
     dither: 0.00001
-    pad_to: 16
+    pad_to: 64
     pad_value: 0.0
 
   spec_augment:
     _target_: nemo.collections.asr.modules.TestAugmentation
-    time_aligned: false
-    patch_size: 1
-    drop_rate: 0.5
+    time_aligned: true
+    patch_size: 32
+    remove_dropped: true
 
   encoder:
     _target_: nemo.collections.asr.modules.ConformerEncoder

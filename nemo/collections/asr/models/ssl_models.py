@@ -249,7 +249,8 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
 
         spectrograms = processed_signal.detach().clone()
 
-        processed_signal = self.spec_augmentation(input_spec=processed_signal, length=processed_signal_length)
+        processed_signal, processed_signal_length = \
+            self.spec_augmentation(input_spec=processed_signal, length=processed_signal_length)
 
         masked_spectrograms = processed_signal.detach()
         spec_masks = torch.logical_and(masked_spectrograms < 1e-5, masked_spectrograms > -1e-5).float()
@@ -257,6 +258,10 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
             spec_masks[idx, :, proc_len:] = 0.0
 
         encoded, encoded_len = self.encoder(audio_signal=processed_signal, length=processed_signal_length)
+
+        if hasattr(self.spec_augmentation, 'backward'):
+            processed_signal, processed_signal_length = \
+                self.spec_augmentation.backward(input_spec=processed_signal, length=processed_signal_length)
 
         outputs = self.decoder_ssl(encoder_output=encoded)
 

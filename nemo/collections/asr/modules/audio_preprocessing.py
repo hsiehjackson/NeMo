@@ -456,7 +456,8 @@ class SpectrogramAugmentation(NeuralModule):
     def output_types(self):
         """Returns definitions of module output types
         """
-        return {"augmented_spec": NeuralType(('B', 'D', 'T'), SpectrogramType())}
+        return {"augmented_spec": NeuralType(('B', 'D', 'T'), SpectrogramType()),
+                "augmented_length": NeuralType(tuple('B'), LengthsType()),}
 
     def __init__(
         self,
@@ -509,6 +510,7 @@ class SpectrogramAugmentation(NeuralModule):
     @typecheck()
     def forward(self, input_spec, length):
         augmented_spec = self.spec_cutout(input_spec=input_spec)
+        augmented_length = length
 
         # To run the Numba kernel, correct numba version is required as well as
         # tensor must be on GPU and length must be provided
@@ -516,7 +518,7 @@ class SpectrogramAugmentation(NeuralModule):
             augmented_spec = self.spec_augment_numba(input_spec=augmented_spec, length=length)
         else:
             augmented_spec = self.spec_augment(input_spec=augmented_spec, length=length)
-        return augmented_spec
+        return augmented_spec, augmented_length
 
 class TestAugmentation(NeuralModule):
 
@@ -533,34 +535,65 @@ class TestAugmentation(NeuralModule):
     def output_types(self):
         """Returns definitions of module output types
         """
-        return {"augmented_spec": NeuralType(('B', 'D', 'T'), SpectrogramType())}
+        return {"augmented_spec": NeuralType(('B', 'D', 'T'), SpectrogramType()),
+                "augmented_length": NeuralType(tuple('B'), LengthsType()),}
 
     def __init__(
         self,
         time_aligned=False,
         patch_size=1,
         drop_rate=0.5,
+        removed_dropped=False,
     ):
         super().__init__()
         self.time_aligned = time_aligned
         self.patch_size = patch_size
         self.drop_rate = drop_rate
+        self.remove_dropped = removed_dropped
 
     @typecheck()
     def forward(self, input_spec, length):
         augmented_spec = input_spec
         bs = augmented_spec.shape[0]
+        augmented_length = length
 
         if self.time_aligned:
             augmented_spec = augmented_spec.transpose(-2, -1)
             augmented_spec = augmented_spec.reshape(bs, -1, augmented_spec.shape[2] * self.patch_size)
-            augmented_spec[:, ::2, :] = 0.
+            if self.remove_dropped:
+                augmented_spec = augmented_spec[:, 1::2, :]
+            else:
+                augmented_spec[:, ::2, :] = 0.
+                augmented_length /= 2
             augmented_spec = augmented_spec.reshape(bs, -1, augmented_spec.shape[2] // self.patch_size)
             augmented_spec = augmented_spec.transpose(-2, -1)
         else:
             augmented_spec = torch.nn.functional.dropout(augmented_spec, p=self.drop_rate)
 
-        return augmented_spec
+        return augmented_spec, augmented_length
+
+    def backward(self, input_spec, length):
+        augmented_length = length
+
+        if self.remove_dropped:
+            #...
+            if self.time_aligned:
+                input_spec = input_spec.transpose(-2, -1)
+                input_spec = input_spec.reshape(bs, -1, input_spec.shape[2] * self.patch_size)
+
+                augmented_spec = input_spec.new_zeros(input_spec.shape[0], 2, input_spec.shape[1], input_spec.shape[2])
+
+                augmented_spec[:, 1, :, :] = input_spec
+                augmented_spec = augmented_spec.transpose(1, 2)
+                augmented_spec = augmented_spec.reshape(augmented_spec.shape[0], -1, augmented_spec.shape[-1] // self.patch_size)
+                augmented_spec = augmented_spec.transpose(-2, -1)
+
+                augmented_length *= 2
+        else:
+            augmented_spec = input_spec
+
+
+        return augmented_spec, out_length
 
 
 class CropOrPadSpectrogramAugmentation(NeuralModule):
