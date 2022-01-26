@@ -139,7 +139,7 @@ class ContrastiveLoss(Loss):
         # BxTxC
 
         targets = targets.reshape(targets.shape[0], targets.shape[1] // self.combine_time_steps, -1)
-        masks = masks.reshape(targets.shape)
+        masks = masks.reshape(targets.shape[0], targets.shape[1], -1)
 
         if self.quantized_targets:
             targets, prob_ppl_loss, cur_codebook_temp = self.quantizer(targets)

@@ -70,6 +70,7 @@ model:
     time_aligned: true
     patch_size: 32
     remove_dropped: true
+    encoder_stride: 4
 
   encoder:
     _target_: nemo.collections.asr.modules.ConformerEncoder

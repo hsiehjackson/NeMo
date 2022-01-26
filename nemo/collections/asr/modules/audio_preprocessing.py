@@ -544,12 +544,14 @@ class TestAugmentation(NeuralModule):
         patch_size=1,
         drop_rate=0.5,
         remove_dropped=False,
+        encoder_stride=4,
     ):
         super().__init__()
         self.time_aligned = time_aligned
         self.patch_size = patch_size
         self.drop_rate = drop_rate
         self.remove_dropped = remove_dropped
+        self.encoder_stride = 4
 
     @typecheck()
     def forward(self, input_spec, length):
@@ -576,12 +578,13 @@ class TestAugmentation(NeuralModule):
         bs = input_spec.shape[0]
         augmented_length = length
         masks = None
+        patch_size_corrected = self.patch_size / self.encoder_stride
 
         if self.remove_dropped:
             #...
             if self.time_aligned:
                 input_spec = input_spec.transpose(-2, -1)
-                input_spec = input_spec.reshape(bs, -1, input_spec.shape[2] * self.patch_size)
+                input_spec = input_spec.reshape(bs, -1, input_spec.shape[2] * patch_size_corrected)
 
                 augmented_spec = input_spec.new_zeros(input_spec.shape[0], 2, input_spec.shape[1], input_spec.shape[2])
 
@@ -590,12 +593,12 @@ class TestAugmentation(NeuralModule):
 
                 augmented_spec[:, 1, :, :] = input_spec
                 augmented_spec = augmented_spec.transpose(1, 2)
-                augmented_spec = augmented_spec.reshape(augmented_spec.shape[0], -1, augmented_spec.shape[-1] // self.patch_size)
+                augmented_spec = augmented_spec.reshape(augmented_spec.shape[0], -1, augmented_spec.shape[-1] // patch_size_corrected)
                 augmented_spec = augmented_spec.transpose(-2, -1)
 
                 masks = masks.transpose(1, 2)
                 masks = masks.reshape(masks.shape[0], -1,
-                                      masks.shape[-1] // self.patch_size)
+                                      masks.shape[-1] // patch_size_corrected)
                 masks = masks.transpose(-2, -1)
 
                 augmented_length *= 2
