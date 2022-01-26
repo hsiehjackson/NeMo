@@ -879,10 +879,10 @@ class ModelPT(LightningModule, Model):
 
         # Restore checkpoint part into current model
         self.load_state_dict(dict_to_load, strict=False)
-        logging.info(f'Model checkpoint partially restored from `{load_from_string}``')
+        logging.info(f'Model checkpoint partially restored from {load_from_string}')
         if len(excluded_param_names) > 0:
             logging.info(
-                f'The following parameters were excluded from loading from `{load_from_string}` : `{excluded_param_names}` `'
+                f'The following parameters were excluded from loading from {load_from_string} : {excluded_param_names}'
             )
             logging.info(f'Make sure that this is what you wanted!')
 
@@ -899,15 +899,26 @@ class ModelPT(LightningModule, Model):
 
                 path: Str path to .nemo model
 
-                include: List of strings, at least one of which needs to be contained in parameter name
-                to be loaded from this .nemo file
+                include: Optional list of strings, at least one of which needs to be contained in parameter name
+                to be loaded from this .nemo file. Default: everything is included.
 
                 exclude: Optional list of strings, which can be used to exclude any parameter containing one of
-                these strings from being loaded from this .nemo file
+                these strings from being loaded from this .nemo file. Default: nothing is excluded.
+
+                hydra usage example:
+
+                init_from_nemo_model:
+                    model0:
+                        path:<path/to/model1>
+                        include:["encoder"]
+                    model1:
+                        path:<path/to/model2>
+                        include:["decoder"]
+                        exclude:["embed"]
 
             init_from_pretrained_model: Str name of a pretrained model checkpoint (obtained via cloud).
                 The model will be downloaded (or a cached copy will be used), instantiated and then
-                its state dict will be extracted. If loading from multiple files, you can pass in a dict
+                its state dict will be extracted. If loading from multiple models, you can pass in a dict
                 with the same format as for init_from_nemo_model, except with "name" instead of "path"
 
             init_from_ptl_ckpt: Str name of a Pytorch Lightning checkpoint file. It will be loaded and
@@ -949,7 +960,7 @@ class ModelPT(LightningModule, Model):
                     self.load_state_dict(restored_model.state_dict(), strict=False)
                     logging.info(f'Model checkpoint restored from nemo file with path : `{model_path}`')
                     del restored_model
-                else:
+                elif isinstance(cfg.init_from_nemo_model, dict):
                     model_load_dict = cfg.init_from_nemo_model
                     for model_load_cfg in model_load_dict.values():
                         model_path = model_load_cfg.path
@@ -958,7 +969,7 @@ class ModelPT(LightningModule, Model):
                             model_path, map_location=map_location, strict=cfg.get("init_strict", True)
                         )
 
-                        include = model_load_cfg.pop('include', [])
+                        include = model_load_cfg.pop('include', [""])
                         exclude = model_load_cfg.pop('exclude', [])
 
                         self.load_part_of_state_dict(
@@ -966,6 +977,8 @@ class ModelPT(LightningModule, Model):
                         )
 
                         del restored_model
+                else:
+                    raise TypeError("Invalid type: init_from_nemo_model is not a string or a dict!")
 
         if 'init_from_pretrained_model' in cfg and cfg.init_from_pretrained_model is not None:
             with open_dict(cfg):
@@ -996,7 +1009,7 @@ class ModelPT(LightningModule, Model):
                     logging.info(f'Model checkpoint restored from pretrained chackpoint with name : `{model_name}`')
 
                     del restored_model
-                else:
+                elif isinstance(cfg.init_from_pretrained_model, dict):
                     model_load_dict = cfg.init_from_pretrained_model
                     for model_load_cfg in model_load_dict.values():
                         model_name = model_load_cfg.name
@@ -1005,7 +1018,7 @@ class ModelPT(LightningModule, Model):
                             model_name, map_location=map_location, strict=cfg.get("init_strict", True)
                         )
 
-                        include = model_load_cfg.pop('include', [])
+                        include = model_load_cfg.pop('include', [""])
                         exclude = model_load_cfg.pop('exclude', [])
 
                         self.load_part_of_state_dict(
@@ -1016,6 +1029,8 @@ class ModelPT(LightningModule, Model):
                         )
 
                         del restored_model
+                else:
+                    raise TypeError("Invalid type: init_from_pretrained_model is not a string or a dict!")
 
         if 'init_from_ptl_ckpt' in cfg and cfg.init_from_ptl_ckpt is not None:
             with open_dict(cfg):
@@ -1031,14 +1046,14 @@ class ModelPT(LightningModule, Model):
                     )
 
                     del ckpt
-                else:
+                elif isinstance(cfg.init_from_ptl_ckpt, dict):
                     model_load_dict = cfg.init_from_ptl_ckpt
                     for model_load_cfg in model_load_dict.values():
                         ckpt_path = model_load_cfg.path
                         # Restore model
                         ckpt = torch.load(ckpt_path, map_location=map_location)
 
-                        include = model_load_cfg.pop('include', [])
+                        include = model_load_cfg.pop('include', [""])
                         exclude = model_load_cfg.pop('exclude', [])
 
                         self.load_part_of_state_dict(
@@ -1046,6 +1061,8 @@ class ModelPT(LightningModule, Model):
                         )
 
                         del ckpt
+                else:
+                    raise TypeError("Invalid type: init_from_ptl_ckpt is not a string or a dict!")
 
     def teardown(self, stage: str):
         """
