@@ -563,7 +563,7 @@ class TestAugmentation(NeuralModule):
             augmented_spec = augmented_spec.transpose(-2, -1)
             augmented_spec = augmented_spec.reshape(bs, -1, augmented_spec.shape[2] * self.patch_size)
             if self.remove_dropped:
-                augmented_spec = augmented_spec[:, 1::2, :]
+                augmented_spec = augmented_spec[:, 1::2, :].contiguous()
             else:
                 augmented_spec[:, ::2, :] = 0.
                 augmented_length /= 2
