@@ -314,6 +314,10 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
         self.eval()
         self.reset_registry()
 
+        stride = 4
+        combine = 4
+        div = stride * combine
+
         processed_signal, processed_signal_length = self.preprocessor(
             input_signal=input_signal, length=input_signal_length,
         )
@@ -325,7 +329,9 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
 
         for k, v in reg.items():
             if layer_name in k:
-                return v[-1], torch.div(processed_signal_length + 4, 4, rounding_mode='trunc')
+                feats = v[-1]
+                feats = feats.reshape(..., feats.shape[-1] * combine)
+                return feats, torch.div(processed_signal_length + div, div, rounding_mode='trunc')
 
         return None
 
