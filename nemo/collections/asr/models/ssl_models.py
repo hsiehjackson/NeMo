@@ -241,7 +241,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
                 " with ``processed_signal`` and ``processed_signal_len`` arguments."
             )
 
-        print(input_signal.shape, input_signal_length)
+        #print(input_signal.shape, input_signal_length)
 
         if not has_processed_signal:
             input_signal_length = torch.clamp(input_signal_length, min=4000)
@@ -251,7 +251,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
 
         spectrograms = processed_signal.detach().clone()
 
-        print(processed_signal.shape, processed_signal_length)
+        #print(processed_signal.shape, processed_signal_length)
 
         processed_signal = self.spec_augmentation(input_spec=processed_signal, length=processed_signal_length)
 
@@ -267,7 +267,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
 
         encoded, encoded_len = self.encoder(audio_signal=processed_signal, length=processed_signal_length)
 
-        print(encoded.shape, encoded_len)
+        #print(encoded.shape, encoded_len)
 
         if hasattr(self.spec_augmentation, 'backward'):
             encoded, encoded_len, masks = \
@@ -325,7 +325,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
 
         for k, v in reg.items():
             if layer_name in k:
-                return v[-1], processed_signal_length / 4
+                return v[-1], (processed_signal_length + 4) // 4
                 #change later
 
         return None
