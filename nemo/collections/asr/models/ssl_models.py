@@ -319,7 +319,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
         self.reset_registry()
 
         stride = 4
-        combine = 4
+        combine = 1
         div = stride * combine
 
         processed_signal, processed_signal_length = self.preprocessor(
