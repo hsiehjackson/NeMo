@@ -68,6 +68,8 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
 
         self.spec_augmentation = SpeechEncDecSelfSupervisedModel.from_config_dict(self._cfg.spec_augment)
 
+        self.feat_mode = False
+
     def _setup_dataloader_from_config(self, config: Optional[Dict]):
         if 'augmentor' in config:
             augmentor = process_augmentations(config['augmentor'])
@@ -253,7 +255,8 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
 
         #print(processed_signal.shape, processed_signal_length)
 
-        processed_signal = self.spec_augmentation(input_spec=processed_signal, length=processed_signal_length)
+        if not self.feat_mode:
+            processed_signal = self.spec_augmentation(input_spec=processed_signal, length=processed_signal_length)
 
         #processed_signal, processed_signal_length = \
         #    self.spec_augmentation(input_spec=processed_signal, length=processed_signal_length)
@@ -269,7 +272,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
 
         #print(encoded.shape, encoded_len)
 
-        if hasattr(self.spec_augmentation, 'backward'):
+        if (not self.feat_mode) and hasattr(self.spec_augmentation, 'backward'):
             encoded, encoded_len, masks = \
                 self.spec_augmentation.backward(input_spec=encoded, length=encoded_len)
             if self._cfg.get("spec_augment.remove_dropped", False):
@@ -312,6 +315,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
 
     def get_feats(self, input_signal, input_signal_length, layer_name):
         self.eval()
+        self.feat_mode = True
         self.reset_registry()
 
         stride = 4
@@ -324,6 +328,8 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
 
         with torch.no_grad():
             self(processed_signal=processed_signal, processed_signal_length=processed_signal_length)
+
+        self.feat_mode = False
 
         reg = self.get_module_registry(self.encoder)
 
