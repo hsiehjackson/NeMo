@@ -149,7 +149,7 @@ class AudioText(_Collection):
                 continue
 
 
-            if len(token_labels) > 0:
+            if token_labels is not None:
                 text_tokens = token_labels
             else:
                 text_tokens = parser(text)
