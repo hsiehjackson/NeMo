@@ -282,7 +282,7 @@ def main(cfg: TranscriptionConfig) -> TranscriptionConfig:
         with open(cfg.dataset_manifest, 'r') as fr:
                 for idx, line in enumerate(fr):
                     item = json.loads(line)
-                    item['labels'] = list(map(int, label_dict[idx]))
+                    item['token_labels'] = list(map(int, label_dict[idx]))
                     f.write(json.dumps(item) + "\n")
 
     logging.info("Finished writing labels !")
