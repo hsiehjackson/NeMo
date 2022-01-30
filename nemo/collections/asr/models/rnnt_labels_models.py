@@ -153,11 +153,7 @@ class EncDecRNNTLabelsModel(EncDecRNNTModel):
     def validation_step(self, batch, batch_idx, dataloader_idx=0):
         signal, signal_len, transcript, transcript_len = batch
 
-        # forward() only performs encoder forward
-        if isinstance(batch, DALIOutputs) and batch.has_processed_signal:
-            encoded, encoded_len = self.forward(processed_signal=signal, processed_signal_length=signal_len)
-        else:
-            encoded, encoded_len = self.forward(input_signal=signal, input_signal_length=signal_len)
+        encoded, encoded_len = self.forward(input_signal=signal, input_signal_length=signal_len)
         del signal
 
         tensorboard_logs = {}
@@ -170,8 +166,6 @@ class EncDecRNNTLabelsModel(EncDecRNNTModel):
         )
 
         tensorboard_logs['val_loss'] = loss_value
-
-
 
         return tensorboard_logs
 
