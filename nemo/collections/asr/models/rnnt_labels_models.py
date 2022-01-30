@@ -99,8 +99,8 @@ class EncDecRNNTLabelsModel(EncDecRNNTModel):
                 logging.warning(f"Could not load dataset as `manifest_filepath` was None. Provided config : {config}")
                 return None
 
-            dataset = audio_to_text_dataset.get_bpe_dataset(
-                config=config, tokenizer=self.tokenizer, augmentor=augmentor
+            dataset = audio_to_text_dataset.get_char_dataset(
+                config=config, augmentor=augmentor
             )
 
         if type(dataset) is ChainDataset:
