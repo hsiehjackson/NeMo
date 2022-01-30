@@ -164,9 +164,16 @@ def __process_data(data_folder: str, dst_folder: str, manifest_file: str, num_wo
         for result in tqdm(results, total=len(files)):
             entries.extend(result)
 
+    total_dur = 0.
+
+    #create_manifests = []
+
     with open(manifest_file, "w") as fout:
         for m in entries:
+            total_dur += m["duration"]
             fout.write(json.dumps(m) + "\n")
+
+    print("total duration:", total_dur)
 
 
 def main():
