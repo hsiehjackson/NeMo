@@ -48,7 +48,7 @@ class EncDecRNNTLabelsModel(EncDecRNNTModel):
 
         # Setup decoding object
         self.decoding = RNNTBPEDecoding(
-            decoding_cfg=self.cfg.decoding, decoder=self.decoder, joint=self.joint, tokenizer=self.tokenizer,
+            decoding_cfg=self.cfg.decoding, decoder=self.decoder, joint=self.joint, tokenizer=None,
         )
 
         # Setup wer object
@@ -87,7 +87,6 @@ class EncDecRNNTLabelsModel(EncDecRNNTModel):
             shuffle_n = config.get('shuffle_n', 4 * config['batch_size']) if shuffle else 0
             dataset = audio_to_text_dataset.get_tarred_dataset(
                 config=config,
-                tokenizer=self.tokenizer,
                 shuffle_n=shuffle_n,
                 global_rank=self.global_rank,
                 world_size=self.world_size,
