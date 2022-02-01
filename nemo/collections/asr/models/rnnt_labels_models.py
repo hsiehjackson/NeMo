@@ -167,6 +167,22 @@ class EncDecRNNTLabelsModel(EncDecRNNTModel):
 
         tensorboard_logs['val_loss'] = loss_value
 
+        print()
+        print("transcripts:")
+        print(transcript)
+        print("predictions:")
+
+        with torch.no_grad():
+            hypotheses_list = self.decoding.decoding(
+                encoder_output=encoded, encoded_lengths=encoded_lengths, partial_hypotheses=None
+            )  # type: [List[Hypothesis]]
+
+            # extract the hypotheses
+            hypotheses_list = hypotheses_list[0]  # type: List[Hypothesis]
+
+        print(hypotheses_list)
+        print()
+
         return tensorboard_logs
 
 
