@@ -174,7 +174,7 @@ class EncDecRNNTLabelsModel(EncDecRNNTModel):
 
         with torch.no_grad():
             hypotheses_list = self.decoding.decoding(
-                encoder_output=encoded, encoded_lengths=encoded_lengths, partial_hypotheses=None
+                encoder_output=encoded, encoded_lengths=encoded_len, partial_hypotheses=None
             )  # type: [List[Hypothesis]]
 
             # extract the hypotheses
