@@ -180,7 +180,8 @@ class EncDecRNNTLabelsModel(EncDecRNNTModel):
             # extract the hypotheses
             hypotheses_list = hypotheses_list[0]  # type: List[Hypothesis]
 
-        print(hypotheses_list)
+        for hyp in hypotheses_list:
+            print(hyp.y_sequence)
         print()
 
         return tensorboard_logs
