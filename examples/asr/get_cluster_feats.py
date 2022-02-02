@@ -30,7 +30,7 @@ from nemo.utils import logging, model_utils
 
 from sklearn.cluster import MiniBatchKMeans
 
-import nemo.collections.asr.parts.mixins as mixins
+from nemo.core.classes.mixins import set_access_cfg, AccessMixin
 
 
 """
@@ -177,7 +177,7 @@ def main(cfg: FeatClusteringConfig) -> FeatClusteringConfig:
 
     device = torch.device(f'cuda:{cfg.cuda}' if cfg.cuda >= 0 else 'cpu')
 
-    mixins.set_access_cfg(cfg.access)
+    set_access_cfg(cfg.access)
 
     # setup model
     if cfg.model_path is not None:
