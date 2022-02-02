@@ -236,11 +236,11 @@ def main(cfg: FeatClusteringConfig) -> FeatClusteringConfig:
         'pin_memory': True,
     }
 
+    ds_cfg = OmegaConf.create(ds_cfg)
+
     if cfg.fit_is_tarred:
         ds_cfg.is_tarred = True
         ds_cfg.tarred_audio_filepaths = cfg.fit_tarred_filepaths
-
-    ds_cfg = OmegaConf.create(ds_cfg)
 
     ds_cfg.return_sample_id = True
     ds_cfg.min_duration = None
