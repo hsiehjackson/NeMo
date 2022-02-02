@@ -32,6 +32,8 @@ from sklearn.cluster import MiniBatchKMeans
 
 from nemo.core.classes.mixins import set_access_cfg, AccessMixin
 
+from tqdm.auto import tqdm
+
 
 """
 Transcribe audio file on a single CPU/GPU. Useful for transcription of moderate amounts of audio data.
