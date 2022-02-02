@@ -115,7 +115,7 @@ class FeatClusteringConfig:
 
 
 
-def produce_labels(datalayer, out_manifest, asr_model, cluster_model):
+def produce_labels(datalayer, out_manifest, asr_model, cluster_model, device):
 
     label_dict = {}
 
@@ -304,7 +304,7 @@ def main(cfg: FeatClusteringConfig) -> FeatClusteringConfig:
 
     if cfg.apply_to_fit:
         print("Producing labels for dataset:", cfg.fit_manifest)
-        produce_labels(datalayer, cfg.out_manifests[0], asr_model, cluster_model)
+        produce_labels(datalayer, cfg.out_manifests[0], asr_model, cluster_model, device)
     #produce labels
 
     for idx in range(len(cfg.apply_manifests)):
@@ -326,7 +326,7 @@ def main(cfg: FeatClusteringConfig) -> FeatClusteringConfig:
         datalayer = asr_model._setup_dataloader_from_config(ds_cfg)
 
         print("Producing labels for dataset:", data_manifest)
-        produce_labels(datalayer, out_manifest, asr_model, cluster_model)
+        produce_labels(datalayer, out_manifest, asr_model, cluster_model, device)
 
     return cfg
 
