@@ -76,9 +76,12 @@ class AccessConfig:
 @dataclass
 class FeatClusteringConfig:
     # Required configs
+    apply_manifests: List[str] #which manifests to apply clustering to
+    output_filenames: List[str] #names of new manifests to write to
+    fit_manifest: str #manifest for fitting the clustering model
+
     model_path: Optional[str] = None  # Path to a .nemo file
     pretrained_name: Optional[str] = None  # Name of a pretrained model
-    dataset_manifest: Optional[str] = None  # Path to dataset's JSON manifest
 
     cluster_model_path: Optional[str] = None # if already have cluster model
 
@@ -101,6 +104,56 @@ class FeatClusteringConfig:
     layer_name: str = "7"
 
     access: AccessConfig = AccessConfig()
+
+
+
+def produce_labels(ds_cfg, data_manifest, out_manifest, asr_model, cluster_model):
+
+    ds_cfg.manifest_filepath = data_manifest
+
+    datalayer = asr_model._setup_dataloader_from_config(ds_cfg)
+
+    label_dict = {}
+
+    cluster_labels = []
+    for batch in tqdm(datalayer, desc="Getting cluster labels"):
+
+        input_signal = batch[0].to(device)
+        input_signal_length = batch[1].to(device)
+
+        feats, feat_lens = asr_model.get_feats(
+            input_signal=input_signal,
+            input_signal_length=input_signal_length,
+            layer_name=cluster_cfg.layer_name
+        )
+
+        orig_bs = feats.shape[0]
+
+        feats = feats.reshape(-1, feats.shape[-1])
+        cur_labels = cluster_model.predict(feats.cpu())
+        cur_labels = cur_labels.reshape(orig_bs, -1)
+
+        for j in range(cur_labels.shape[0]):
+            label_dict[int(batch[-1][j])] = cur_labels[j, :feat_lens[j]]
+
+        del batch
+
+    ###################
+
+    logging.info(f"Writing labels into file: {out_manifest}")
+
+    # write audio transcriptions
+    with open(out_manifest, 'w', encoding='utf-8') as f:
+        with open(data_manifest, 'r') as fr:
+            for idx, line in enumerate(fr):
+                item = json.loads(line)
+                item['token_labels'] = list(map(int, label_dict[idx]))
+                f.write(json.dumps(item) + "\n")
+
+    logging.info("Finished writing labels !")
+
+
+    return
 
 @hydra_runner(config_name="FeatClusteringConfig", schema=FeatClusteringConfig)
 def main(cfg: TranscriptionConfig) -> TranscriptionConfig:
@@ -244,48 +297,9 @@ def main(cfg: TranscriptionConfig) -> TranscriptionConfig:
 
     #produce labels
 
-    label_dict = {}
-    dur_dict = {}
-
-    cluster_labels = []
-    for batch in tqdm(datalayer, desc="Getting cluster labels"):
-
-        input_signal = batch[0].to(device)
-        input_signal_length = batch[1].to(device)
-
-        feats, feat_lens = asr_model.get_feats(
-            input_signal=input_signal,
-            input_signal_length=input_signal_length,
-            layer_name=cluster_cfg.layer_name
-        )
-
-        orig_bs = feats.shape[0]
-
-        feats = feats.reshape(-1, feats.shape[-1])
-        cur_labels = cluster_model.predict(feats.cpu())
-        cur_labels = cur_labels.reshape(orig_bs, -1)
-
-        for j in range(cur_labels.shape[0]):
-            label_dict[int(batch[-1][j])] = cur_labels[j, :feat_lens[j]]
-            dur_dict[int(batch[-1][j])] = int(input_signal_length[j])
-
-        del batch
-
-
-
-    ###################
-
-    logging.info(f"Writing labels into file: {cfg.output_filename}")
-
-    # write audio transcriptions
-    with open(cfg.output_filename, 'w', encoding='utf-8') as f:
-        with open(cfg.dataset_manifest, 'r') as fr:
-                for idx, line in enumerate(fr):
-                    item = json.loads(line)
-                    item['token_labels'] = list(map(int, label_dict[idx]))
-                    f.write(json.dumps(item) + "\n")
-
-    logging.info("Finished writing labels !")
+    for data_manifest, out_manifest in zip(cfg.apply_manifests, cfg.out_manifests):
+        print("Producing labels for dataset:", data_manifest)
+        produce_labels(ds_cfg, data_manifest, out_manifest, asr_model, cluster_model)
 
     return cfg
 
