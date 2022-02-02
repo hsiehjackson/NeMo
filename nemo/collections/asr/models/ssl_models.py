@@ -119,7 +119,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
             collate_fn=collate_fn,
             drop_last=config.get('drop_last', False),
             shuffle=shuffle,
-            num_workers=config.get('num_workers', 0),
+            num_workers=config.get('num_workers', 0))
 
     def setup_training_data(self, train_data_config: Optional[Union[DictConfig, Dict]]):
         """
