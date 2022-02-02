@@ -302,10 +302,18 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
         return {'loss': loss_value, 'log': tensorboard_logs}
 
     def validation_step(self, batch, batch_idx, dataloader_idx=0):
+        print("validation step start", batch_idx, dataloader_idx)
+
         signal, signal_len, transcript, transcript_len = batch
         spectrograms, spec_masks, outputs = self.forward(input_signal=signal, input_signal_length=signal_len)
 
+        print("forward done", batch_idx, dataloader_idx)
+
         loss_value = self.loss(spectrograms=spectrograms, spec_masks=spec_masks, decoder_outputs=outputs)
+
+        print(loss_value, batch_idx, dataloader_idx)
+
+        print("validation step end", batch_idx, dataloader_idx)
 
         return {
             'val_loss': loss_value,
