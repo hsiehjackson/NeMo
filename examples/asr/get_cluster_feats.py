@@ -115,7 +115,7 @@ class FeatClusteringConfig:
 
 
 
-def produce_labels(datalayer, out_manifest, asr_model, cluster_model, layer_name, device):
+def produce_labels(datalayer, in_manifest, out_manifest, asr_model, cluster_model, layer_name, device):
 
     label_dict = {}
 
@@ -148,7 +148,7 @@ def produce_labels(datalayer, out_manifest, asr_model, cluster_model, layer_name
 
     # write audio transcriptions
     with open(out_manifest, 'w', encoding='utf-8') as f:
-        with open(data_manifest, 'r') as fr:
+        with open(in_manifest, 'r') as fr:
             for idx, line in enumerate(fr):
                 item = json.loads(line)
                 item['token_labels'] = list(map(int, label_dict[idx]))
@@ -304,7 +304,7 @@ def main(cfg: FeatClusteringConfig) -> FeatClusteringConfig:
 
     if cfg.apply_to_fit:
         print("Producing labels for dataset:", cfg.fit_manifest)
-        produce_labels(datalayer, cfg.out_manifests[0], asr_model, cluster_model, cfg.layer_name, device)
+        produce_labels(datalayer, cfg.fit_manifest, cfg.out_manifests[0], asr_model, cluster_model, cfg.layer_name, device)
     #produce labels
 
     for idx in range(len(cfg.apply_manifests)):
@@ -326,7 +326,7 @@ def main(cfg: FeatClusteringConfig) -> FeatClusteringConfig:
         datalayer = asr_model._setup_dataloader_from_config(ds_cfg)
 
         print("Producing labels for dataset:", data_manifest)
-        produce_labels(datalayer, out_manifest, asr_model, cluster_model, cfg.layer_name, device)
+        produce_labels(datalayer, data_manifest, out_manifest, asr_model, cluster_model, cfg.layer_name, device)
 
     return cfg
 
