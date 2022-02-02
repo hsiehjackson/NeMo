@@ -307,16 +307,12 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
 
         loss_value = self.loss(spectrograms=spectrograms, spec_masks=spec_masks, decoder_outputs=outputs)
 
-        print("val step loss:", loss_value, dataloader_idx)
-
         return {
             'val_loss': loss_value,
         }
 
     def multi_validation_epoch_end(self, outputs, dataloader_idx: int = 0):
-        print("validation epoch end! ", dataloader_idx)
         val_loss_mean = torch.stack([x['val_loss'] for x in outputs]).mean()
-        print("val loss mean:", val_loss_mean, dataloader_idx)
         tensorboard_logs = {'val_loss': val_loss_mean}
         return {'val_loss': val_loss_mean, 'log': tensorboard_logs}
 
