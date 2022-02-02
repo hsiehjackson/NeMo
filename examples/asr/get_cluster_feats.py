@@ -86,6 +86,8 @@ class FeatClusteringConfig:
     fit_is_tarrred: bool
     fit_tarred_filepaths: str
 
+    apply_to_fit: bool = True
+
     model_path: Optional[str] = None  # Path to a .nemo file
     pretrained_name: Optional[str] = None  # Name of a pretrained model
 
@@ -113,13 +115,7 @@ class FeatClusteringConfig:
 
 
 
-def produce_labels(ds_cfg, data_manifest, is_tarred, tarred_filepaths, out_manifest, asr_model, cluster_model):
-
-    ds_cfg.manifest_filepath = data_manifest
-    ds_cfg.is_tarred = is_tarred
-    ds_cfg.tarred_audio_filepaths = tarred_filepaths
-
-    datalayer = asr_model._setup_dataloader_from_config(ds_cfg)
+def produce_labels(datalayer, out_manifest, asr_model, cluster_model):
 
     label_dict = {}
 
@@ -306,20 +302,31 @@ def main(cfg: FeatClusteringConfig) -> FeatClusteringConfig:
     print("total intertia: %.5f", inertia)
     print("finished successfully")
 
-
+    if cfg.apply_to_fit:
+        print("Producing labels for dataset:", cfg.fit_manifest)
+        produce_labels(datalayer, cfg.out_manifests[0], asr_model, cluster_model)
     #produce labels
 
     for idx in range(len(cfg.apply_manifests)):
         data_manifest = cfg.apply_manifests[idx]
-        out_manifest = cfg.out_manifests[idx]
+        if cfg.apply_to_fit:
+            out_manifest = cfg.out_manifests[idx + 1]
+        else:
+            out_manifest = cfg.out_manifests[idx]
         is_tarred = False
         tarred_filepaths = None
         if cfg.apply_is_tarred is not None and cfg.apply_is_tarred[idx]:
             is_tarred = True
             tarred_filepaths = cfg.apply_tarred_filepaths[idx]
 
+        ds_cfg.manifest_filepath = data_manifest
+        ds_cfg.is_tarred = is_tarred
+        ds_cfg.tarred_audio_filepaths = tarred_filepaths
+
+        datalayer = asr_model._setup_dataloader_from_config(ds_cfg)
+
         print("Producing labels for dataset:", data_manifest)
-        produce_labels(ds_cfg, data_manifest, is_tarred, tarred_filepaths, out_manifest, asr_model, cluster_model)
+        produce_labels(datalayer, out_manifest, asr_model, cluster_model)
 
     return cfg
 
