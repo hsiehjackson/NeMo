@@ -132,7 +132,7 @@ def produce_labels(ds_cfg, data_manifest, is_tarred, tarred_filepaths, out_manif
         feats, feat_lens = asr_model.get_feats(
             input_signal=input_signal,
             input_signal_length=input_signal_length,
-            layer_name=cluster_cfg.layer_name
+            layer_name=cfg.layer_name
         )
 
         orig_bs = feats.shape[0]
@@ -273,7 +273,7 @@ def main(cfg: FeatClusteringConfig) -> FeatClusteringConfig:
         feats, feat_lens = asr_model.get_feats(
             input_signal=input_signal,
             input_signal_length=input_signal_length,
-            layer_name=cluster_cfg.layer_name
+            layer_name=cfg.layer_name
         )
 
         feats = feats.reshape(-1, feats.shape[-1])
