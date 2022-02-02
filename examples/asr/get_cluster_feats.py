@@ -77,8 +77,12 @@ class AccessConfig:
 class FeatClusteringConfig:
     # Required configs
     apply_manifests: List[str] #which manifests to apply clustering to
+    apply_is_tarred: Optional[List[bool]] #which manifests that we are applying to are tarred
+    apply_tarred_filepaths: Optional[List[List[str]]] #lists of filenames for tarred sets
     output_filenames: List[str] #names of new manifests to write to
     fit_manifest: str #manifest for fitting the clustering model
+    fit_is_tarrred: bool
+    fit_tarred_filepaths: List[str]
 
     model_path: Optional[str] = None  # Path to a .nemo file
     pretrained_name: Optional[str] = None  # Name of a pretrained model
@@ -107,9 +111,11 @@ class FeatClusteringConfig:
 
 
 
-def produce_labels(ds_cfg, data_manifest, out_manifest, asr_model, cluster_model):
+def produce_labels(ds_cfg, data_manifest, is_tarred, tarred_filepaths, out_manifest, asr_model, cluster_model):
 
     ds_cfg.manifest_filepath = data_manifest
+    ds_cfg.is_tarred = is_tarred
+    ds_cfg.tarred_audio_filepaths = tarred_filepaths
 
     datalayer = asr_model._setup_dataloader_from_config(ds_cfg)
 
@@ -232,6 +238,10 @@ def main(cfg: TranscriptionConfig) -> TranscriptionConfig:
         'pin_memory': True,
     }
 
+    if cfg.fit_is_tarred:
+        ds_cfg.is_tarred = True
+        ds_cfg.tarred_audio_filepaths = cfg.fit_tarred_filepaths
+
     ds_cfg = OmegaConf.create(ds_cfg)
 
     ds_cfg.return_sample_id = True
@@ -297,9 +307,17 @@ def main(cfg: TranscriptionConfig) -> TranscriptionConfig:
 
     #produce labels
 
-    for data_manifest, out_manifest in zip(cfg.apply_manifests, cfg.out_manifests):
+    for idx in range(len(cfg.apply_manifests)):
+        data_manifest = cfg.apply_manifests[idx]
+        out_manifest = cfg.out_manifests[idx]
+        is_tarred = False
+        tarred_filepaths = None
+        if cfg.apply_is_tarred is not None and cfg.apply_is_tarred[idx]:
+            is_tarred = True
+            tarred_filepaths = cfg.apply_tarred_filepaths[idx]
+
         print("Producing labels for dataset:", data_manifest)
-        produce_labels(ds_cfg, data_manifest, out_manifest, asr_model, cluster_model)
+        produce_labels(ds_cfg, data_manifest, is_tarred, tarred_filepaths, out_manifest, asr_model, cluster_model)
 
     return cfg
 
