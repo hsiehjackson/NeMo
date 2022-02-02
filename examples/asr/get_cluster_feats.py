@@ -162,7 +162,7 @@ def produce_labels(ds_cfg, data_manifest, is_tarred, tarred_filepaths, out_manif
     return
 
 @hydra_runner(config_name="FeatClusteringConfig", schema=FeatClusteringConfig)
-def main(cfg: TranscriptionConfig) -> TranscriptionConfig:
+def main(cfg: FeatClusteringConfig) -> FeatClusteringConfig:
     logging.info(f'Hydra config: {OmegaConf.to_yaml(cfg)}')
 
     if cfg.model_path is None and cfg.pretrained_name is None:
