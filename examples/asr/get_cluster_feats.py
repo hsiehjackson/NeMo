@@ -81,7 +81,7 @@ class FeatClusteringConfig:
     apply_manifests: List[str] #which manifests to apply clustering to
     apply_is_tarred: Optional[List[bool]] #which manifests that we are applying to are tarred
     apply_tarred_filepaths: Optional[List[str]] #lists of filenames for tarred sets
-    output_filenames: List[str] #names of new manifests to write to
+    out_manifests: List[str] #names of new manifests to write to
     fit_manifest: str #manifest for fitting the clustering model
     fit_is_tarrred: bool
     fit_tarred_filepaths: str
@@ -92,7 +92,7 @@ class FeatClusteringConfig:
     cluster_model_path: Optional[str] = None # if already have cluster model
 
     # General configs
-    output_filename: Optional[str] = None
+    #output_filename: Optional[str] = None
     batch_size: int = 32
     sample_rate: int = 16000
 
