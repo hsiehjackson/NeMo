@@ -283,6 +283,8 @@ def main(cfg: FeatClusteringConfig) -> FeatClusteringConfig:
 
         del batch
 
+        print(feats.shape[0], total_feats, cfg.num_feats_for_fit)
+
         if total_feats > cfg.num_feats_for_fit:
             break
 
