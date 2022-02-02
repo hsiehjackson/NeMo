@@ -17,7 +17,7 @@ import glob
 import json
 import os
 from dataclasses import dataclass
-from typing import Optional
+from typing import List, Optional, Union
 
 import pytorch_lightning as pl
 import torch
