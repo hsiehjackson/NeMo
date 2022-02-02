@@ -167,8 +167,6 @@ def main(cfg: FeatClusteringConfig) -> FeatClusteringConfig:
 
     if cfg.model_path is None and cfg.pretrained_name is None:
         raise ValueError("Both cfg.model_path and cfg.pretrained_name cannot be None!")
-    if cfg.dataset_manifest is None:
-        raise ValueError("cfg.dataset_manifest cannot be None!")
 
     # setup GPU
     if cfg.cuda is None:
