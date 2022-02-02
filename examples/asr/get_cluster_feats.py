@@ -227,7 +227,7 @@ def main(cfg: FeatClusteringConfig) -> FeatClusteringConfig:
     #datalayer = asr_model._train_dl
 
     ds_cfg = {
-        'manifest_filepath': cfg.dataset_manifest,
+        'manifest_filepath': cfg.fit_manifest,
         'sample_rate': cfg.sample_rate,
         'batch_size': cfg.batch_size,
         'trim_silence': False,
