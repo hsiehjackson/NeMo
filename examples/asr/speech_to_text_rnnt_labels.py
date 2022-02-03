@@ -15,6 +15,7 @@
 
 import pytorch_lightning as pl
 from omegaconf import OmegaConf
+from omegaconf.omegaconf import open_dict
 
 from nemo.collections.asr.models import EncDecRNNTLabelsModel
 from nemo.core.config import hydra_runner
@@ -29,7 +30,8 @@ def main(cfg):
     trainer = pl.Trainer(**cfg.trainer)
     exp_manager(trainer, cfg.get("exp_manager", None))
 
-    cfg.model.labels = list(range(cfg.model.decoder.vocab_size))
+    with open_dict(cfg):
+        cfg.model.labels = list(range(cfg.model.decoder.vocab_size))
     asr_model = EncDecRNNTLabelsModel(cfg=cfg.model, trainer=trainer)
 
     # Initialize the weights of the model from another model, if provided via config
