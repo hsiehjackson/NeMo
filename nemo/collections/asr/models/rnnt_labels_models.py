@@ -177,7 +177,8 @@ class EncDecRNNTLabelsModel(EncDecRNNTModel):
         if self._cfg.get('log_prediction', True) and batch_idx % log_every_n_steps == 0:
             print()
             print("transcripts:")
-            print(transcript)
+            for tr_id in range(transcript.shape[0]):
+                print(transcript[tr_id])
             print("predictions:")
 
             with torch.no_grad():
