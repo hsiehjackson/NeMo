@@ -167,22 +167,30 @@ class EncDecRNNTLabelsModel(EncDecRNNTModel):
 
         tensorboard_logs['val_loss'] = loss_value
 
-        print()
-        print("transcripts:")
-        print(transcript)
-        print("predictions:")
+        if hasattr(self, '_trainer') and self._trainer is not None:
+            log_every_n_steps = self._trainer.log_every_n_steps
+            sample_id = self._trainer.global_step
+        else:
+            log_every_n_steps = 1
+            sample_id = batch_nb
 
-        with torch.no_grad():
-            hypotheses_list = self.decoding.decoding(
-                encoder_output=encoded, encoded_lengths=encoded_len, partial_hypotheses=None
-            )  # type: [List[Hypothesis]]
+        if self._cfg.get('log_prediction', True) and (sample_id + 1) % log_every_n_steps == 0:
+            print()
+            print("transcripts:")
+            print(transcript)
+            print("predictions:")
 
-            # extract the hypotheses
-            hypotheses_list = hypotheses_list[0]  # type: List[Hypothesis]
+            with torch.no_grad():
+                hypotheses_list = self.decoding.decoding(
+                    encoder_output=encoded, encoded_lengths=encoded_len, partial_hypotheses=None
+                )  # type: [List[Hypothesis]]
 
-        for hyp in hypotheses_list:
-            print(hyp.y_sequence)
-        print()
+                # extract the hypotheses
+                hypotheses_list = hypotheses_list[0]  # type: List[Hypothesis]
+
+            for hyp in hypotheses_list:
+                print(hyp.y_sequence)
+            print()
 
         return tensorboard_logs
 

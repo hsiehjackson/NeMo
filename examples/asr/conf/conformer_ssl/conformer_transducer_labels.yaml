@@ -53,20 +53,6 @@ model:
     pin_memory: false
     use_start_end_token: true
 
-  test_ds:
-    manifest_filepath: null
-    sample_rate: ${model.sample_rate}
-    batch_size: 16
-    shuffle: false
-    num_workers: 8
-    pin_memory: false
-    use_start_end_token: true
-
-  # You may find more detail on how to train a tokenizer at: /scripts/tokenizers/process_asr_text_tokenizer.py
-  tokenizer:
-    dir: ???  # path to directory which contains either tokenizer.model (bpe) or vocab.txt (for wpe)
-    type: wpe  # Can be either bpe (SentencePiece tokenizer) or wpe (WordPiece tokenizer)
-
   preprocessor:
     _target_: nemo.collections.asr.modules.AudioToMelSpectrogramPreprocessor
     sample_rate: *sample_rate
@@ -124,6 +110,7 @@ model:
     normalization_mode: null # Currently only null is supported for export.
     random_state_sampling: false # Random state sampling: https://arxiv.org/pdf/1910.11455.pdf
     blank_as_pad: true # This flag must be set in order to support exporting of RNNT models + efficient inference.
+    vocab_size: 100
 
     prednet:
       pred_hidden: ${model.model_defaults.pred_hidden}
