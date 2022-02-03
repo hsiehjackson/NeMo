@@ -174,7 +174,7 @@ class EncDecRNNTLabelsModel(EncDecRNNTModel):
             log_every_n_steps = 1
             sample_id = batch_nb
 
-        if self._cfg.get('log_prediction', True) and (sample_id + 1) % log_every_n_steps == 0:
+        if self._cfg.get('log_prediction', True) and batch_idx % log_every_n_steps == 0:
             print()
             print("transcripts:")
             print(transcript)
