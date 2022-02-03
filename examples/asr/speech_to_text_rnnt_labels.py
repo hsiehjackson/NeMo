@@ -30,8 +30,7 @@ def main(cfg):
     trainer = pl.Trainer(**cfg.trainer)
     exp_manager(trainer, cfg.get("exp_manager", None))
 
-    with open_dict(cfg):
-        cfg.model.labels = list(range(cfg.model.decoder.vocab_size))
+    cfg.model.labels = list(range(cfg.model.decoder.vocab_size))
     asr_model = EncDecRNNTLabelsModel(cfg=cfg.model, trainer=trainer)
 
     # Initialize the weights of the model from another model, if provided via config
