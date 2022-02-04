@@ -306,7 +306,7 @@ def main(cfg: FeatClusteringConfig) -> FeatClusteringConfig:
                               copy=False)
         ###
     elif cfg.cluster_model == "DBSCAN":
-        cluster_model = DBSCAN()
+        cluster_model = DBSCAN(n_jobs=-1)
         ###
     else:
         print(cfg.cluster_model, "not valid")
