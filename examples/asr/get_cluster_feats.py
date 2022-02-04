@@ -28,7 +28,7 @@ from nemo.collections.asr.models import ASRModel
 from nemo.core.config import hydra_runner
 from nemo.utils import logging, model_utils
 
-from sklearn.cluster import MiniBatchKMeans
+from sklearn.cluster import MiniBatchKMeans, Birch, DBSCAN
 
 from nemo.core.classes.mixins import set_access_cfg, AccessMixin
 
@@ -106,10 +106,12 @@ class FeatClusteringConfig:
     #audio_type: str = "wav"
 
     #clustering params
+    cluster_model: str = "KMeans"
     num_feats_for_fit: int = 50000
     n_clusters: int = 100
 
     layer_name: str = "7"
+
 
     access: AccessConfig = AccessConfig()
 
@@ -290,15 +292,24 @@ def main(cfg: FeatClusteringConfig) -> FeatClusteringConfig:
     feats_for_fit = torch.cat(feats_for_fit, dim=0).cpu()
 
     #do clustering
-
-    cluster_model = MiniBatchKMeans(n_clusters=cfg.n_clusters,
-                                    max_iter=10000,
-                                    tol=0.0,
-                                    max_no_improvement=200,
-                                    n_init=20,
-                                    reassignment_ratio=0.01,
-                                    batch_size=10000,
-                                    verbose=True)
+    if cfg.cluster_model == "KMeans":
+        cluster_model = MiniBatchKMeans(n_clusters=cfg.n_clusters,
+                                        max_iter=10000,
+                                        tol=0.0,
+                                        max_no_improvement=200,
+                                        n_init=20,
+                                        reassignment_ratio=0.01,
+                                        batch_size=10000,
+                                        verbose=True)
+    elif cfg.cluster_model == "Birch":
+        cluster_model = Birch(n_cluster=cfg.n_clusters,
+                              copy=False)
+        ###
+    elif cfg.cluster_model == "DBSCAN":
+        cluster_model = DBSCAN()
+        ###
+    else:
+        print(cfg.cluster_model, "not valid")
 
     cluster_model.fit(feats_for_fit)
     inertia = -cluster_model.score(feats_for_fit) / len(feats_for_fit)
