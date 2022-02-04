@@ -312,8 +312,8 @@ def main(cfg: FeatClusteringConfig) -> FeatClusteringConfig:
         print(cfg.cluster_model, "not valid")
 
     cluster_model.fit(feats_for_fit)
-    inertia = -cluster_model.score(feats_for_fit) / len(feats_for_fit)
-    print("total intertia: %.5f", inertia)
+    #inertia = -cluster_model.score(feats_for_fit) / len(feats_for_fit)
+    #print("total intertia: %.5f", inertia)
     print("finished successfully")
 
     del feats_for_fit
