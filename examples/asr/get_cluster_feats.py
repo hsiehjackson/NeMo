@@ -95,7 +95,7 @@ class FeatClusteringConfig:
 
     # General configs
     #output_filename: Optional[str] = None
-    batch_size: int = 32
+    batch_size: int = 64
     sample_rate: int = 16000
 
     # Set `cuda` to int to define CUDA device. If 'None', will look for CUDA
@@ -151,8 +151,11 @@ def produce_labels(datalayer, in_manifest, out_manifest, asr_model, cluster_mode
         with open(in_manifest, 'r') as fr:
             for idx, line in enumerate(fr):
                 item = json.loads(line)
-                item['token_labels'] = list(map(int, label_dict[idx]))
-                f.write(json.dumps(item) + "\n")
+                if idx in label_dict:
+                    item['token_labels'] = list(map(int, label_dict[idx]))
+                    f.write(json.dumps(item) + "\n")
+                else:
+                    print(idx, "not found in label_dict")
 
     logging.info("Finished writing labels !")
 
