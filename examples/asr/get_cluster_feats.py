@@ -302,7 +302,7 @@ def main(cfg: FeatClusteringConfig) -> FeatClusteringConfig:
                                         batch_size=10000,
                                         verbose=True)
     elif cfg.cluster_model == "Birch":
-        cluster_model = Birch(n_cluster=cfg.n_clusters,
+        cluster_model = Birch(n_clusters=cfg.n_clusters,
                               copy=False)
         ###
     elif cfg.cluster_model == "DBSCAN":
