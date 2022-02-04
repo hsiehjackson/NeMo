@@ -108,7 +108,7 @@ class FeatClusteringConfig:
     #clustering params
     cluster_model: str = "KMeans"
     num_feats_for_fit: int = 50000
-    n_clusters: int = 100
+    n_clusters: Optional[int] = 100
 
     layer_name: str = "7"
 
