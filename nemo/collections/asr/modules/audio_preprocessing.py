@@ -589,6 +589,37 @@ class CropOrPadSpectrogramAugmentation(NeuralModule):
         pass
 
 
+class PreprocessorList(NeuralModule):
+    @property
+    def input_types(self):
+        """Returns definitions of module input ports.
+        """
+        return {
+            "input_signal": NeuralType(('B', 'T'), AudioSignal(freq=self._sample_rate)),
+            "length": NeuralType(tuple('B'), LengthsType()),
+        }
+
+    @property
+    def output_types(self):
+        """Returns definitions of module output ports.
+        """
+        return {
+            "processed_signal": NeuralType(('B', 'D', 'T'), MFCCSpectrogramType()),
+            "processed_length": NeuralType(tuple('B'), LengthsType()),
+        }
+
+    def __init__(self, prep_list):
+        super(PreprocessorList, self).__init__()
+
+    def forward(self, input_signal, length):
+        print("start shape:", input_signal.shape)
+        for prep in self.prep_list:
+            input_signal, length = prep(input_signal=input_signal, length=length)
+            print("shape:", input_signal.shape)
+        print("end")
+
+        return input_signal, length
+
 @dataclass
 class AudioToMelSpectrogramPreprocessorConfig:
     _target_: str = "nemo.collections.asr.modules.AudioToMelSpectrogramPreprocessor"

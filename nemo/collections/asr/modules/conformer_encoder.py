@@ -27,8 +27,60 @@ from nemo.core.classes.exportable import Exportable
 from nemo.core.classes.module import NeuralModule
 from nemo.core.neural_types import AcousticEncodedRepresentation, LengthsType, NeuralType, SpectrogramType
 
-__all__ = ['ConformerEncoder']
+__all__ = ['ConformerEncoder', 'ConformerSubsampling']
 
+class ConformerSubsampling(NeuralModule, Exportable):
+    def __init__(self,
+                 subsampling='striding',
+                 subsampling_factor=4,
+                 subsampling_conv_channels=-1,
+                 ):
+
+        if subsampling_conv_channels == -1:
+            subsampling_conv_channels = d_model
+        if subsampling and subsampling_factor > 1:
+            self.pre_encode = ConvSubsampling(
+                subsampling=subsampling,
+                subsampling_factor=subsampling_factor,
+                feat_in=feat_in,
+                feat_out=d_model,
+                conv_channels=subsampling_conv_channels,
+                activation=nn.ReLU(),
+            )
+            self._feat_out = d_model
+        else:
+            self.pre_encode = nn.Linear(feat_in, d_model)
+            self._feat_out = d_model
+
+    @property
+    def input_types(self):
+        """Returns definitions of module input ports.
+        """
+        return OrderedDict(
+            {
+                "audio_signal": NeuralType(('B', 'D', 'T'), SpectrogramType()),
+                "length": NeuralType(tuple('B'), LengthsType()),
+            }
+        )
+
+    @property
+    def output_types(self):
+        """Returns definitions of module output ports.
+        """
+        return OrderedDict(
+            {
+                "outputs": NeuralType(('B', 'T', 'D'), AcousticEncodedRepresentation()),
+                "encoded_lengths": NeuralType(tuple('B'), LengthsType()),
+            }
+        )
+
+    def forward(self, audio_signal, length):
+        audio_signal = torch.transpose(audio_signal, 1, 2)
+
+        if isinstance(self.pre_encode, ConvSubsampling):
+            audio_signal, length = self.pre_encode(audio_signal, length)
+        else:
+            audio_signal = self.pre_encode(audio_signal)
 
 class ConformerEncoder(NeuralModule, Exportable):
     """
@@ -92,7 +144,7 @@ class ConformerEncoder(NeuralModule, Exportable):
         """
         return OrderedDict(
             {
-                "audio_signal": NeuralType(('B', 'D', 'T'), SpectrogramType()),
+                "audio_signal": NeuralType(('B', 'T', 'D'), AcousticEncodedRepresentation()),
                 "length": NeuralType(tuple('B'), LengthsType()),
             }
         )
@@ -114,9 +166,6 @@ class ConformerEncoder(NeuralModule, Exportable):
         n_layers,
         d_model,
         feat_out=-1,
-        subsampling='striding',
-        subsampling_factor=4,
-        subsampling_conv_channels=-1,
         ff_expansion_factor=4,
         self_attention_model='rel_pos',
         n_heads=4,
@@ -135,6 +184,7 @@ class ConformerEncoder(NeuralModule, Exportable):
         d_ff = d_model * ff_expansion_factor
         self.d_model = d_model
         self._feat_in = feat_in
+        self._feat_out = d_model
         self.scale = math.sqrt(self.d_model)
         if att_context_size:
             self.att_context_size = att_context_size
@@ -146,21 +196,7 @@ class ConformerEncoder(NeuralModule, Exportable):
         else:
             self.xscale = None
 
-        if subsampling_conv_channels == -1:
-            subsampling_conv_channels = d_model
-        if subsampling and subsampling_factor > 1:
-            self.pre_encode = ConvSubsampling(
-                subsampling=subsampling,
-                subsampling_factor=subsampling_factor,
-                feat_in=feat_in,
-                feat_out=d_model,
-                conv_channels=subsampling_conv_channels,
-                activation=nn.ReLU(),
-            )
-            self._feat_out = d_model
-        else:
-            self.pre_encode = nn.Linear(feat_in, d_model)
-            self._feat_out = d_model
+
 
         if not untie_biases and self_attention_model == "rel_pos":
             d_head = d_model // n_heads
@@ -244,12 +280,7 @@ class ConformerEncoder(NeuralModule, Exportable):
                 audio_signal.size(0), max_audio_length, dtype=torch.int32, device=self.seq_range.device
             )
 
-        audio_signal = torch.transpose(audio_signal, 1, 2)
 
-        if isinstance(self.pre_encode, ConvSubsampling):
-            audio_signal, length = self.pre_encode(audio_signal, length)
-        else:
-            audio_signal = self.pre_encode(audio_signal)
         audio_signal, pos_emb = self.pos_enc(audio_signal)
         # adjust size
         max_audio_length = audio_signal.size(1)

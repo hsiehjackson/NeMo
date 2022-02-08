@@ -66,7 +66,12 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
 
         self.spec_augmentation = SpeechEncDecSelfSupervisedModel.from_config_dict(self._cfg.spec_augment)
 
-        # dropout for features/spectrograms (applied before masking)
+        #if "pre_encoder" in self._cfg:
+        #    self.pre_encoder = SpeechEncDecSelfSupervisedModel.from_config_dict(self._cfg.pre_encoder)
+        #else:
+        #    self.pre_encoder = None
+
+        # dropout for features (applied before masking)
         self.dropout_features = (
             torch.nn.Dropout(self._cfg.dropout_features) if "dropout_features" in self._cfg else None
         )
@@ -223,8 +228,8 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
     @property
     def output_types(self) -> Optional[Dict[str, NeuralType]]:
         return {
-            "spectrograms": NeuralType(('B', 'D', 'T'), SpectrogramType()),
-            "spec_masks": NeuralType(('B', 'D', 'T'), SpectrogramType()),
+            "feats": NeuralType(('B', 'D', 'T'), SpectrogramType()),
+            "feat_masks": NeuralType(('B', 'D', 'T'), SpectrogramType()),
             "outputs": NeuralType(('B', 'T', 'D'), VoidType()),
         }
 
@@ -248,8 +253,8 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
 
         Returns:
             A tuple of 3 elements -
-            1) Processed spectrograms of shape [B, D, T].
-            2) Masks applied to spectrograms of shape [B, D, T].
+            1) Processed feats of shape [B, D, T].
+            2) Masks applied to feats of shape [B, D, T].
             3) Decoder outputs of shape [B, T, D].
         """
         has_input_signal = input_signal is not None and input_signal_length is not None
@@ -265,34 +270,38 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
                 input_signal=input_signal, length=input_signal_length,
             )
 
+        #if self.pre_encoder is not None:
+        #    processed_signal, processed_signal_length = self.pre_encoder(audio_signal=processed_signal,
+        #                                                                     length=processed_signal_length)
+
         if self.pen_factor:
             self.feat_pen = processed_signal.float().pow(2).mean() * self.pen_factor
-        spectrograms = processed_signal.detach().clone()
+        feats = processed_signal.detach().clone()
 
         if self.dropout_features:
             processed_signal = self.dropout_features(processed_signal)
         if self.dropout_features_q:
-            spectrograms = self.dropout_features_q(spectrograms)
+            feats = self.dropout_features_q(feats)
 
         processed_signal = self.spec_augmentation(input_spec=processed_signal, length=processed_signal_length)
 
-        masked_spectrograms = processed_signal.detach()
-        spec_masks = torch.logical_and(masked_spectrograms < 1e-5, masked_spectrograms > -1e-5).float()
+        masked_feats = processed_signal.detach()
+        feat_masks = torch.logical_and(masked_feats < 1e-5, masked_feats > -1e-5).float()
         for idx, proc_len in enumerate(processed_signal_length):
-            spec_masks[idx, :, proc_len:] = 0.0
+            feat_masks[idx, :, proc_len:] = 0.0
 
         encoded, encoded_len = self.encoder(audio_signal=processed_signal, length=processed_signal_length)
         outputs = self.decoder_ssl(encoder_output=encoded)
 
-        return spectrograms, spec_masks, outputs
+        return feats, feat_masks, outputs
 
     # PTL-specific methods
     def training_step(self, batch, batch_nb):
         signal, signal_len, transcript, transcript_len = batch
-        spectrograms, spec_masks, outputs = self.forward(input_signal=signal, input_signal_length=signal_len)
+        feats, feat_masks, outputs = self.forward(input_signal=signal, input_signal_length=signal_len)
 
         self.loss.set_num_updates(self.trainer.global_step)
-        loss_value = self.loss(spectrograms=spectrograms, spec_masks=spec_masks, decoder_outputs=outputs)
+        loss_value = self.loss(feats=feats, feat_masks=feat_masks, decoder_outputs=outputs)
         if self.feat_pen:
             loss_value += self.feat_pen
 
@@ -301,9 +310,9 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
 
     def validation_step(self, batch, batch_idx, dataloader_idx=0):
         signal, signal_len, transcript, transcript_len = batch
-        spectrograms, spec_masks, outputs = self.forward(input_signal=signal, input_signal_length=signal_len)
+        feats, feat_masks, outputs = self.forward(input_signal=signal, input_signal_length=signal_len)
 
-        loss_value = self.loss(spectrograms=spectrograms, spec_masks=spec_masks, decoder_outputs=outputs)
+        loss_value = self.loss(feats=feats, feat_masks=feat_masks, decoder_outputs=outputs)
         if self.feat_pen:
             loss_value += self.feat_pen
         return {
