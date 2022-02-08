@@ -176,11 +176,11 @@ class ConvFeatureEncoder(NeuralModule):
             if is_layer_norm:
                 return nn.Sequential(
                     make_conv(),
-                    nn.Sequential(TransposeLast(), nn.LayerNorm(dim, elementwise_affine=True), TransposeLast()),
+                    nn.Sequential(TransposeLast(), nn.LayerNorm(n_out, elementwise_affine=True), TransposeLast()),
                     nn.GELU(),
                 )
             elif is_group_norm:
-                return nn.Sequential(make_conv(), nn.GroupNorm(dim, dim, affine=True), nn.GELU(),)
+                return nn.Sequential(make_conv(), nn.GroupNorm(n_out, n_out, affine=True), nn.GELU(),)
             else:
                 return nn.Sequential(make_conv(), nn.GELU())
 
