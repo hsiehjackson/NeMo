@@ -615,11 +615,11 @@ class PreprocessorList(NeuralModule):
         self.prep_list = torch.nn.ModuleList(prep_list)
 
     def forward(self, input_signal, length):
-        print("start shape:", input_signal.shape)
+        #print("start shape:", input_signal.shape)
         for prep in self.prep_list:
             input_signal, length = prep(input_signal=input_signal, length=length)
-            print("shape:", input_signal.shape)
-        print("end")
+            #print("shape:", input_signal.shape)
+        #print("end")
 
         return input_signal, length
 
