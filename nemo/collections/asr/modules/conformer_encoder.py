@@ -69,7 +69,7 @@ class ConformerSubsampling(NeuralModule, Exportable):
         """
         return OrderedDict(
             {
-                "outputs": NeuralType(('B', 'T', 'D'), AcousticEncodedRepresentation()),
+                "outputs": NeuralType(('B', 'D', 'T'), AcousticEncodedRepresentation()),
                 "encoded_lengths": NeuralType(tuple('B'), LengthsType()),
             }
         )
@@ -81,6 +81,10 @@ class ConformerSubsampling(NeuralModule, Exportable):
             audio_signal, length = self.pre_encode(audio_signal, length)
         else:
             audio_signal = self.pre_encode(audio_signal)
+
+        audio_signal = torch.transpose(audio_signal, 1, 2)
+
+        return audio_signal, length
 
 class ConformerEncoder(NeuralModule, Exportable):
     """
@@ -144,7 +148,7 @@ class ConformerEncoder(NeuralModule, Exportable):
         """
         return OrderedDict(
             {
-                "audio_signal": NeuralType(('B', 'T', 'D'), AcousticEncodedRepresentation()),
+                "audio_signal": NeuralType(('B', 'D', 'T'), AcousticEncodedRepresentation()),
                 "length": NeuralType(tuple('B'), LengthsType()),
             }
         )
@@ -280,6 +284,7 @@ class ConformerEncoder(NeuralModule, Exportable):
                 audio_signal.size(0), max_audio_length, dtype=torch.int32, device=self.seq_range.device
             )
 
+        audio_signal = torch.transpose(audio_signal, 1, 2)
 
         audio_signal, pos_emb = self.pos_enc(audio_signal)
         # adjust size

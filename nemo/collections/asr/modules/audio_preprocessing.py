@@ -31,6 +31,7 @@ from nemo.core.neural_types import (
     MFCCSpectrogramType,
     NeuralType,
     SpectrogramType,
+    VoidType
 )
 from nemo.core.utils import numba_utils
 from nemo.core.utils.numba_utils import __NUMBA_MINIMUM_VERSION__
@@ -604,7 +605,7 @@ class PreprocessorList(NeuralModule):
         """Returns definitions of module output ports.
         """
         return {
-            "processed_signal": NeuralType(('B', 'D', 'T'), MFCCSpectrogramType()),
+            "processed_signal": NeuralType(('B', 'D', 'T'), VoidType()),
             "processed_length": NeuralType(tuple('B'), LengthsType()),
         }
 
