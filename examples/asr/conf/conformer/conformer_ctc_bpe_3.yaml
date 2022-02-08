@@ -89,11 +89,11 @@ model:
               kernel_size: 10
               stride: 5
             - emb_dim: 512
-              kernel_size: 3
-              stride: 2
+              kernel_size: 5
+              stride: 3
             - emb_dim: 512
-              kernel_size: 3
-              stride: 2
+              kernel_size: 5
+              stride: 3
             - emb_dim: 512
               kernel_size: 3
               stride: 2
