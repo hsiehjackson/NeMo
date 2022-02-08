@@ -55,28 +55,34 @@ model:
     pin_memory: true
     use_start_end_token: false
 
-
-
   preprocessor:
-    _target_: nemo.collections.asr.modules.AudioToMelSpectrogramPreprocessor
-    sample_rate: ${model.sample_rate}
-    normalize: "per_feature"
-    window_size: 0.025
-    window_stride: 0.01
-    window: "hann"
-    features: &n_mels 80
-    n_fft: 512
-    log: true
-    frame_splicing: 1
-    dither: 0.00001
-    pad_to: 16
-    pad_value: 0.0
+    _target_: nemo.collections.asr.modules.PreprocessorList
+    prep_list:
+      - _target_: nemo.collections.asr.modules.AudioToMelSpectrogramPreprocessor
+        sample_rate: ${model.sample_rate}
+        normalize: "per_feature"
+        window_size: 0.025
+        window_stride: 0.01
+        window: "hann"
+        features: 80
+        n_fft: 512
+        log: true
+        frame_splicing: 1
+        dither: 0.00001
+        pad_to: 0
+        pad_value: 0.0
+      - _target_: nemo.collections.asr.modules.ConformerSubsampling
+        subsampling: striding # vggnet or striding, vggnet may give better results but needs more memory
+        subsampling_factor: 4 # must be power of 2
+        subsampling_conv_channels: -1
+        feat_in: 80
+        feat_out: 512
 
   spec_augment:
     _target_: nemo.collections.asr.modules.SpectrogramAugmentation
-    freq_masks: 4
+    freq_masks: 2
     time_masks: 10
-    freq_width: 27
+    freq_width: 128
     time_width: 0.05
 
   encoder:

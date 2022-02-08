@@ -49,10 +49,8 @@ class ConformerSubsampling(NeuralModule, Exportable):
                 conv_channels=subsampling_conv_channels,
                 activation=nn.ReLU(),
             )
-            self._feat_out = d_model
         else:
-            self.pre_encode = nn.Linear(feat_in, d_model)
-            self._feat_out = d_model
+            self.pre_encode = nn.Linear(feat_in, feat_out)
 
     @property
     def input_types(self):
