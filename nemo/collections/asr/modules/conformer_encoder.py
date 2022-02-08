@@ -37,7 +37,7 @@ class ConformerSubsampling(NeuralModule, Exportable):
                  subsampling_factor=4,
                  subsampling_conv_channels=-1,
                  ):
-
+        super(ConformerSubsampling, self).__init__()
         if subsampling_conv_channels == -1:
             subsampling_conv_channels = feat_out
         if subsampling and subsampling_factor > 1:
