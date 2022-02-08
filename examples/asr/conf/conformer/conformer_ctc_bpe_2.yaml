@@ -95,6 +95,7 @@ model:
         conv_bias: False # Include bias in convolution feature extractor model
         feature_grad_mult: 1.0 # Multiply extracted feature gradients
         embedding_dim: 512
+        feat_in: 80
         conv_layers:
           - emb_dim: 512
             kernel_size: 10

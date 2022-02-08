@@ -157,6 +157,7 @@ class ConvFeatureEncoder(NeuralModule):
         conv_bias: bool = False,
         feature_grad_mult=1.0,
         embedding_dim=768,
+        feat_in=1,
     ):
         super().__init__()
 
@@ -183,7 +184,7 @@ class ConvFeatureEncoder(NeuralModule):
             else:
                 return nn.Sequential(make_conv(), nn.GELU())
 
-        in_d = 1
+        in_d = feat_in
         self.layer_cfg = conv_layers
         self.conv_layers = nn.ModuleList()
         self.mode = extractor_mode
