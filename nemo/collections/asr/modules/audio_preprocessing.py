@@ -611,6 +611,7 @@ class PreprocessorList(NeuralModule):
 
     def __init__(self, prep_list):
         super(PreprocessorList, self).__init__()
+        self.prep_list = prep_list
 
     def forward(self, input_signal, length):
         print("start shape:", input_signal.shape)
