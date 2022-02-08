@@ -82,7 +82,7 @@ class AudioConverter(NeuralModule):
             0: AxisType(BatchTag)
         """
         return {
-            "processed_signal": NeuralType(('B', 'C', 'T'), SpectrogramType()),
+            "processed_signal": NeuralType(('B', 'C', 'T'), AcousticEncodedRepresentation()),
             "processed_signal_length": NeuralType(tuple('B'), LengthsType()),
         }
 
@@ -130,7 +130,7 @@ class ConvFeatureEncoder(NeuralModule):
         Note: length is in number of samples, not seconds
         """
         return {
-            "input_signal": NeuralType(('B', 'C', 'T'), SpectrogramType(freq=self._sample_rate)),
+            "input_signal": NeuralType(('B', 'C', 'T'), VoidType()),
             "length": NeuralType(tuple('B'), LengthsType()),
         }
 
@@ -146,7 +146,7 @@ class ConvFeatureEncoder(NeuralModule):
             0: AxisType(BatchTag)
         """
         return {
-            "processed_signal": NeuralType(('B', 'C', 'T'), SpectrogramType()),
+            "processed_signal": NeuralType(('B', 'C', 'T'), AcousticEncodedRepresentation()),
             "processed_signal_length": NeuralType(tuple('B'), LengthsType()),
         }
 

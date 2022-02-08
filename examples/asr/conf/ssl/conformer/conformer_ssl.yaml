@@ -123,18 +123,17 @@ model:
   decoder:
     _target_: nemo.collections.asr.modules.ConvASRDecoderReconstruction
     feat_in: ${model.encoder.d_model}
-    feat_hidden: 128
+    feat_hidden: 256
     feat_out: *dec_out
     stride_layers: 0
     non_stride_layers: 2
 
-
   loss:
     _target_: nemo.collections.asr.losses.ContrastiveLoss
-    in_dim: *n_mels
+    in_dim: 512
     proj_dim: *dec_out
-    combine_time_steps: 4
-    codebook_size: 1200
+    combine_time_steps: 1
+    codebook_size: 320
 
   optim:
     name: adamw

@@ -75,35 +75,37 @@ model:
     type: wpe  # Can be either bpe (SentencePiece tokenizer) or wpe (WordPiece tokenizer)
 
   preprocessor:
-    preprocessor:
-    _target_: nemo.collections.asr.modules.wav2vec_modules.ConvFeatureEncoder
-    extractor_mode: layer_norm # Mode for feature extractor. [group_norm, layer_norm]
-    conv_bias: False # Include bias in convolution feature extractor model
-    feature_grad_mult: 1.0 # Multiply extracted feature gradients
-    normalize_audio: true
-    embedding_dim: 512
-    conv_layers:
-      - emb_dim: 512
-        kernel_size: 10
-        stride: 5
-      - emb_dim: 512
-        kernel_size: 3
-        stride: 2
-      - emb_dim: 512
-        kernel_size: 3
-        stride: 2
-      - emb_dim: 512
-        kernel_size: 3
-        stride: 2
-      - emb_dim: 512
-        kernel_size: 3
-        stride: 2
-      - emb_dim: 512
-        kernel_size: 2
-        stride: 2
-      - emb_dim: 512
-        kernel_size: 2
-        stride: 2
+    _target_: nemo.collections.asr.modules.PreprocessorList
+    prep_list:
+        - _target_: nemo.collections.asr.modules.wav2vec_modules.AudioConverter
+          normalize: true
+        - _target_: nemo.collections.asr.modules.wav2vec_modules.ConvFeatureEncoder
+          extractor_mode: layer_norm # Mode for feature extractor. [group_norm, layer_norm]
+          conv_bias: False # Include bias in convolution feature extractor model
+          feature_grad_mult: 1.0 # Multiply extracted feature gradients
+          embedding_dim: 512
+          conv_layers:
+            - emb_dim: 512
+              kernel_size: 10
+              stride: 2
+            - emb_dim: 512
+              kernel_size: 3
+              stride: 2
+            - emb_dim: 512
+              kernel_size: 3
+              stride: 1
+            - emb_dim: 512
+              kernel_size: 3
+              stride: 1
+            - emb_dim: 512
+              kernel_size: 3
+              stride: 1
+            - emb_dim: 512
+              kernel_size: 2
+              stride: 2
+            - emb_dim: 512
+              kernel_size: 2
+              stride: 1
 
   spec_augment:
     _target_: nemo.collections.asr.modules.SpectrogramAugmentation
