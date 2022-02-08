@@ -93,7 +93,9 @@ model:
       - _target_: nemo.collections.asr.modules.ConformerSubsampling
         subsampling: striding # vggnet or striding, vggnet may give better results but needs more memory
         subsampling_factor: 4 # must be power of 2
-        subsampling_conv_channels: -1 # -1 sets it to d_model
+        subsampling_conv_channels: -1
+        feat_in: 80
+        feat_out: 512
 
   spec_augment:
     _target_: nemo.collections.asr.modules.SpectrogramAugmentation

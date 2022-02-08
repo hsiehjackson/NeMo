@@ -31,19 +31,21 @@ __all__ = ['ConformerEncoder', 'ConformerSubsampling']
 
 class ConformerSubsampling(NeuralModule, Exportable):
     def __init__(self,
+                 feat_in,
+                 feat_out,
                  subsampling='striding',
                  subsampling_factor=4,
                  subsampling_conv_channels=-1,
                  ):
 
         if subsampling_conv_channels == -1:
-            subsampling_conv_channels = d_model
+            subsampling_conv_channels = feat_out
         if subsampling and subsampling_factor > 1:
             self.pre_encode = ConvSubsampling(
                 subsampling=subsampling,
                 subsampling_factor=subsampling_factor,
                 feat_in=feat_in,
-                feat_out=d_model,
+                feat_out=feat_out,
                 conv_channels=subsampling_conv_channels,
                 activation=nn.ReLU(),
             )
