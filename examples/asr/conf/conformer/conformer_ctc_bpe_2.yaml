@@ -106,18 +106,6 @@ model:
           - emb_dim: 512
             kernel_size: 3
             stride: 1
-          - emb_dim: 512
-            kernel_size: 3
-            stride: 1
-          - emb_dim: 512
-            kernel_size: 3
-            stride: 1
-          - emb_dim: 512
-            kernel_size: 2
-            stride: 2
-          - emb_dim: 512
-            kernel_size: 2
-            stride: 1
 
   spec_augment:
     _target_: nemo.collections.asr.modules.SpectrogramAugmentation
