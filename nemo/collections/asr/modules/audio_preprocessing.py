@@ -448,7 +448,7 @@ class SpectrogramAugmentation(NeuralModule):
         """Returns definitions of module input types
         """
         return {
-            "input_spec": NeuralType(('B', 'D', 'T'), SpectrogramType()),
+            "input_spec": NeuralType(('B', 'D', 'T'), VoidType()),
             "length": NeuralType(tuple('B'), LengthsType()),
         }
 
@@ -456,7 +456,7 @@ class SpectrogramAugmentation(NeuralModule):
     def output_types(self):
         """Returns definitions of module output types
         """
-        return {"augmented_spec": NeuralType(('B', 'D', 'T'), SpectrogramType())}
+        return {"augmented_spec": NeuralType(('B', 'D', 'T'), VoidType())}
 
     def __init__(
         self,
