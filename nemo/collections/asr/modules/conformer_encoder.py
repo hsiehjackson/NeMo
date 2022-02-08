@@ -58,7 +58,7 @@ class ConformerSubsampling(NeuralModule, Exportable):
         """
         return OrderedDict(
             {
-                "audio_signal": NeuralType(('B', 'D', 'T'), SpectrogramType()),
+                "input_signal": NeuralType(('B', 'D', 'T'), SpectrogramType()),
                 "length": NeuralType(tuple('B'), LengthsType()),
             }
         )
@@ -74,8 +74,8 @@ class ConformerSubsampling(NeuralModule, Exportable):
             }
         )
 
-    def forward(self, audio_signal, length):
-        audio_signal = torch.transpose(audio_signal, 1, 2)
+    def forward(self, input_signal, length):
+        audio_signal = torch.transpose(input_signal, 1, 2)
 
         if isinstance(self.pre_encode, ConvSubsampling):
             audio_signal, length = self.pre_encode(audio_signal, length)
