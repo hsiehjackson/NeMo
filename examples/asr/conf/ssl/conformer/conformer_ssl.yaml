@@ -92,11 +92,6 @@ model:
     n_layers: 18
     d_model: 512
 
-    # Sub-sampling params
-    subsampling: striding # vggnet or striding, vggnet may give better results but needs more memory
-    subsampling_factor: 4 # must be power of 2
-    subsampling_conv_channels: -1 # -1 sets it to d_model
-
     # Feed forward module's params
     ff_expansion_factor: 4
 
