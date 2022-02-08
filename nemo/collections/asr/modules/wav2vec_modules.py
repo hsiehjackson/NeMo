@@ -54,6 +54,62 @@ class SamePad(torch.nn.Module):
             x = x[:, :, :-1]
         return x
 
+class AudioConverter(NeuralModule):
+    @property
+    def input_types(self):
+        """Returns definitions of module input ports.
+        input_signal:
+            0: AxisType(BatchTag)
+            1: AxisType(TimeTag)
+        input_signal_length:
+            0: AxisType(BatchTag)
+        Note: length is in number of samples, not seconds
+        """
+        return {
+            "input_signal": NeuralType(('B', 'T'), AudioSignal(freq=self._sample_rate)),
+            "length": NeuralType(tuple('B'), LengthsType()),
+        }
+
+    @property
+    def output_types(self):
+        """Returns definitions of module output ports.
+        For compatibility, processed features are treated as Spectrogram types
+        processed_signal:
+            0: AxisType(BatchTag)
+            1: AxisType(ChannelTag)
+            2: AxisType(ProcessedTimeTag)
+        processed_signal_length:
+            0: AxisType(BatchTag)
+        """
+        return {
+            "processed_signal": NeuralType(('B', 'C', 'T'), SpectrogramType()),
+            "processed_signal_length": NeuralType(tuple('B'), LengthsType()),
+        }
+
+    def __init__(
+        self,
+        normalize_audio=True,
+    ):
+        super().__init__()
+
+        self.normalize_input = normalize_audio
+
+    def normalize(self, source, lengths):
+        with torch.no_grad():  # Normalizes audio source
+            for i in range(lengths.size(0)):
+                orig = source[i, : lengths[i]]
+                norm = F.layer_norm(orig, orig.shape)
+                source[i, : lengths[i]] = norm
+        return source
+
+    def forward(self, input_signal, length):
+        if self.normalize_input:
+            input_signal = self.normalize(input_signal, length)
+
+        # BxT -> BxCxT
+        processed_signal = input_signal.unsqueeze(1)
+
+        return processed_signal, length
 
 class ConvFeatureEncoder(NeuralModule):
     """
@@ -74,7 +130,7 @@ class ConvFeatureEncoder(NeuralModule):
         Note: length is in number of samples, not seconds
         """
         return {
-            "input_signal": NeuralType(('B', 'T'), AudioSignal(freq=self._sample_rate)),
+            "input_signal": NeuralType(('B', 'C', 'T'), SpectrogramType(freq=self._sample_rate)),
             "length": NeuralType(tuple('B'), LengthsType()),
         }
 
@@ -100,13 +156,11 @@ class ConvFeatureEncoder(NeuralModule):
         extractor_mode: str = "layer_norm",
         conv_bias: bool = False,
         feature_grad_mult=1.0,
-        normalize_audio=True,
         embedding_dim=768,
     ):
         super().__init__()
 
         self.grad_mult = feature_grad_mult
-        self.normalize_input = normalize_audio
 
         def block(
             n_in, n_out, k, stride, is_layer_norm=False, is_group_norm=False, conv_bias=False,
@@ -162,29 +216,15 @@ class ConvFeatureEncoder(NeuralModule):
             x = conv(x)
         return x
 
-    def normalize(self, source, lengths):
-        with torch.no_grad():  # Normalizes audio source
-            for i in range(lengths.size(0)):
-                orig = source[i, : lengths[i]]
-                norm = F.layer_norm(orig, orig.shape)
-                source[i, : lengths[i]] = norm
-        return source
-
     def forward(self, input_signal, length):
-        if self.normalize_input:
-            input_signal = self.normalize(input_signal, length)
-
-        # BxT -> BxCxT
-        processed_signal = input_signal.unsqueeze(1)
-
         # Applies grad mult scaling
         if self.grad_mult > 0:
-            processed_signal = self.apply_layers(processed_signal)
+            processed_signal = self.apply_layers(input_signal)
             if self.grad_mult != 1.0:
                 processed_signal = GradMultiply.apply(processed_signal, self.grad_mult)
         else:
             with torch.no_grad():  # 0 indicates frozen feature encoder
-                processed_signal = self.apply_layers(processed_signal)
+                processed_signal = self.apply_layers(input_signal)
 
         processed_signal = processed_signal.transpose(1, 2)  # B,T,C
         # Project to embedding
