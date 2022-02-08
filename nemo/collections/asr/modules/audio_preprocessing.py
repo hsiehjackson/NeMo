@@ -31,7 +31,8 @@ from nemo.core.neural_types import (
     MFCCSpectrogramType,
     NeuralType,
     SpectrogramType,
-    VoidType
+    VoidType,
+    AcousticEncodedRepresentation
 )
 from nemo.core.utils import numba_utils
 from nemo.core.utils.numba_utils import __NUMBA_MINIMUM_VERSION__
@@ -456,7 +457,7 @@ class SpectrogramAugmentation(NeuralModule):
     def output_types(self):
         """Returns definitions of module output types
         """
-        return {"augmented_spec": NeuralType(('B', 'D', 'T'), VoidType())}
+        return {"augmented_spec": NeuralType(('B', 'D', 'T'), AcousticEncodedRepresentation())}
 
     def __init__(
         self,
