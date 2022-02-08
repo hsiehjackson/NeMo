@@ -125,7 +125,7 @@ model:
 
   loss:
     _target_: nemo.collections.asr.losses.ContrastiveLoss
-    in_dim: 512
+    in_dim: ${model.encoder.d_model}
     proj_dim: *dec_out
     combine_time_steps: 1
     codebook_size: 320
