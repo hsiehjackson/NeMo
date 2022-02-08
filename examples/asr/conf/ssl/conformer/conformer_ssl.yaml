@@ -118,15 +118,15 @@ model:
     dropout_emb: 0.0 # The dropout used for embeddings
     dropout_att: 0.1 # The dropout for multi-headed attention modules
 
-  dec_out: &dec_out 128
+  dec_out: &dec_out 256
 
   decoder:
     _target_: nemo.collections.asr.modules.ConvASRDecoderReconstruction
     feat_in: ${model.encoder.d_model}
-    feat_hidden: 256
+    feat_hidden: ${model.encoder.d_model}
     feat_out: *dec_out
     stride_layers: 0
-    non_stride_layers: 2
+    non_stride_layers: 0
 
   loss:
     _target_: nemo.collections.asr.losses.ContrastiveLoss
