@@ -83,6 +83,7 @@ class SpecAugment(nn.Module, Typing):
         sh = input_spec.shape
 
         print(sh)
+        print(length)
 
         for idx in range(sh[0]):
             for i in range(self.freq_masks):
