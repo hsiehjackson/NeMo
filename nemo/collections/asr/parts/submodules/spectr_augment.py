@@ -82,9 +82,6 @@ class SpecAugment(nn.Module, Typing):
     def forward(self, input_spec, length):
         sh = input_spec.shape
 
-        print(sh)
-        print(length)
-
 
         for idx in range(sh[0]):
             print(input_spec[idx].mean(-2))
@@ -93,7 +90,6 @@ class SpecAugment(nn.Module, Typing):
 
                 w = self._rng.randint(0, self.freq_width)
 
-                print("freq", x_left, w)
 
                 input_spec[idx, x_left : x_left + w, :] = self.mask_value
 
@@ -107,14 +103,8 @@ class SpecAugment(nn.Module, Typing):
 
                 w = self._rng.randint(0, time_width)
 
-                print("time", y_left, w)
 
                 input_spec[idx, :, y_left : y_left + w] = self.mask_value
-            print(input_spec[idx].mean(-2))
-            print("---")
-
-
-        print("-----")
 
         return input_spec
 
