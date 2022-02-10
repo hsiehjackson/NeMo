@@ -84,7 +84,6 @@ class SpecAugment(nn.Module, Typing):
 
 
         for idx in range(sh[0]):
-            print(input_spec[idx].mean(-2))
             for i in range(self.freq_masks):
                 x_left = self._rng.randint(0, sh[1] - self.freq_width)
 
