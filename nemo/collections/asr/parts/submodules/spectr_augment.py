@@ -87,7 +87,7 @@ class SpecAugment(nn.Module, Typing):
 
 
         for idx in range(sh[0]):
-            print(input_spec[0].mean(-1))
+            print(input_spec[idx].mean(-1))
             for i in range(self.freq_masks):
                 x_left = self._rng.randint(0, sh[1] - self.freq_width)
 
@@ -110,7 +110,7 @@ class SpecAugment(nn.Module, Typing):
                 print("time", y_left, w)
 
                 input_spec[idx, :, y_left : y_left + w] = self.mask_value
-            print(input_spec[0].mean(-1))
+            print(input_spec[idx].mean(-1))
             print("---")
 
 
