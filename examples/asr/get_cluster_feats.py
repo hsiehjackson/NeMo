@@ -180,8 +180,6 @@ def main(cfg: FeatClusteringConfig) -> FeatClusteringConfig:
 
     device = torch.device(f'cuda:{cfg.cuda}' if cfg.cuda >= 0 else 'cpu')
 
-    set_access_cfg(cfg.access)
-
     # setup model
     if cfg.model_path is not None:
         # restore model from .nemo file path
@@ -195,6 +193,8 @@ def main(cfg: FeatClusteringConfig) -> FeatClusteringConfig:
         # restore model by name
         asr_model = ASRModel.from_pretrained(model_name=cfg.pretrained_name, map_location=device)  # type: ASRModel
         model_name = cfg.pretrained_name
+
+    set_access_cfg(cfg.access)
 
     asr_model = asr_model.eval()
 

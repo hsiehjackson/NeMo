@@ -20,7 +20,7 @@ from typing import Dict, Iterator, List, Optional, Union
 
 import torch
 
-_ACCESS_CFG = DictConfig({})
+_ACCESS_CFG = DictConfig({"access_all_intermediate": False})
 
 def set_access_cfg(cfg: 'DictConfig'):
     global _ACCESS_CFG

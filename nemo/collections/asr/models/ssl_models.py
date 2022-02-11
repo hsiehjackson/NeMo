@@ -21,7 +21,7 @@ from pytorch_lightning import Trainer
 from nemo.collections.asr.data import audio_to_text_dataset
 from nemo.collections.asr.models.asr_model import ExportableEncDecModel
 from nemo.collections.asr.parts.mixins import ASRModuleMixin
-from nemo.core.classes.mixins import AccessMixin
+from nemo.core.classes.mixins import AccessMixin, set_access_cfg
 from nemo.collections.asr.parts.preprocessing.perturb import process_augmentations
 from nemo.core.classes import ModelPT
 from nemo.core.classes.common import PretrainedModelInfo, typecheck
@@ -63,12 +63,40 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
             if "feat_in" not in self._cfg.decoder or not self._cfg.decoder.feat_in:
                 raise ValueError("param feat_in of the decoder's config is not set!")
 
-        self.decoder_ssl = SpeechEncDecSelfSupervisedModel.from_config_dict(self._cfg.decoder)
-        self.loss = SpeechEncDecSelfSupervisedModel.from_config_dict(self._cfg.loss)
+        self.decoder_losses = None
+
+        if "loss_list" in self._cfg:
+
+            self.decoder_losses = {}
+            self.loss_alphas = {}
+            self.output_from_layer = {}
+            #need to be separate for moduledict
+
+
+            for decoder_loss_name, decoder_loss_cfg in self._cfg.loss_list.items():
+
+                new_decoder_loss = {
+                    'decoder': SpeechEncDecSelfSupervisedModel.from_config_dict(decoder_loss_cfg.decoder),
+                    'loss': SpeechEncDecSelfSupervisedModel.from_config_dict(decoder_loss_cfg.loss)}
+                new_decoder_loss = nn.ModuleDict(new_decoder_loss)
+                self.decoder_losses[decoder_loss_name] = new_decoder_loss
+                self.loss_alphas[decoder_loss_name] = decoder_loss_cfg.get("loss_alpha", 1.0)
+                self.output_from_layer = decoder_loss_cfg.get("output_from_layer", None)
+
+            self.decoder_losses = nn.ModuleDict(self.decoder_losses)
+
+        else:
+            self.decoder_ssl = SpeechEncDecSelfSupervisedModel.from_config_dict(self._cfg.decoder)
+            self.loss = SpeechEncDecSelfSupervisedModel.from_config_dict(self._cfg.loss)
 
         self.spec_augmentation = SpeechEncDecSelfSupervisedModel.from_config_dict(self._cfg.spec_augment)
 
         self.feat_mode = False
+
+        if "access" in self._cfg:
+            set_access_cfg(self._cfg.access)
+
+
 
     def _setup_dataloader_from_config(self, config: Optional[Dict]):
         if 'augmentor' in config:
@@ -238,6 +266,8 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
             2) Masks applied to spectrograms of shape [B, D, T].
             3) Decoder outputs of shape [B, T, D].
         """
+        self.reset_registry()
+
         has_input_signal = input_signal is not None and input_signal_length is not None
         has_processed_signal = processed_signal is not None and processed_signal_length is not None
         if (has_input_signal ^ has_processed_signal) == False:
@@ -256,15 +286,8 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
 
         spectrograms = processed_signal.detach().clone()
 
-        #print(processed_signal.shape, processed_signal_length)
-
         if not self.feat_mode:
             processed_signal = self.spec_augmentation(input_spec=processed_signal, length=processed_signal_length)
-
-        #processed_signal, processed_signal_length = \
-        #    self.spec_augmentation(input_spec=processed_signal, length=processed_signal_length)
-
-        #print(processed_signal.shape)
 
         masked_spectrograms = processed_signal.detach()
         spec_masks = torch.logical_and(masked_spectrograms < 1e-5, masked_spectrograms > -1e-5).float()
@@ -273,19 +296,31 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
 
         encoded, encoded_len = self.encoder(audio_signal=processed_signal, length=processed_signal_length)
 
-        #print(encoded.shape, encoded_len)
-
         if (not self.feat_mode) and hasattr(self.spec_augmentation, 'backward'):
             encoded, encoded_len, masks = \
                 self.spec_augmentation.backward(input_spec=encoded, length=encoded_len)
             if self._cfg.get("spec_augment.remove_dropped", False):
                 spec_masks = masks
 
-            #print(spec_masks.shape)
-
-        #print(encoded.shape)
-
-        outputs = self.decoder_ssl(encoder_output=encoded)
+        if self.decoder_losses is None:
+            outputs = self.decoder_ssl(encoder_output=encoded)
+        else:
+            outputs = {}
+            reg = self.get_module_registry(self.encoder)
+            #print(reg.keys())
+            print("---")
+            for k, vl in reg.items():
+                print(k)
+                for v in vl:
+                    print(v.shape)
+                print()
+            print("---")
+            for dec_loss_name, dec_loss in self.decoder_losses.items():
+                if self.output_from_layer[dec_loss_name] is None:
+                    outputs[dec_loss_name] = dec_loss['decoder'](encoder_output=encoded)
+                else:
+                    outputs[dec_loss_name] = dec_loss['decoder']\
+                        (encoder_output=reg[self.output_from_layer[dec_loss_name]][-1])
 
         return spectrograms, spec_masks, outputs
 
@@ -294,10 +329,22 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
         signal, signal_len, transcript, transcript_len = batch
         spectrograms, spec_masks, outputs = self.forward(input_signal=signal, input_signal_length=signal_len)
 
-        self.loss.set_num_updates(self.trainer.global_step)
-        loss_value = self.loss(spectrograms=spectrograms, spec_masks=spec_masks, decoder_outputs=outputs)
+        if self.decoder_losses is None:
+            self.loss.set_num_updates(self.trainer.global_step)
+            loss_value = self.loss(spectrograms=spectrograms, spec_masks=spec_masks, decoder_outputs=outputs)
+            tensorboard_logs = {'train_loss': loss_value, 'learning_rate': self._optimizer.param_groups[0]['lr']}
+        else:
+            tensorboard_logs = {'learning_rate': self._optimizer.param_groups[0]['lr']}
+            loss_value = torch.Tensor([0.])
+            for dec_loss_name, dec_loss in self.decoder_losses.items():
+                cur_loss = dec_loss['loss']
+                cur_loss.set_num_updates(self.trainer.global_step)
+                cur_loss_value = cur_loss(spectrograms=spectrograms, spec_masks=spec_masks,
+                                          decoder_outputs=outputs[dec_loss_name])
+                loss_value += cur_loss_value * self.loss_alphas[dec_loss_name]
+                tensorboard_logs['train_' + dec_loss_name] = cur_loss_value
 
-        tensorboard_logs = {'train_loss': loss_value, 'learning_rate': self._optimizer.param_groups[0]['lr']}
+            tensorboard_logs['train_loss'] = loss_value
 
         return {'loss': loss_value, 'log': tensorboard_logs}
 
@@ -306,8 +353,16 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
         signal, signal_len, transcript, transcript_len = batch
         spectrograms, spec_masks, outputs = self.forward(input_signal=signal, input_signal_length=signal_len)
 
-
-        loss_value = self.loss(spectrograms=spectrograms, spec_masks=spec_masks, decoder_outputs=outputs)
+        if self.decoder_losses is None:
+            loss_value = self.loss(spectrograms=spectrograms, spec_masks=spec_masks, decoder_outputs=outputs)
+        else:
+            loss_value = torch.Tensor([0.])
+            for dec_loss_name, dec_loss in self.decoder_losses.items():
+                cur_loss = dec_loss['loss']
+                cur_loss.set_num_updates(self.trainer.global_step)
+                cur_loss_value = cur_loss(spectrograms=spectrograms, spec_masks=spec_masks,
+                                          decoder_outputs=outputs[dec_loss_name])
+                loss_value += cur_loss_value
 
         return {
             'val_loss': loss_value,
