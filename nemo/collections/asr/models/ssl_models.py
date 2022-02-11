@@ -337,8 +337,8 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
                 cur_loss.set_num_updates(self.trainer.global_step)
                 cur_loss_value = cur_loss(spectrograms=spectrograms, spec_masks=spec_masks,
                                           decoder_outputs=outputs[dec_loss_name])
-                print(dec_loss_name, cur_loss_value)
-                loss_value += cur_loss_value * self.loss_alphas[dec_loss_name]
+                print("train", dec_loss_name, cur_loss_value)
+                loss_value = loss_value + cur_loss_value * self.loss_alphas[dec_loss_name]
                 tensorboard_logs['train_' + dec_loss_name] = cur_loss_value
 
             tensorboard_logs['train_loss'] = loss_value
@@ -353,13 +353,14 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
         if self.decoder_losses is None:
             loss_value = self.loss(spectrograms=spectrograms, spec_masks=spec_masks, decoder_outputs=outputs)
         else:
-            loss_value = torch.Tensor([0.])
+            loss_value = signal.new_zeros(1)
             for dec_loss_name, dec_loss in self.decoder_losses.items():
                 cur_loss = dec_loss['loss']
                 cur_loss.set_num_updates(self.trainer.global_step)
                 cur_loss_value = cur_loss(spectrograms=spectrograms, spec_masks=spec_masks,
                                           decoder_outputs=outputs[dec_loss_name])
-                loss_value += cur_loss_value
+                print("val", dec_loss_name, cur_loss_value)
+                loss_value = loss_value + cur_loss_value * self.loss_alphas[dec_loss_name]
 
         return {
             'val_loss': loss_value,
