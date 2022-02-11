@@ -74,7 +74,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
                 new_decoder_loss = nn.ModuleDict(new_decoder_loss)
                 self.decoder_losses[decoder_loss_name] = new_decoder_loss
                 self.loss_alphas[decoder_loss_name] = decoder_loss_cfg.get("loss_alpha", 1.0)
-                self.output_from_layer = decoder_loss_cfg.get("output_from_layer", None)
+                self.output_from_layer[decoder_loss_name] = decoder_loss_cfg.get("output_from_layer", None)
 
             self.decoder_losses = nn.ModuleDict(self.decoder_losses)
 

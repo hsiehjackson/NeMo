@@ -124,7 +124,7 @@ model:
         proj_dim: *dec_out
         combine_time_steps: 4
         codebook_size: 1200
-      #output_from_layer:
+      output_from_layer: "layers.8"
     final:
       decoder:
         _target_: nemo.collections.asr.modules.ConvASRDecoderReconstruction
