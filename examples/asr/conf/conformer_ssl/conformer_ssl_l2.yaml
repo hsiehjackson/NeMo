@@ -106,20 +106,40 @@ model:
 
   dec_out: &dec_out 128
 
-  decoder:
-    _target_: nemo.collections.asr.modules.ConvASRDecoderReconstruction
-    feat_in: ${model.encoder.d_model}
-    feat_hidden: 128
-    feat_out: *dec_out
-    stride_layers: 0
-    non_stride_layers: 0
+  access:
+    access_all_intermediate: true
 
-  loss:
-    _target_: nemo.collections.asr.losses.ContrastiveLoss
-    in_dim: *n_mels
-    proj_dim: *dec_out
-    combine_time_steps: 4
-    codebook_size: 1200
+  loss_list:
+    l9:
+      decoder:
+        _target_: nemo.collections.asr.modules.ConvASRDecoderReconstruction
+        feat_in: ${model.encoder.d_model}
+        feat_hidden: 128
+        feat_out: *dec_out
+        stride_layers: 0
+        non_stride_layers: 0
+      loss:
+        _target_: nemo.collections.asr.losses.ContrastiveLoss
+        in_dim: *n_mels
+        proj_dim: *dec_out
+        combine_time_steps: 4
+        codebook_size: 1200
+      #output_from_layer:
+    final:
+      decoder:
+        _target_: nemo.collections.asr.modules.ConvASRDecoderReconstruction
+        feat_in: ${model.encoder.d_model}
+        feat_hidden: 128
+        feat_out: *dec_out
+        stride_layers: 0
+        non_stride_layers: 0
+      loss:
+        _target_: nemo.collections.asr.losses.ContrastiveLoss
+        in_dim: *n_mels
+        proj_dim: *dec_out
+        combine_time_steps: 4
+        codebook_size: 1200
+
 
   optim:
     name: adamw
