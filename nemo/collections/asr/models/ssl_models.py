@@ -331,7 +331,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
             tensorboard_logs = {'train_loss': loss_value, 'learning_rate': self._optimizer.param_groups[0]['lr']}
         else:
             tensorboard_logs = {'learning_rate': self._optimizer.param_groups[0]['lr']}
-            loss_value = torch.Tensor([0.])
+            loss_value = signal.new_zeros(1)
             for dec_loss_name, dec_loss in self.decoder_losses.items():
                 cur_loss = dec_loss['loss']
                 cur_loss.set_num_updates(self.trainer.global_step)
