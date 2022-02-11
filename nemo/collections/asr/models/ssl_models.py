@@ -15,6 +15,7 @@ from math import ceil
 from typing import Dict, Optional, Union
 
 import torch
+import torch.nn as nn
 from omegaconf import DictConfig, open_dict
 from pytorch_lightning import Trainer
 
