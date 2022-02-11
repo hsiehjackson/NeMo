@@ -55,14 +55,6 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
         self.preprocessor = SpeechEncDecSelfSupervisedModel.from_config_dict(self._cfg.preprocessor)
         self.encoder = SpeechEncDecSelfSupervisedModel.from_config_dict(self._cfg.encoder)
 
-        with open_dict(self._cfg):
-            if "feat_in" not in self._cfg.decoder or (
-                not self._cfg.decoder.feat_in and hasattr(self.encoder, '_feat_out')
-            ):
-                self._cfg.decoder.feat_in = self.encoder._feat_out
-            if "feat_in" not in self._cfg.decoder or not self._cfg.decoder.feat_in:
-                raise ValueError("param feat_in of the decoder's config is not set!")
-
         self.decoder_losses = None
 
         if "loss_list" in self._cfg:
