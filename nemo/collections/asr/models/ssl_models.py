@@ -337,6 +337,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
                 cur_loss.set_num_updates(self.trainer.global_step)
                 cur_loss_value = cur_loss(spectrograms=spectrograms, spec_masks=spec_masks,
                                           decoder_outputs=outputs[dec_loss_name])
+                print(dec_loss_name, cur_loss_value)
                 loss_value += cur_loss_value * self.loss_alphas[dec_loss_name]
                 tensorboard_logs['train_' + dec_loss_name] = cur_loss_value
 
