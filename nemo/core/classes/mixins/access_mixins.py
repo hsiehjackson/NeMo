@@ -86,8 +86,9 @@ class AccessMixin(ABC):
             del self._registry[:]
             self._registry = []
             #self._registry.clear()
-        for _, m in self.named_modules():
-            if hasattr(m, '_registry') and len(m._registry) > 0:
+        for n, m in self.named_modules():
+            if hasattr(m, "reset_registry"):
+                print(n, "rec")
                 m.reset_registry()
 
     @property

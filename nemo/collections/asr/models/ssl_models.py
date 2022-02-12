@@ -260,11 +260,13 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
             3) Decoder outputs of shape [B, T, D].
         """
         print()
+        print("before")
         reg = self.get_module_registry(self.encoder)
         print(reg.keys())
 
         self.reset_registry()
 
+        print("after")
         reg = self.get_module_registry(self.encoder)
         print(reg.keys())
         print()
