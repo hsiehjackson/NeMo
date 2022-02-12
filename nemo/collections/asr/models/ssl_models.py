@@ -259,7 +259,15 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
             2) Masks applied to spectrograms of shape [B, D, T].
             3) Decoder outputs of shape [B, T, D].
         """
+        print()
+        reg = self.get_module_registry(self.encoder)
+        print(reg.keys())
+
         self.reset_registry()
+
+        reg = self.get_module_registry(self.encoder)
+        print(reg.keys())
+        print()
 
         has_input_signal = input_signal is not None and input_signal_length is not None
         has_processed_signal = processed_signal is not None and processed_signal_length is not None
