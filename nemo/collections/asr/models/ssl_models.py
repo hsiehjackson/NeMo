@@ -259,17 +259,17 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
             2) Masks applied to spectrograms of shape [B, D, T].
             3) Decoder outputs of shape [B, T, D].
         """
-        print()
-        print("before")
-        reg = self.get_module_registry(self.encoder)
-        print(reg.keys())
+        #print()
+        #print("before")
+        #reg = self.get_module_registry(self.encoder)
+        #print(reg.keys())
 
         self.reset_registry(self.encoder)
 
-        print("after")
-        reg = self.get_module_registry(self.encoder)
-        print(reg.keys())
-        print()
+        #print("after")
+        #reg = self.get_module_registry(self.encoder)
+        #print(reg.keys())
+        #print()
 
         has_input_signal = input_signal is not None and input_signal_length is not None
         has_processed_signal = processed_signal is not None and processed_signal_length is not None
@@ -332,6 +332,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
 
     # PTL-specific methods
     def training_step(self, batch, batch_nb):
+        print("train step start", batch_nb)
         signal, signal_len, transcript, transcript_len = batch
         spectrograms, spec_masks, outputs = self.forward(input_signal=signal, input_signal_length=signal_len)
 
@@ -352,11 +353,12 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
                 tensorboard_logs['train_' + dec_loss_name] = cur_loss_value
 
             tensorboard_logs['train_loss'] = loss_value
+        print("train step end", batch_nb)
 
         return {'loss': loss_value, 'log': tensorboard_logs}
 
     def validation_step(self, batch, batch_idx, dataloader_idx=0):
-
+        print("val step start", batch_idx)
         signal, signal_len, transcript, transcript_len = batch
         spectrograms, spec_masks, outputs = self.forward(input_signal=signal, input_signal_length=signal_len)
 
@@ -371,7 +373,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
                                           decoder_outputs=outputs[dec_loss_name])
                 print("val", dec_loss_name, cur_loss_value)
                 loss_value = loss_value + cur_loss_value * self.loss_alphas[dec_loss_name]
-
+        print("val step end", batch_idx)
         return {
             'val_loss': loss_value,
         }
