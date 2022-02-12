@@ -89,6 +89,7 @@ class AccessMixin(ABC):
             if hasattr(m, "_registry") and len(m._registry) > 0:
                 print(n, len(m._registry))
                 self.reset_registry(m)
+                print(n, len(m._registry))
 
     @property
     def access_cfg(self):
