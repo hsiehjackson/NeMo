@@ -264,7 +264,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
         reg = self.get_module_registry(self.encoder)
         print(reg.keys())
 
-        self.encoder.reset_registry()
+        self.reset_registry(self.encoder)
 
         print("after")
         reg = self.get_module_registry(self.encoder)
