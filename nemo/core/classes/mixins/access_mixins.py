@@ -86,7 +86,7 @@ class AccessMixin(ABC):
             module._registry.clear()
         for n, m in module.named_modules():
             if hasattr(m, "_registry") and len(m._registry) > 0:
-                m.reset_registry()
+                self.reset_registry(m)
 
     @property
     def access_cfg(self):
