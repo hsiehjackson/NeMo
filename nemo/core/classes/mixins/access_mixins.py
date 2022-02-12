@@ -74,7 +74,7 @@ class AccessMixin(ABC):
         """
         module_registry = {}
         for name, m in module.named_modules():
-            if hasattr(m, '_registry'):
+            if hasattr(m, '_registry') and len(m._registry) > 0:
                 module_registry[name] = m._registry
         return module_registry
 
@@ -86,6 +86,7 @@ class AccessMixin(ABC):
             module._registry.clear()
         for n, m in module.named_modules():
             if hasattr(m, "_registry") and len(m._registry) > 0:
+                print(n, len(m._registry))
                 self.reset_registry(m)
 
     @property
