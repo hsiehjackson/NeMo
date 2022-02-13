@@ -309,7 +309,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
             outputs = self.decoder_ssl(encoder_output=encoded)
         else:
             outputs = {}
-            reg = self.get_module_registry(self.encoder)
+
             #print(reg.keys())
 
             for dec_loss_name, dec_loss in self.decoder_losses.items():
@@ -320,6 +320,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
                         (encoder_output=reg[self.output_from_layer[dec_loss_name]][-1].transpose(-2, -1))
 
         # """
+        reg = self.get_module_registry(self.encoder)
         print("---1s")
         for k, vl in reg.items():
             print(k)
@@ -333,6 +334,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
         self.reset_registry(self.encoder)
 
         #"""
+        reg = self.get_module_registry(self.encoder)
         print("---2s")
         for k, vl in reg.items():
             print(k)
