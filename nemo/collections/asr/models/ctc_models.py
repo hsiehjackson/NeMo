@@ -576,10 +576,25 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
                 input_signal=input_signal, length=input_signal_length,
             )
 
+        print("after prep")
+        print(processed_signal.shape)
+        print(processed_signal.mean(-2))
+        print("--")
+
         if self.spec_augmentation is not None and self.training:
             processed_signal = self.spec_augmentation(input_spec=processed_signal, length=processed_signal_length)
 
+        print("after spec")
+        print(processed_signal.shape)
+        print(processed_signal.mean(-2))
+        print("--")
+
         encoded, encoded_len = self.encoder(audio_signal=processed_signal, length=processed_signal_length)
+
+        print("after enc")
+        print(encoded.shape)
+        print(encoded.mean(-2))
+        print("--")
 
         log_probs = self.decoder(encoder_output=encoded)
         greedy_predictions = log_probs.argmax(dim=-1, keepdim=False)
