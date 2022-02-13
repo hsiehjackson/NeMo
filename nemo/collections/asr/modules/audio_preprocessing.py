@@ -669,7 +669,7 @@ class MaskedPatchAugmentation(NeuralModule):
                 augmented_spec[idx, :, mp * self.patch_size: (mp + 1) * self.patch_size] = 0.
 
         if self.spec_augment is not None:
-            augmented_spec = self.spec_augment(augmented_spec)
+            augmented_spec = self.spec_augment(input_spec=augmented_spec, length=length)
 
         return augmented_spec
 
