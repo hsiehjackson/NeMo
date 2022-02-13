@@ -576,9 +576,11 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
                 input_signal=input_signal, length=input_signal_length,
             )
 
+        torch.set_printoptions(threshold=10_000)
+
         print("after prep")
         print(processed_signal.shape)
-        print(processed_signal.mean(-2))
+        print(processed_signal[0].mean(-2))
         print("--")
 
         if self.spec_augmentation is not None and self.training:
@@ -586,14 +588,14 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
 
         print("after spec")
         print(processed_signal.shape)
-        print(processed_signal.mean(-2))
+        print(processed_signal[0].mean(-2))
         print("--")
 
         encoded, encoded_len = self.encoder(audio_signal=processed_signal, length=processed_signal_length)
 
         print("after enc")
         print(encoded.shape)
-        print(encoded.mean(-2))
+        print(encoded[0].mean(-2))
         print("--")
 
         log_probs = self.decoder(encoder_output=encoded)
