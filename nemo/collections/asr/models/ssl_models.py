@@ -235,7 +235,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
             "outputs": NeuralType(('B', 'T', 'D'), VoidType()),
         }
 
-    @typecheck()
+    #@typecheck()
     def forward(
         self, input_signal=None, input_signal_length=None, processed_signal=None, processed_signal_length=None
     ):

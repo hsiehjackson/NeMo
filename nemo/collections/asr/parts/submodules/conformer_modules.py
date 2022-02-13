@@ -125,6 +125,7 @@ class ConformerLayer(torch.nn.Module, AccessMixin):
         x = self.norm_out(x)
 
         if self.access_cfg.get('access_all_intermediate', False):
+            print("registering", x.shape)
             self.register_accessible_tensor(tensor=x)
 
         return x
