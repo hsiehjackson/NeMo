@@ -352,7 +352,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
                                           decoder_outputs=outputs[dec_loss_name])
                 print("train", dec_loss_name, cur_loss_value)
                 loss_value = loss_value + cur_loss_value * self.loss_alphas[dec_loss_name]
-                tensorboard_logs['train_' + dec_loss_name] = cur_loss_value
+                #tensorboard_logs['train_' + dec_loss_name] = cur_loss_value
 
             tensorboard_logs['train_loss'] = loss_value
         print("train step end", batch_nb)
