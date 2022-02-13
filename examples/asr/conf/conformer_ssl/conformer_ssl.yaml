@@ -114,6 +114,9 @@ model:
     stride_layers: 0
     non_stride_layers: 0
 
+  access:
+    access_all_intermediate: true
+
   loss:
     _target_: nemo.collections.asr.losses.ContrastiveLoss
     in_dim: *n_mels
