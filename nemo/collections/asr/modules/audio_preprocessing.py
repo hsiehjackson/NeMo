@@ -471,7 +471,7 @@ class SpectrogramAugmentation(NeuralModule):
         same_time_masks=False,
         rng=None,
         mask_value=0.0,
-        use_numba_spec_augment: bool = True,
+        use_numba_spec_augment: bool = False,
     ):
         super().__init__()
 
