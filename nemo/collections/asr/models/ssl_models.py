@@ -311,16 +311,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
             outputs = {}
             reg = self.get_module_registry(self.encoder)
             #print(reg.keys())
-            """
-            print("---")
-            for k, vl in reg.items():
-                print(k)
-                for v in vl:
-                    print(v.shape)
-                print()
-            print("---")
-            print(encoded.shape)
-            """
+
             for dec_loss_name, dec_loss in self.decoder_losses.items():
                 if self.output_from_layer[dec_loss_name] is None:
                     outputs[dec_loss_name] = dec_loss['decoder'](encoder_output=encoded)
@@ -328,7 +319,29 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
                     outputs[dec_loss_name] = dec_loss['decoder']\
                         (encoder_output=reg[self.output_from_layer[dec_loss_name]][-1].transpose(-2, -1))
 
+        # """
+        print("---1s")
+        for k, vl in reg.items():
+            print(k)
+            for v in vl:
+                print(v.shape)
+            print()
+        print("---1e")
+        print(encoded.shape)
+        # """
+
         self.reset_registry(self.encoder)
+
+        #"""
+        print("---2s")
+        for k, vl in reg.items():
+            print(k)
+            for v in vl:
+                print(v.shape)
+            print()
+        print("---2e")
+        print(encoded.shape)
+        #"""
 
         return spectrograms, spec_masks, outputs
 
