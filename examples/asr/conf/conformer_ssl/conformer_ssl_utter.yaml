@@ -66,11 +66,11 @@ model:
     pad_value: 0.0
 
   spec_augment:
-    _target_: nemo.collections.asr.modules.SpectrogramAugmentation
+    _target_: nemo.collections.asr.modules.MaskedPatchAugmentation
     freq_masks: 4
-    time_masks: 10
     freq_width: 27
-    time_width: 0.1
+    patch_size: 64
+    mask_patches: 10
 
   encoder:
     _target_: nemo.collections.asr.modules.ConformerEncoder
@@ -123,6 +123,7 @@ model:
     proj_dim: *dec_out
     combine_time_steps: 4
     quantized_targets: false
+    sample_from_same_utterance_only: true
 
   optim:
     name: adamw
