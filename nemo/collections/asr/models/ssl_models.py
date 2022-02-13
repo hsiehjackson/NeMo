@@ -235,7 +235,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
             "outputs": NeuralType(('B', 'T', 'D'), VoidType()),
         }
 
-    #@typecheck()
+    @typecheck()
     def forward(
         self, input_signal=None, input_signal_length=None, processed_signal=None, processed_signal_length=None
     ):
@@ -328,7 +328,6 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
                 print(v.shape)
             print()
         print("---1e")
-        print(encoded.shape)
         # """
 
         self.reset_registry(self.encoder)
@@ -342,7 +341,6 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
                 print(v.shape)
             print()
         print("---2e")
-        print(encoded.shape)
         #"""
 
         return spectrograms, spec_masks, outputs

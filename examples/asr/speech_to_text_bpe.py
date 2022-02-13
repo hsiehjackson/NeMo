@@ -84,7 +84,14 @@ def main(cfg):
     asr_model.maybe_init_from_pretrained_checkpoint(cfg)
 
     if cfg.model.get("freeze_encoder", False):
-        asr_model.encoder.freeze()
+        for param in asr_model.encoder.parameters():
+            print("freezing", param.shape)
+            param.requires_grad = False
+
+    if cfg.model.get("freeze_pre_encoder", False):
+        for param in asr_model.encoder.pre_encode.parameters():
+            print("freezing", param.shape)
+            param.requires_grad = False
 
     trainer.fit(asr_model)
 
