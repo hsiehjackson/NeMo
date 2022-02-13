@@ -155,7 +155,8 @@ class ContrastiveLoss(Loss):
             out_masked_only = out_masked_only.reshape(bs, -1, out_masked_only.shape[-1])
             targets_masked_only = targets_masked_only.reshape(bs, -1, targets_masked_only.shape[-1])
 
-
+            print(masks.shape)
+            print(out_masked_only.shape)
             # BxT'xC
             # number of masked time steps to predict (T')
             # -> T'xBxC
