@@ -115,7 +115,7 @@ model:
     non_stride_layers: 0
 
   access:
-    access_all_intermediate: true
+    access_all_intermediate: false
 
   loss:
     _target_: nemo.collections.asr.losses.ContrastiveLoss
