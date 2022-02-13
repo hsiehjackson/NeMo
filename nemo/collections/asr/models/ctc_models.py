@@ -578,25 +578,25 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
 
         torch.set_printoptions(threshold=10_000)
 
-        print("after prep")
-        print(processed_signal.shape)
-        print(processed_signal[0].mean(-2))
-        print("--")
+        #print("after prep")
+        #print(processed_signal.shape)
+        #print(processed_signal[0].mean(-2))
+        #print("--")
 
         if self.spec_augmentation is not None and self.training:
             processed_signal = self.spec_augmentation(input_spec=processed_signal, length=processed_signal_length)
 
-        print("after spec")
-        print(processed_signal.shape)
-        print(processed_signal[0].mean(-2))
-        print("--")
+        #print("after spec")
+        #print(processed_signal.shape)
+        #print(processed_signal[0].mean(-2))
+        #print("--")
 
         encoded, encoded_len = self.encoder(audio_signal=processed_signal, length=processed_signal_length)
 
-        print("after enc")
-        print(encoded.shape)
-        print(encoded[0].mean(-2))
-        print("--")
+        #print("after enc")
+        #print(encoded.shape)
+        #print(encoded[0].mean(-2))
+        #print("--")
 
         log_probs = self.decoder(encoder_output=encoded)
         greedy_predictions = log_probs.argmax(dim=-1, keepdim=False)
