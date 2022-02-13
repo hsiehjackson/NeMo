@@ -200,7 +200,7 @@ class ConformerEncoder(NeuralModule, Exportable):
         else:
             self.xscale = None
 
-
+        self.linear = nn.Linear(feat_in, d_model)
 
         if not untie_biases and self_attention_model == "rel_pos":
             d_head = d_model // n_heads
@@ -285,6 +285,8 @@ class ConformerEncoder(NeuralModule, Exportable):
             )
 
         audio_signal = torch.transpose(audio_signal, 1, 2)
+
+        audio_signal = self.linear(audio_signal)
 
         audio_signal, pos_emb = self.pos_enc(audio_signal)
         # adjust size
