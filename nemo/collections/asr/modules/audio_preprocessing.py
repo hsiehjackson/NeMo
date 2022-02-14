@@ -657,6 +657,7 @@ class MaskedPatchAugmentation(NeuralModule):
         mask_patches = self.mask_patches
         if min_len < self.patch_size * self.mask_patches:
             mask_patches = min_len // self.patch_size
+        print(augmented_spec.shape)
         print(length)
         print(mask_patches, self.patch_size)
 
@@ -670,7 +671,9 @@ class MaskedPatchAugmentation(NeuralModule):
             for mp in masked_patches:
                 augmented_spec[idx, :, mp * self.patch_size: (mp + 1) * self.patch_size] = 0.
 
-            #print(augmented_spec[idx].mean(-2))
+            tr = augmented_spec.transpose(-2, -1)
+            time_steps = tr.shape[-2]
+            print(tr[idx].reshape(time_steps // 4, -1).mean(-2))
 
         if self.spec_augment is not None:
             augmented_spec = self.spec_augment(input_spec=augmented_spec, length=length)
