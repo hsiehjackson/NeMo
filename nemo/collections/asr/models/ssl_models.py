@@ -299,6 +299,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
         else:
             outputs = {}
 
+            reg = self.get_module_registry(self.encoder)
             #print(reg.keys())
 
             for dec_loss_name, dec_loss in self.decoder_losses.items():
