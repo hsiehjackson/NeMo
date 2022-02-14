@@ -620,17 +620,14 @@ class ModelPT(LightningModule, Model):
             along with merged logs from all data loaders.
         """
 
-        print("val epoch end start")
 
         # Case where we dont provide data loaders
         if outputs is not None and len(outputs) == 0:
             return {}
 
-        print(1)
 
         # Case where we provide exactly 1 data loader
         if type(outputs[0]) == dict:
-            print(2)
             output_dict = self.multi_validation_epoch_end(outputs, dataloader_idx=0)
 
             if output_dict is not None and 'log' in output_dict:
@@ -639,12 +636,10 @@ class ModelPT(LightningModule, Model):
             return output_dict
 
         else:  # Case where we provide more than 1 data loader
-            print(3)
             output_dict = {'log': {}}
 
             # The output is a list of list of dicts, outer list corresponds to dataloader idx
             for dataloader_idx, val_outputs in enumerate(outputs):
-                print(4, dataloader_idx)
                 # Get prefix and dispatch call to multi epoch end
                 dataloader_prefix = self.get_validation_dataloader_prefix(dataloader_idx)
                 dataloader_logs = self.multi_validation_epoch_end(val_outputs, dataloader_idx=dataloader_idx)
@@ -693,11 +688,9 @@ class ModelPT(LightningModule, Model):
                         new_k = dataloader_prefix + k
                         output_dict[new_k] = v
 
-            print(5)
             if 'log' in output_dict:
                 self.log_dict(output_dict.pop('log'), on_epoch=True)
 
-            print(6)
             # return everything else
             return output_dict
 
