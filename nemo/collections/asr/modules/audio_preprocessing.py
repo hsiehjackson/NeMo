@@ -673,7 +673,8 @@ class MaskedPatchAugmentation(NeuralModule):
 
             tr = augmented_spec.transpose(-2, -1)
             time_steps = tr.shape[-2]
-            print(tr[idx].reshape(time_steps // 4, -1).mean(-1))
+            cur_len //= 4
+            print(tr[idx].reshape(time_steps // 4, -1).mean(-1)[:cur_len])
 
         if self.spec_augment is not None:
             augmented_spec = self.spec_augment(input_spec=augmented_spec, length=length)
