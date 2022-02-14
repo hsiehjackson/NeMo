@@ -300,7 +300,6 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
             outputs = {}
 
             reg = self.get_module_registry(self.encoder)
-            #print(reg.keys())
 
             for dec_loss_name, dec_loss in self.decoder_losses.items():
                 if self.output_from_layer[dec_loss_name] is None:
@@ -315,7 +314,6 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
 
     # PTL-specific methods
     def training_step(self, batch, batch_nb):
-        #print("train step start", batch_nb)
         signal, signal_len, transcript, transcript_len = batch
         spectrograms, spec_masks, outputs = self.forward(input_signal=signal, input_signal_length=signal_len)
 
@@ -331,17 +329,14 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
                 cur_loss.set_num_updates(self.trainer.global_step)
                 cur_loss_value = cur_loss(spectrograms=spectrograms, spec_masks=spec_masks,
                                           decoder_outputs=outputs[dec_loss_name])
-                #print("train", dec_loss_name, cur_loss_value)
                 loss_value = loss_value + cur_loss_value * self.loss_alphas[dec_loss_name]
-                #tensorboard_logs['train_' + dec_loss_name] = cur_loss_value
+                tensorboard_logs['train_' + dec_loss_name] = cur_loss_value
 
             tensorboard_logs['train_loss'] = loss_value
-        #print("train step end", batch_nb)
 
         return {'loss': loss_value, 'log': tensorboard_logs}
 
     def validation_step(self, batch, batch_idx, dataloader_idx=0):
-        #print("val step start", batch_idx)
         signal, signal_len, transcript, transcript_len = batch
         spectrograms, spec_masks, outputs = self.forward(input_signal=signal, input_signal_length=signal_len)
 
@@ -354,9 +349,8 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
                 cur_loss.set_num_updates(self.trainer.global_step)
                 cur_loss_value = cur_loss(spectrograms=spectrograms, spec_masks=spec_masks,
                                           decoder_outputs=outputs[dec_loss_name])
-                #print("val", dec_loss_name, cur_loss_value)
                 loss_value = loss_value + cur_loss_value * self.loss_alphas[dec_loss_name]
-        #print("val step end", batch_idx)
+
         return {
             'val_loss': loss_value,
         }
