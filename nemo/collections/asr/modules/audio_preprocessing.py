@@ -671,10 +671,10 @@ class MaskedPatchAugmentation(NeuralModule):
             for mp in masked_patches:
                 augmented_spec[idx, :, mp * self.patch_size: (mp + 1) * self.patch_size] = 0.
 
-            tr = augmented_spec.transpose(-2, -1)
+            tr = augmented_spec.detach().clone().transpose(-2, -1)
             time_steps = tr.shape[-2]
             cur_len //= 4
-            print(tr[idx].reshape(time_steps // 4, -1).mean(-1)[:cur_len])
+            print((tr[idx].reshape(time_steps // 4, -1).mean(-1)[:cur_len] == 0.).sum())
 
         if self.spec_augment is not None:
             augmented_spec = self.spec_augment(input_spec=augmented_spec, length=length)
