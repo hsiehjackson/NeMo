@@ -259,17 +259,8 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
             2) Masks applied to spectrograms of shape [B, D, T].
             3) Decoder outputs of shape [B, T, D].
         """
-        #print()
-        #print("before")
-        #reg = self.get_module_registry(self.encoder)
-        #print(reg.keys())
 
         self.reset_registry(self.encoder)
-
-        #print("after")
-        #reg = self.get_module_registry(self.encoder)
-        #print(reg.keys())
-        #print()
 
         has_input_signal = input_signal is not None and input_signal_length is not None
         has_processed_signal = processed_signal is not None and processed_signal_length is not None
@@ -278,8 +269,6 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
                 f"{self} Arguments ``input_signal`` and ``input_signal_length`` are mutually exclusive "
                 " with ``processed_signal`` and ``processed_signal_len`` arguments."
             )
-
-        #print(input_signal.shape, input_signal_length)
 
         if not has_processed_signal:
             input_signal_length = torch.clamp(input_signal_length, min=4000)
@@ -319,29 +308,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
                     outputs[dec_loss_name] = dec_loss['decoder']\
                         (encoder_output=reg[self.output_from_layer[dec_loss_name]][-1].transpose(-2, -1))
 
-        """
-        reg = self.get_module_registry(self.encoder)
-        print("---1s")
-        for k, vl in reg.items():
-            print(k)
-            for v in vl:
-                print(v.shape)
-            print()
-        print("---1e")
-        """
-
         self.reset_registry(self.encoder)
-
-        """
-        reg = self.get_module_registry(self.encoder)
-        print("---2s")
-        for k, vl in reg.items():
-            print(k)
-            for v in vl:
-                print(v.shape)
-            print()
-        print("---2e")
-        """
 
         return spectrograms, spec_masks, outputs
 
