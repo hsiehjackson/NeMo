@@ -152,8 +152,8 @@ class ContrastiveLoss(Loss):
             print(masks.shape)
             masks = masks.mean(-1) > self.mask_threshold
             print(masks.shape)
-            for i in range(5):
-                print("m1:", i, masks[i])
+            #for i in range(5):
+            #    print("m1:", i, masks[i])
             print(masks.sum(-1))
             out_masked_only = decoder_outputs[masks]
             targets_masked_only = targets[masks]
