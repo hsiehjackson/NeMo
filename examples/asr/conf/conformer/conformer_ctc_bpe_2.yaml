@@ -114,6 +114,7 @@ model:
     time_masks: 10 # set to zero to disable it
     freq_width: 128
     time_width: 0.05
+    mask_value: 1.0
 
   encoder:
     _target_: nemo.collections.asr.modules.ConformerEncoder
