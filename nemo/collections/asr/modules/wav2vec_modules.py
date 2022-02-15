@@ -150,12 +150,14 @@ class ConvFeatureEncoder(NeuralModule):
             )
             in_d = dim
 
+
         # Model Layers
         final_conv_dim = self.layer_cfg[-1]["emb_dim"]  # Select last conv output layer dimension
+        self.layer_norm = nn.LayerNorm(final_conv_dim)
         self.post_extract_proj = (  # To project feature encodings to transformer
             nn.Linear(final_conv_dim, embedding_dim) if final_conv_dim != embedding_dim else None
         )
-        self.layer_norm = nn.LayerNorm(embedding_dim)
+
 
     def apply_layers(self, x):
         for conv in self.conv_layers:
@@ -187,13 +189,14 @@ class ConvFeatureEncoder(NeuralModule):
                 processed_signal = self.apply_layers(processed_signal)
 
         processed_signal = processed_signal.transpose(1, 2)  # B,T,C
-        # Project to embedding
-        if self.post_extract_proj is not None:
-            processed_signal = self.post_extract_proj(processed_signal)
 
         # Adding normalization for output
         if self.mode == "layer_norm":
             processed_signal = self.layer_norm(processed_signal)
+
+        # Project to embedding
+        if self.post_extract_proj is not None:
+            processed_signal = self.post_extract_proj(processed_signal)
 
         processed_signal = processed_signal.transpose(1, 2)  # B,C,T
 
