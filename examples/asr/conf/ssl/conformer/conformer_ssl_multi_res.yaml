@@ -147,20 +147,20 @@ model:
         quantized_targets: false
         sample_from_same_utterance_only: true
 
-    c16:
+    c2:
       decoder:
         _target_: nemo.collections.asr.modules.ConvASRDecoderReconstruction
         feat_in: ${model.encoder.d_model}
         feat_hidden: 128
         feat_out: *dec_out
-        stride_layers: 2
+        stride_layers: 1
         non_stride_layers: 0
-        stride_transpose: false
+        stride_transpose: true
       loss:
         _target_: nemo.collections.asr.losses.ContrastiveLoss
         in_dim: *n_mels
         proj_dim: *dec_out
-        combine_time_steps: 16
+        combine_time_steps: 2
         quantized_targets: false
         sample_from_same_utterance_only: true
 
