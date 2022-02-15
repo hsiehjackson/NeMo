@@ -116,6 +116,8 @@ model:
 
   access:
     access_all_intermediate: true
+    detach: false
+    convert_to_cpu: false
 
   loss_list:
     l9:
