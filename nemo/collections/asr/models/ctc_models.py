@@ -304,7 +304,7 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
             if mode is True:
                 self.encoder.unfreeze()
                 self.decoder.unfreeze()
-            logging.set_verbosity(logging_level)
+            #logging.set_verbosity(logging_level)
         return hypotheses
 
     def change_vocabulary(self, new_vocabulary: List[str]):
