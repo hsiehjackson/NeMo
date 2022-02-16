@@ -246,6 +246,7 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
         device = next(self.parameters()).device
         #dither_value = self.preprocessor.featurizer.dither
         #pad_to_value = self.preprocessor.featurizer.pad_to
+        logging_level = logging.get_verbosity()
 
         try:
             #self.preprocessor.featurizer.dither = 0.0
@@ -253,9 +254,8 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
             # Switch model to evaluation mode
             self.eval()
             # Freeze the encoder and decoder modules
-            self.encoder.freeze()
-            self.decoder.freeze()
-            logging_level = logging.get_verbosity()
+            #self.encoder.freeze()
+            #self.decoder.freeze()
             logging.set_verbosity(logging.WARNING)
             # Work in tmp directory - will store manifest file there
             with tempfile.TemporaryDirectory() as tmpdir:
@@ -301,10 +301,10 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
             self.train(mode=mode)
             #self.preprocessor.featurizer.dither = dither_value
             #self.preprocessor.featurizer.pad_to = pad_to_value
-            if mode is True:
-                self.encoder.unfreeze()
-                self.decoder.unfreeze()
-            #logging.set_verbosity(logging_level)
+            #if mode is True:
+            #    self.encoder.unfreeze()
+            #    self.decoder.unfreeze()
+            logging.set_verbosity(logging_level)
         return hypotheses
 
     def change_vocabulary(self, new_vocabulary: List[str]):
