@@ -694,7 +694,6 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
         batch_size = min(config['batch_size'], len(config['paths2audio_files']))
         dl_config = {
             'manifest_filepath': os.path.join(config['temp_dir'], 'manifest.json'),
-            'sample_rate': self.preprocessor._sample_rate,
             'labels': self.decoder.vocabulary,
             'batch_size': batch_size,
             'trim_silence': False,
@@ -702,6 +701,9 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
             'num_workers': config.get('num_workers', min(batch_size, os.cpu_count() - 1)),
             'pin_memory': True,
         }
+        if hasattr(self.preprocessor, "_sample_rate"):
+            dl_config['sample_rate'] = self.preprocessor._sample_rate
+
 
         temporary_datalayer = self._setup_dataloader_from_config(config=DictConfig(dl_config))
         return temporary_datalayer
