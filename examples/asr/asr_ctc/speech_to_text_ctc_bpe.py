@@ -83,6 +83,16 @@ def main(cfg):
     # Initialize the weights of the model from another model, if provided via config
     asr_model.maybe_init_from_pretrained_checkpoint(cfg)
 
+    if cfg.model.get("freeze_encoder", False):
+        for param in asr_model.encoder.parameters():
+            print("freezing", param.shape)
+            param.requires_grad = False
+
+    if cfg.model.get("freeze_pre_encoder", False):
+        for param in asr_model.encoder.pre_encode.parameters():
+            print("freezing", param.shape)
+            param.requires_grad = False
+
     trainer.fit(asr_model)
 
     if hasattr(cfg.model, 'test_ds') and cfg.model.test_ds.manifest_filepath is not None:
