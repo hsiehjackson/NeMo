@@ -244,12 +244,12 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
         # Model's mode and device
         mode = self.training
         device = next(self.parameters()).device
-        dither_value = self.preprocessor.featurizer.dither
-        pad_to_value = self.preprocessor.featurizer.pad_to
+        #dither_value = self.preprocessor.featurizer.dither
+        #pad_to_value = self.preprocessor.featurizer.pad_to
 
         try:
-            self.preprocessor.featurizer.dither = 0.0
-            self.preprocessor.featurizer.pad_to = 0
+            #self.preprocessor.featurizer.dither = 0.0
+            #self.preprocessor.featurizer.pad_to = 0
             # Switch model to evaluation mode
             self.eval()
             # Freeze the encoder and decoder modules
@@ -299,8 +299,8 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
         finally:
             # set mode back to its original value
             self.train(mode=mode)
-            self.preprocessor.featurizer.dither = dither_value
-            self.preprocessor.featurizer.pad_to = pad_to_value
+            #self.preprocessor.featurizer.dither = dither_value
+            #self.preprocessor.featurizer.pad_to = pad_to_value
             if mode is True:
                 self.encoder.unfreeze()
                 self.decoder.unfreeze()
