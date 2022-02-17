@@ -24,6 +24,7 @@ model:
     is_tarred: false
     tarred_audio_filepaths: null
     use_start_end_token: false
+    min_duration: 8.0
 
   validation_ds:
     manifest_filepath: ???
@@ -31,13 +32,14 @@ model:
     batch_size: ???
     shuffle: false
     use_start_end_token: false
+    min_duration: 8.0
 
   preprocessor:
     _target_: nemo.collections.asr.modules.wav2vec_modules.ConvFeatureEncoder
-    extractor_mode: layer_norm # Mode for feature extractor. [group_norm, layer_norm]
+    extractor_mode: group_norm # Mode for feature extractor. [group_norm, layer_norm]
     conv_bias: False # Include bias in convolution feature extractor model
     feature_grad_mult: 1.0 # Multiply extracted feature gradients
-    normalize_audio: true
+    normalize_audio: false
     embedding_dim: *emb_dim # projected final depth of feature embeddings
     conv_layers:
       - emb_dim: 512
@@ -63,12 +65,11 @@ model:
         stride: 2
 
   spec_augment:
-    _target_: nemo.collections.asr.modules.SpectrogramAugmentation
-    freq_masks: 4
-    time_masks: 10
-    freq_width: 27
-    time_width: 0.05
-    mask_value: 0.0
+    _target_: nemo.collections.asr.modules.MaskedPatchAugmentation
+    freq_masks: 3
+    freq_width: 20
+    patch_size: 48
+    mask_patches: 10
 
   encoder:
     _target_: nemo.collections.asr.modules.wav2vec_modules.Wav2VecTransformerEncoder
@@ -98,7 +99,9 @@ model:
     _target_: nemo.collections.asr.losses.ContrastiveLoss
     in_dim: *emb_dim
     proj_dim: *final_dim
-    sample_from_non_masked: true
+    quantized_targets: false
+    sample_from_same_utterance_only: true
+    sample_from_non_masked: false
 
   optim:
     name: adamw
