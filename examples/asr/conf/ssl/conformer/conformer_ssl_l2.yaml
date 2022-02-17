@@ -135,6 +135,7 @@ model:
         combine_time_steps: 4
         quantized_targets: false
         sample_from_same_utterance_only: true
+        sample_from_non_masked: false
       output_from_layer: "layers.8"
     final:
       decoder:
@@ -151,6 +152,7 @@ model:
         combine_time_steps: 4
         quantized_targets: false
         sample_from_same_utterance_only: true
+        sample_from_non_masked: false
 
 
   optim:

@@ -130,6 +130,8 @@ model:
         combine_time_steps: 4
         quantized_targets: false
         sample_from_same_utterance_only: true
+        sample_from_non_masked: false
+
     c8:
       decoder:
         _target_: nemo.collections.asr.modules.ConvASRDecoderReconstruction
@@ -146,6 +148,8 @@ model:
         combine_time_steps: 8
         quantized_targets: false
         sample_from_same_utterance_only: true
+        sample_from_non_masked: false
+        num_negatives: 60
 
     c2:
       decoder:
@@ -163,6 +167,7 @@ model:
         combine_time_steps: 2
         quantized_targets: false
         sample_from_same_utterance_only: true
+        sample_from_non_masked: false
 
   optim:
     name: adamw

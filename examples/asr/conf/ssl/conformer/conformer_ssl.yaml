@@ -130,6 +130,7 @@ model:
     combine_time_steps: 4
     quantized_targets: false
     sample_from_same_utterance_only: true
+    sample_from_non_masked: false
 
   optim:
     name: adamw
