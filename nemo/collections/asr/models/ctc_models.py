@@ -700,6 +700,7 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
             'shuffle': False,
             'num_workers': config.get('num_workers', min(batch_size, os.cpu_count() - 1)),
             'pin_memory': True,
+            'use_start_end_token': False
         }
         if hasattr(self.preprocessor, "_sample_rate"):
             dl_config['sample_rate'] = self.preprocessor._sample_rate
