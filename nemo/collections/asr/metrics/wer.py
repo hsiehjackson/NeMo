@@ -54,7 +54,7 @@ def word_error_rate(hypotheses: List[str], references: List[str], use_cer=False)
         words += len(r_list)
         cur_scores = editdistance.eval(h_list, r_list)
         scores += cur_scores
-        if True:#cur_scores > 5:
+        if False:#cur_scores > 5:
             print()
             print(h_list)
             print(r_list)
