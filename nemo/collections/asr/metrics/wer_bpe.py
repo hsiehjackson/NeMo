@@ -214,7 +214,7 @@ class WERBPE(Metric):
             words += len(r_list)
             cur_scores = editdistance.eval(h_list, r_list)
             scores += cur_scores
-            if cur_scores > 5:
+            if True:#cur_scores > 5:
                 print()
                 print(h_list)
                 print(r_list)
