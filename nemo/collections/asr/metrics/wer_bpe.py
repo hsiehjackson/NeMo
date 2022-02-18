@@ -212,8 +212,15 @@ class WERBPE(Metric):
                 h_list = h.split()
                 r_list = r.split()
             words += len(r_list)
-            # Compute Levenstein's distance
-            scores += editdistance.eval(h_list, r_list)
+            cur_scores = editdistance.eval(h_list, r_list)
+            scores += cur_scores
+            if cur_scores > 5:
+                print()
+                print(h_list)
+                print(r_list)
+                print(cur_scores)
+                print(len(r_list))
+                print()
 
         self.scores = torch.tensor(scores, device=self.scores.device, dtype=self.scores.dtype)
         self.words = torch.tensor(words, device=self.words.device, dtype=self.words.dtype)

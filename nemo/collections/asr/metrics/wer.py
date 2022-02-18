@@ -52,7 +52,15 @@ def word_error_rate(hypotheses: List[str], references: List[str], use_cer=False)
             h_list = h.split()
             r_list = r.split()
         words += len(r_list)
-        scores += editdistance.eval(h_list, r_list)
+        cur_scores = editdistance.eval(h_list, r_list)
+        scores += cur_scores
+        if cur_scores > 5:
+            print()
+            print(h_list)
+            print(r_list)
+            print(cur_scores)
+            print(len(r_list))
+            print()
     if words != 0:
         wer = 1.0 * scores / words
     else:
