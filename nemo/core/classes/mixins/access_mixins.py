@@ -51,7 +51,8 @@ class AccessMixin(ABC):
         if self.access_cfg.get('detach', False):
             tensor = tensor.detach()
 
-        del self._registry
+        if hasattr(self, '_registry'):
+            del self._registry
         self._registry = []
 
         self._registry.append(tensor)
