@@ -363,7 +363,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
     def get_feats(self, input_signal, input_signal_length, layer_name):
         self.eval()
         self.feat_mode = True
-        self.reset_registry()
+        self.reset_registry(self.encoder)
 
         stride = 4
         combine = 1
