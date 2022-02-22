@@ -46,6 +46,7 @@ class ConformerLayer(torch.nn.Module, AccessMixin):
         self_attention_model='rel_pos',
         n_heads=4,
         conv_kernel_size=31,
+        conv_norm_type='batch_norm',
         dropout=0.1,
         dropout_att=0.1,
         pos_bias_u=None,
@@ -63,7 +64,7 @@ class ConformerLayer(torch.nn.Module, AccessMixin):
 
         # convolution module
         self.norm_conv = LayerNorm(d_model)
-        self.conv = ConformerConvolution(d_model=d_model, kernel_size=conv_kernel_size)
+        self.conv = ConformerConvolution(d_model=d_model, kernel_size=conv_kernel_size, norm_type=conv_norm_type)
 
         # multi-headed self-attention module
         self.norm_self_att = LayerNorm(d_model)
@@ -85,7 +86,6 @@ class ConformerLayer(torch.nn.Module, AccessMixin):
 
         self.dropout = nn.Dropout(dropout)
         self.norm_out = LayerNorm(d_model)
-
 
     def forward(self, x, att_mask=None, pos_emb=None, pad_mask=None):
         """
@@ -137,7 +137,7 @@ class ConformerConvolution(nn.Module):
         kernel_size (int): kernel size for depthwise convolution
     """
 
-    def __init__(self, d_model, kernel_size):
+    def __init__(self, d_model, kernel_size, norm_type='batch_norm'):
         super(ConformerConvolution, self).__init__()
         assert (kernel_size - 1) % 2 == 0
         self.d_model = d_model
@@ -154,7 +154,12 @@ class ConformerConvolution(nn.Module):
             groups=d_model,
             bias=True,
         )
-        self.batch_norm = nn.BatchNorm1d(d_model)
+        if norm_type == 'batch_norm':
+            self.batch_norm = nn.BatchNorm1d(d_model)
+        elif norm_type == 'layer_norm':
+            self.batch_norm = nn.LayerNorm(d_model)
+        else:
+            raise ValueError(f"conv_norm_type={norm_type} is not valid!")
 
         self.activation = Swish()
         self.pointwise_conv2 = nn.Conv1d(
@@ -170,7 +175,14 @@ class ConformerConvolution(nn.Module):
             x.masked_fill_(pad_mask.unsqueeze(1), 0.0)
 
         x = self.depthwise_conv(x)
-        x = self.batch_norm(x)
+
+        if isinstance(self.batch_norm, nn.LayerNorm):
+            x = x.transpose(1, 2)
+            x = self.batch_norm(x)
+            x = x.transpose(1, 2)
+        else:
+            x = self.batch_norm(x)
+
         x = self.activation(x)
         x = self.pointwise_conv2(x)
         x = x.transpose(1, 2)
