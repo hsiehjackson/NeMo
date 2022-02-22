@@ -45,6 +45,8 @@ class AccessMixin(ABC):
     def register_accessible_tensor(
             self, tensor
     ):
+        print("reg")
+        print(tensor.shape)
         if self.access_cfg.get('convert_to_cpu', False):
             tensor = tensor.cpu()
 
@@ -56,6 +58,8 @@ class AccessMixin(ABC):
         self._registry = []
 
         self._registry.append(tensor)
+        
+        print(self._registry)
 
     @classmethod
     def get_module_registry(
