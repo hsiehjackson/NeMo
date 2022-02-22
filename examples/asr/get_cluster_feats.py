@@ -74,6 +74,8 @@ python transcribe_speech.py \
 @dataclass
 class AccessConfig:
     access_all_intermediate: bool = True
+    detach: bool = True
+    convert_to_cpu: bool = True
 
 @dataclass
 class FeatClusteringConfig:
@@ -83,7 +85,7 @@ class FeatClusteringConfig:
     apply_tarred_filepaths: Optional[List[str]] #lists of filenames for tarred sets
     out_manifests: List[str] #names of new manifests to write to
     fit_manifest: str #manifest for fitting the clustering model
-    fit_is_tarrred: bool
+    fit_is_tarred: bool
     fit_tarred_filepaths: str
 
     apply_to_fit: bool = True
