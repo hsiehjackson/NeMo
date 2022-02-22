@@ -198,6 +198,8 @@ def main(cfg: FeatClusteringConfig) -> FeatClusteringConfig:
 
     set_access_cfg(cfg.access)
 
+    print(asr_model.access_cfg)
+
     asr_model = asr_model.eval()
 
     """
