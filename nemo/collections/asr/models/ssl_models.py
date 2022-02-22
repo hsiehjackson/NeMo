@@ -380,7 +380,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
 
         reg = self.get_module_registry(self.encoder)
 
-        print(reg)
+        #print(reg)
 
         for k, v in reg.items():
             if layer_name in k:
