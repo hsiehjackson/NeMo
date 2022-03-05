@@ -120,7 +120,7 @@ model:
     convert_to_cpu: false
 
   loss_list:
-    l6:
+    very_early:
       decoder:
         _target_: nemo.collections.asr.modules.ConvASRDecoderReconstruction
         feat_in: ${model.encoder.d_model}
@@ -136,8 +136,8 @@ model:
         quantized_targets: false
         sample_from_same_utterance_only: true
         sample_from_non_masked: false
-      output_from_layer: "layers.5"
-    l12:
+      output_from_layer: "layers.1"
+    early:
       decoder:
         _target_: nemo.collections.asr.modules.ConvASRDecoderReconstruction
         feat_in: ${model.encoder.d_model}
@@ -153,7 +153,7 @@ model:
         quantized_targets: false
         sample_from_same_utterance_only: true
         sample_from_non_masked: false
-      output_from_layer: "layers.11"
+      output_from_layer: "layers.3"
     final:
       decoder:
         _target_: nemo.collections.asr.modules.ConvASRDecoderReconstruction
