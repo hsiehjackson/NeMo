@@ -1068,7 +1068,7 @@ class ModelPT(LightningModule, Model):
                         exclude = model_load_cfg.pop('exclude', [])
 
                         self.load_part_of_state_dict(
-                            ckpt['state_dict'], include, exclude, f'nemo file with path `{ckpt_path}`'
+                            ckpt['state_dict'], include, exclude, f'ptl ckpt file with path `{ckpt_path}`'
                         )
 
                         del ckpt
