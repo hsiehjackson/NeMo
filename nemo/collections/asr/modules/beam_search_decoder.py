@@ -82,8 +82,6 @@ class BeamSearchDecoderWithLM(NeuralModule):
         self.cutoff_top_n = cutoff_top_n
         self.input_tensor = input_tensor
 
-        print(self.vocab)
-
     @typecheck(ignore_collections=True)
     @torch.no_grad()
     def forward(self, log_probs, log_probs_length):

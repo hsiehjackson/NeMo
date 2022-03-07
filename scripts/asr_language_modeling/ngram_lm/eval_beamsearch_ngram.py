@@ -107,8 +107,6 @@ def beam_search_eval(
             words_count += len(target_split_w)
             chars_count += len(target_split_c)
             wer_dist_min = cer_dist_min = 10000
-            if beams_idx < 5:
-                print(target)
             for candidate_idx, candidate in enumerate(beams):
                 if ids_to_text_func is not None:
                     # For BPE encodings, need to shift by TOKEN_OFFSET to retrieve the original sub-word ids
@@ -123,8 +121,6 @@ def beam_search_eval(
                 wer_dist_min = min(wer_dist_min, wer_dist)
                 cer_dist_min = min(cer_dist_min, cer_dist)
 
-                if beams_idx < 5 and candidate_idx < 5:
-                    print(pred_text)
 
                 if candidate_idx == 0:
                     # first candidate
@@ -282,8 +278,6 @@ def main():
         preds_tensor = torch.tensor(preds, device='cpu').unsqueeze(0)
         pred_text = asr_model._wer.ctc_decoder_predictions_tensor(preds_tensor)[0]
 
-        if batch_idx < 5:
-            print(pred_text)
 
         pred_split_w = pred_text.split()
         target_split_w = target_transcripts[batch_idx].split()
