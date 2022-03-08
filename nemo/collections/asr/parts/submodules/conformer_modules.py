@@ -15,6 +15,8 @@
 import torch
 from torch import nn as nn
 from torch.nn import LayerNorm
+from nemo.core.classes.mixins import AccessMixin
+
 
 from nemo.collections.asr.parts.submodules.multi_head_attention import (
     MultiHeadAttention,
@@ -25,7 +27,7 @@ from nemo.collections.asr.parts.utils.activations import Swish
 __all__ = ['ConformerConvolution', 'ConformerFeedForward', 'ConformerLayer']
 
 
-class ConformerLayer(torch.nn.Module):
+class ConformerLayer(torch.nn.Module, AccessMixin):
     """A single block of the Conformer encoder.
 
     Args:
@@ -118,6 +120,10 @@ class ConformerLayer(torch.nn.Module):
         residual = residual + self.dropout(x) * self.fc_factor
 
         x = self.norm_out(residual)
+
+        if self.access_cfg.get('access_all_intermediate', False):
+            self.register_accessible_tensor(tensor=x)
+
         return x
 
 
