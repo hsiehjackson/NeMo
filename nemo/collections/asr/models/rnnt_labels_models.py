@@ -25,13 +25,13 @@ from nemo.collections.asr.data import audio_to_text_dataset
 from nemo.collections.asr.losses.rnnt import RNNTLoss
 from nemo.collections.asr.metrics.rnnt_wer_bpe import RNNTBPEWER, RNNTBPEDecoding
 from nemo.collections.asr.models.rnnt_models import EncDecRNNTModel
-from nemo.collections.asr.parts.mixins import ASRBPEMixin
+from nemo.collections.asr.parts.mixins import ASRBPEMixin, FeatExtractMixin
 from nemo.collections.asr.parts.preprocessing.perturb import process_augmentations
 from nemo.core.classes.common import PretrainedModelInfo
 from nemo.utils import logging, model_utils
 
 
-class EncDecRNNTLabelsModel(EncDecRNNTModel):
+class EncDecRNNTLabelsModel(EncDecRNNTModel, FeatExtractMixin):
     """Base class for encoder decoder RNNT-based models for direct training on non-text label sequences."""
 
 

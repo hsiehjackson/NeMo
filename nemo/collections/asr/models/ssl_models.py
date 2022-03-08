@@ -19,7 +19,7 @@ from omegaconf import DictConfig, open_dict
 from pytorch_lightning import Trainer
 
 from nemo.collections.asr.data import audio_to_text_dataset
-from nemo.collections.asr.parts.mixins import ASRModuleMixin
+from nemo.collections.asr.parts.mixins import ASRModuleMixin, FeatExtractMixin
 from nemo.collections.asr.parts.preprocessing.perturb import process_augmentations
 from nemo.core.classes import ModelPT
 from nemo.core.classes.common import PretrainedModelInfo, typecheck
@@ -29,7 +29,7 @@ from nemo.utils import logging
 __all__ = ['SpeechEncDecSelfSupervisedModel']
 
 
-class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
+class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, FeatExtractMixin):
     """Base class for encoder-decoder models used for self-supervised encoder pre-training"""
 
     @classmethod
@@ -81,6 +81,8 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
             self.feat_pen, self.pen_factor = 0.0, self._cfg.feature_penalty
         else:
             self.feat_pen, self.pen_factor = None, None
+
+        self.apply_masking = True
 
     def _setup_dataloader_from_config(self, config: Optional[Dict]):
         if 'augmentor' in config:
@@ -274,7 +276,8 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
         if self.dropout_features_q:
             spectrograms = self.dropout_features_q(spectrograms)
 
-        processed_signal = self.spec_augmentation(input_spec=processed_signal, length=processed_signal_length)
+        if self.apply_masking:
+            processed_signal = self.spec_augmentation(input_spec=processed_signal, length=processed_signal_length)
 
         masked_spectrograms = processed_signal.detach()
         spec_masks = torch.logical_and(masked_spectrograms < 1e-5, masked_spectrograms > -1e-5).float()
@@ -314,3 +317,4 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin):
         val_loss_mean = torch.stack([x['val_loss'] for x in outputs]).mean()
         tensorboard_logs = {'val_loss': val_loss_mean}
         return {'val_loss': val_loss_mean, 'log': tensorboard_logs}
+
