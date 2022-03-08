@@ -23,7 +23,7 @@ from nemo.collections.common import tokenizers
 from nemo.utils import logging
 
 from nemo.core.classes.mixins import AccessMixin
-
+import torch
 
 
 class ASRBPEMixin(ABC):
