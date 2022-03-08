@@ -22,6 +22,9 @@ from nemo.collections.asr.parts.utils import asr_module_utils
 from nemo.collections.common import tokenizers
 from nemo.utils import logging
 
+from nemo.core.classes.mixins import AccessMixin
+
+
 
 class ASRBPEMixin(ABC):
     """ ASR BPE Mixin class that sets up a Tokenizer via a config
@@ -192,7 +195,7 @@ class DiarizationMixin(ABC):
         pass
 
 
-class FeatExtractMixin(ABC):
+class FeatExtractMixin(AccessMixin):
     def get_feats(self, input_signal, input_signal_length, layer_name):
         self.eval()
         self.apply_masking = False
