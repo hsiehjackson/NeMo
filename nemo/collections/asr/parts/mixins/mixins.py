@@ -206,8 +206,12 @@ class FeatExtractMixin(AccessMixin):
         div = stride * combine
         #TODO: move to conf
 
+        processed_signal, processed_signal_length = self.preprocessor(
+            input_signal=input_signal, length=input_signal_length,
+        )
+
         with torch.no_grad():
-            self(input_signal=input_signal, input_signal_length=input_signal_length)
+            self(processed_signal=processed_signal, processed_signal_length=processed_signal_length)
 
         self.apply_masking = True
 
