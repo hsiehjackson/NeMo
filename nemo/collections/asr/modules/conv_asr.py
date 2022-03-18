@@ -412,7 +412,7 @@ class ConvASRDecoder(NeuralModule, Exportable):
     def output_types(self):
         return OrderedDict({"logprobs": NeuralType(('B', 'T', 'D'), LogprobsType())})
 
-    def __init__(self, feat_in, num_classes, init_mode="xavier_uniform", vocabulary=None):
+    def __init__(self, feat_in, num_classes, init_mode="xavier_uniform", vocabulary=None, add_blank=True):
         super().__init__()
 
         if vocabulary is None and num_classes < 0:
@@ -432,7 +432,7 @@ class ConvASRDecoder(NeuralModule, Exportable):
             self.__vocabulary = vocabulary
         self._feat_in = feat_in
         # Add 1 for blank char
-        self._num_classes = num_classes + 1
+        self._num_classes = num_classes + (1 if add_blank else 0)
 
         self.decoder_layers = torch.nn.Sequential(
             torch.nn.Conv1d(self._feat_in, self._num_classes, kernel_size=1, bias=True)
