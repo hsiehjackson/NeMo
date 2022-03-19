@@ -244,24 +244,24 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
         # Model's mode and device
         mode = self.training
         device = next(self.parameters()).device
-        dither_value = self.preprocessor.featurizer.dither
-        pad_to_value = self.preprocessor.featurizer.pad_to
+        #dither_value = self.preprocessor.featurizer.dither
+        #pad_to_value = self.preprocessor.featurizer.pad_to
+        logging_level = logging.get_verbosity()
 
         try:
-            self.preprocessor.featurizer.dither = 0.0
-            self.preprocessor.featurizer.pad_to = 0
+            #self.preprocessor.featurizer.dither = 0.0
+            #self.preprocessor.featurizer.pad_to = 0
             # Switch model to evaluation mode
             self.eval()
             # Freeze the encoder and decoder modules
-            self.encoder.freeze()
-            self.decoder.freeze()
-            logging_level = logging.get_verbosity()
+            #self.encoder.freeze()
+            #self.decoder.freeze()
             logging.set_verbosity(logging.WARNING)
             # Work in tmp directory - will store manifest file there
             with tempfile.TemporaryDirectory() as tmpdir:
                 with open(os.path.join(tmpdir, 'manifest.json'), 'w', encoding='utf-8') as fp:
                     for audio_file in paths2audio_files:
-                        entry = {'audio_filepath': audio_file, 'duration': 100000, 'text': ''}
+                        entry = {'audio_filepath': audio_file, 'duration': 100000, 'text': 'nothing'}
                         fp.write(json.dumps(entry) + '\n')
 
                 config = {
@@ -299,11 +299,11 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
         finally:
             # set mode back to its original value
             self.train(mode=mode)
-            self.preprocessor.featurizer.dither = dither_value
-            self.preprocessor.featurizer.pad_to = pad_to_value
-            if mode is True:
-                self.encoder.unfreeze()
-                self.decoder.unfreeze()
+            #self.preprocessor.featurizer.dither = dither_value
+            #self.preprocessor.featurizer.pad_to = pad_to_value
+            #if mode is True:
+            #    self.encoder.unfreeze()
+            #    self.decoder.unfreeze()
             logging.set_verbosity(logging_level)
         return hypotheses
 
@@ -691,16 +691,9 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
         Returns:
             A pytorch DataLoader for the given audio file(s).
         """
-        if 'manifest_filepath' in config:
-            manifest_filepath = config['manifest_filepath']
-            batch_size = config['batch_size']
-        else:
-            manifest_filepath = os.path.join(config['temp_dir'], 'manifest.json')
-            batch_size = min(config['batch_size'], len(config['paths2audio_files']))
-
+        batch_size = min(config['batch_size'], len(config['paths2audio_files']))
         dl_config = {
-            'manifest_filepath': manifest_filepath,
-            'sample_rate': self.preprocessor._sample_rate,
+            'manifest_filepath': os.path.join(config['temp_dir'], 'manifest.json'),
             'labels': self.decoder.vocabulary,
             'batch_size': batch_size,
             'trim_silence': False,
@@ -708,6 +701,9 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
             'num_workers': config.get('num_workers', min(batch_size, os.cpu_count() - 1)),
             'pin_memory': True,
         }
+        if hasattr(self.preprocessor, "_sample_rate"):
+            dl_config['sample_rate'] = self.preprocessor._sample_rate
+
 
         temporary_datalayer = self._setup_dataloader_from_config(config=DictConfig(dl_config))
         return temporary_datalayer
