@@ -160,8 +160,8 @@ def main(cfg: FeatClusteringConfig) -> FeatClusteringConfig:
         model_name = cfg.pretrained_name
 
     set_access_cfg(cfg.access)
-    asr_model._cfg.feat_extract_stride = cfg.stride
-    asr_model._cfg.feat_extract_combine = cfg.combine
+    asr_model.feat_extract_stride = cfg.stride
+    asr_model.feat_extract_combine = cfg.combine
 
     print(asr_model.access_cfg)
 
