@@ -201,10 +201,9 @@ class FeatExtractMixin(AccessMixin):
         self.apply_masking = False
         self.reset_registry(self.encoder)
 
-        stride = 4
-        combine = 1
+        stride = self._cfg.get("feat_extract_stride")#4
+        combine = self._cfg.get("feat_extract_combine")#1
         div = stride * combine
-        #TODO: move to conf
 
         processed_signal, processed_signal_length = self.preprocessor(
             input_signal=input_signal, length=input_signal_length,

@@ -79,6 +79,9 @@ class FeatClusteringConfig:
 
     access: AccessConfig = AccessConfig()
 
+    stride: int = 4
+    combine: int = 1
+
 
 def produce_labels(datalayer, in_manifest, out_manifest, asr_model, cluster_model, layer_name, device):
     label_dict = {}
@@ -157,6 +160,8 @@ def main(cfg: FeatClusteringConfig) -> FeatClusteringConfig:
         model_name = cfg.pretrained_name
 
     set_access_cfg(cfg.access)
+    asr_model._cfg.feat_extract_stride = cfg.stride
+    asr_model._cfg.feat_extract_combine = cfg.combine
 
     print(asr_model.access_cfg)
 
