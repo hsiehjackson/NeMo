@@ -140,12 +140,9 @@ def main(cfg: FeatClusteringConfig) -> FeatClusteringConfig:
 
     # setup GPU
     if cfg.cuda is None:
-        if torch.cuda.is_available():
-            cfg.cuda = 0  # use 0th CUDA device
-        else:
-            cfg.cuda = -1  # use CPU
-
-    device = torch.device(f'cuda:{cfg.cuda}' if cfg.cuda >= 0 else 'cpu')
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    else:
+        device = torch.device(f'cuda:{cfg.cuda}' if cfg.cuda >= 0 else 'cpu')
 
     # setup model
     if cfg.model_path is not None:
