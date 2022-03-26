@@ -13,3 +13,4 @@
 # limitations under the License.
 
 from nemo.collections.asr.losses.pt_losses.contrastive import ContrastiveLoss
+from nemo.collections.asr.losses.pt_losses.mlm import MLMLoss
