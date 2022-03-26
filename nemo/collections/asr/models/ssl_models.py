@@ -15,6 +15,7 @@ from math import ceil
 from typing import Dict, Optional, Union
 
 import torch
+import torch.nn as nn
 from omegaconf import DictConfig, open_dict
 from pytorch_lightning import Trainer
 
@@ -53,16 +54,32 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, FeatExtractMixin)
         self.preprocessor = SpeechEncDecSelfSupervisedModel.from_config_dict(self._cfg.preprocessor)
         self.encoder = SpeechEncDecSelfSupervisedModel.from_config_dict(self._cfg.encoder)
 
-        with open_dict(self._cfg):
-            if "feat_in" not in self._cfg.decoder or (
-                not self._cfg.decoder.feat_in and hasattr(self.encoder, '_feat_out')
-            ):
-                self._cfg.decoder.feat_in = self.encoder._feat_out
-            if "feat_in" not in self._cfg.decoder or not self._cfg.decoder.feat_in:
-                raise ValueError("param feat_in of the decoder's config is not set!")
+        self.decoder_losses = None
 
-        self.decoder_ssl = SpeechEncDecSelfSupervisedModel.from_config_dict(self._cfg.decoder)
-        self.loss = SpeechEncDecSelfSupervisedModel.from_config_dict(self._cfg.loss)
+        if "loss_list" in self._cfg:
+
+            self.decoder_losses = {}
+            self.loss_alphas = {}
+            self.output_from_layer = {}
+            self.targets_from_loss = {}
+            # need to be separate for moduledict
+
+            for decoder_loss_name, decoder_loss_cfg in self._cfg.loss_list.items():
+                new_decoder_loss = {
+                    'decoder': SpeechEncDecSelfSupervisedModel.from_config_dict(decoder_loss_cfg.decoder),
+                    'loss': SpeechEncDecSelfSupervisedModel.from_config_dict(decoder_loss_cfg.loss)}
+                new_decoder_loss = nn.ModuleDict(new_decoder_loss)
+                self.decoder_losses[decoder_loss_name] = new_decoder_loss
+                self.loss_alphas[decoder_loss_name] = decoder_loss_cfg.get("loss_alpha", 1.0)
+                self.output_from_layer[decoder_loss_name] = decoder_loss_cfg.get("output_from_layer", None)
+                self.targets_from_loss[decoder_loss_name] = decoder_loss_cfg.get("targets_from_loss", None)
+
+
+            self.decoder_losses = nn.ModuleDict(self.decoder_losses)
+
+        else:
+            self.decoder_ssl = SpeechEncDecSelfSupervisedModel.from_config_dict(self._cfg.decoder)
+            self.loss = SpeechEncDecSelfSupervisedModel.from_config_dict(self._cfg.loss)
 
         self.spec_augmentation = SpeechEncDecSelfSupervisedModel.from_config_dict(self._cfg.spec_augment)
 
@@ -81,6 +98,9 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, FeatExtractMixin)
             self.feat_pen, self.pen_factor = 0.0, self._cfg.feature_penalty
         else:
             self.feat_pen, self.pen_factor = None, None
+
+        if "access" in self._cfg:
+            set_access_cfg(self._cfg.access)
 
         self.apply_masking = True
 
@@ -254,6 +274,8 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, FeatExtractMixin)
             2) Masks applied to spectrograms of shape [B, D, T].
             3) Decoder outputs of shape [B, T, D].
         """
+        self.reset_registry(self.encoder)
+
         has_input_signal = input_signal is not None and input_signal_length is not None
         has_processed_signal = processed_signal is not None and processed_signal_length is not None
         if (has_input_signal ^ has_processed_signal) == False:
@@ -285,7 +307,22 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, FeatExtractMixin)
             spec_masks[idx, :, proc_len:] = 0.0
 
         encoded, encoded_len = self.encoder(audio_signal=processed_signal, length=processed_signal_length)
-        outputs = self.decoder_ssl(encoder_output=encoded)
+
+        if self.decoder_losses is None:
+            outputs = self.decoder_ssl(encoder_output=encoded)
+        else:
+            outputs = {}
+
+            reg = self.get_module_registry(self.encoder)
+
+            for dec_loss_name, dec_loss in self.decoder_losses.items():
+                if self.output_from_layer[dec_loss_name] is None:
+                    outputs[dec_loss_name] = dec_loss['decoder'](encoder_output=encoded)
+                else:
+                    outputs[dec_loss_name] = dec_loss['decoder'] \
+                        (encoder_output=reg[self.output_from_layer[dec_loss_name]][-1].transpose(-2, -1))
+
+        self.reset_registry(self.encoder)
 
         return spectrograms, spec_masks, outputs
 
@@ -294,21 +331,79 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, FeatExtractMixin)
         signal, signal_len, transcript, transcript_len = batch
         spectrograms, spec_masks, outputs = self.forward(input_signal=signal, input_signal_length=signal_len)
 
-        self.loss.set_num_updates(self.trainer.global_step)
-        loss_value = self.loss(spectrograms=spectrograms, spec_masks=spec_masks, decoder_outputs=outputs)
+        if self.decoder_losses is None:
+            if hasattr(self.loss, "set_num_updates"):
+                self.loss.set_num_updates(self.trainer.global_step)
+            if self.loss.needs_labels:
+                loss_value = self.loss(spec_masks=spec_masks, decoder_outputs=outputs,
+                                       targets=transcript, targets_len=transcript_len)
+            else:
+                loss_value = self.loss(spectrograms=spectrograms, spec_masks=spec_masks, decoder_outputs=outputs)
+            tensorboard_logs = {'train_loss': loss_value, 'learning_rate': self._optimizer.param_groups[0]['lr']}
+        else:
+            tensorboard_logs = {'learning_rate': self._optimizer.param_groups[0]['lr']}
+            loss_value = signal.new_zeros(1)
+            for dec_loss_name, dec_loss in self.decoder_losses.items():
+                cur_loss = dec_loss['loss']
+                if hasattr(cur_loss, "set_num_updates"):
+                    cur_loss.set_num_updates(self.trainer.global_step)
+                if cur_loss.needs_labels:
+                    if self.targets_from_loss[dec_loss_name] is not None:
+                        target_loss = self.targets_from_loss[dec_loss_name]
+                        cur_loss_value = self.loss(spec_masks=spec_masks,
+                                                    decoder_outputs=outputs[dec_loss_name],
+                                                    targets=dec_loss[target_loss])
+                    else:
+                        cur_loss_value = self.loss(spec_masks=spec_masks,
+                                                    decoder_outputs=outputs[dec_loss_name],
+                                                    targets=transcript,
+                                                    targets_len=transcript_len)
+                else:
+                    cur_loss_value = cur_loss(spectrograms=spectrograms, spec_masks=spec_masks,
+                                          decoder_outputs=outputs[dec_loss_name])
+                loss_value = loss_value + cur_loss_value * self.loss_alphas[dec_loss_name]
+                tensorboard_logs['train_' + dec_loss_name] = cur_loss_value
+
+            tensorboard_logs['train_loss'] = loss_value
+
         if self.feat_pen:
             loss_value += self.feat_pen
 
-        tensorboard_logs = {'train_loss': loss_value, 'learning_rate': self._optimizer.param_groups[0]['lr']}
         return {'loss': loss_value, 'log': tensorboard_logs}
 
     def validation_step(self, batch, batch_idx, dataloader_idx=0):
         signal, signal_len, transcript, transcript_len = batch
         spectrograms, spec_masks, outputs = self.forward(input_signal=signal, input_signal_length=signal_len)
 
-        loss_value = self.loss(spectrograms=spectrograms, spec_masks=spec_masks, decoder_outputs=outputs)
+        if self.decoder_losses is None:
+            if self.loss.needs_labels:
+                loss_value = self.loss(spec_masks=spec_masks, decoder_outputs=outputs,
+                                       targets=transcript, targets_len=transcript_len)
+            else:
+                loss_value = self.loss(spectrograms=spectrograms, spec_masks=spec_masks, decoder_outputs=outputs)
+        else:
+            loss_value = signal.new_zeros(1)
+            for dec_loss_name, dec_loss in self.decoder_losses.items():
+                cur_loss = dec_loss['loss']
+                if cur_loss.needs_labels:
+                    if self.targets_from_loss[dec_loss_name] is not None:
+                        target_loss = self.targets_from_loss[dec_loss_name]
+                        cur_loss_value = self.loss(spec_masks=spec_masks,
+                                                   decoder_outputs=outputs[dec_loss_name],
+                                                   targets=dec_loss[target_loss])
+                    else:
+                        cur_loss_value = self.loss(spec_masks=spec_masks,
+                                                   decoder_outputs=outputs[dec_loss_name],
+                                                   targets=transcript,
+                                                   targets_len=transcript_len)
+                else:
+                    cur_loss_value = cur_loss(spectrograms=spectrograms, spec_masks=spec_masks,
+                                              decoder_outputs=outputs[dec_loss_name])
+                loss_value = loss_value + cur_loss_value * self.loss_alphas[dec_loss_name]
+
         if self.feat_pen:
             loss_value += self.feat_pen
+
         return {
             'val_loss': loss_value,
         }
@@ -317,4 +412,3 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, FeatExtractMixin)
         val_loss_mean = torch.stack([x['val_loss'] for x in outputs]).mean()
         tensorboard_logs = {'val_loss': val_loss_mean}
         return {'val_loss': val_loss_mean, 'log': tensorboard_logs}
-

@@ -1123,3 +1123,6 @@ class RNNTDecoderJoint(torch.nn.Module, Exportable):
         state_h, state_c = decoder_outputs[2][0], decoder_outputs[2][1]
         joint_output = self.joint(encoder_outputs, decoder_output)
         return (joint_output, decoder_length, state_h, state_c)
+
+
+#TODO add encapsulated rnnt decoder for ssl here?

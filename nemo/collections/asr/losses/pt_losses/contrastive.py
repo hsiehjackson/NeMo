@@ -42,6 +42,10 @@ class ContrastiveLoss(Loss):
         """
         return {"loss": NeuralType(elements_type=LossType())}
 
+    @property
+    def needs_labels(self):
+        return False
+
     def __init__(
         self,
         in_dim: int,
@@ -115,6 +119,8 @@ class ContrastiveLoss(Loss):
         self.group_loss = group_loss
         self.mask_threshold = mask_threshold
 
+        self.store_ids = True
+
         if not self.quantized_targets:
             self.target_proj = nn.Linear(in_dim * combine_time_steps, proj_dim)
 
@@ -142,7 +148,11 @@ class ContrastiveLoss(Loss):
         masks = masks.reshape(targets.shape[0], targets.shape[1], -1)
 
         if self.quantized_targets:
-            targets, prob_ppl_loss, cur_codebook_temp = self.quantizer(targets)
+
+            if self.store_ids:
+                targets, prob_ppl_loss, cur_codebook_temp, self.target_ids = self.quantizer(targets)
+            else:
+                targets, prob_ppl_loss, cur_codebook_temp = self.quantizer(targets)
         else:
             targets = self.target_proj(targets)
 
@@ -213,7 +223,7 @@ class ContrastiveLoss(Loss):
                 negatives, _ = self.sample_negatives(targets_masked_only, targets_masked_only.size(0))  # T'xC  # T'
                 # NxT'xC
 
-        # Calculate similarity between logits and all targets
+        # Calculate similarity between outputs and all targets
         similarity_scores = self._calculate_similarity(out_masked_only, negatives, targets_masked_only)
         # (1+N)xT'
         # cosine similarity of outs with targets + N negatives
