@@ -65,6 +65,9 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, FeatExtractMixin)
             # need to be separate for moduledict
 
             for decoder_loss_name, decoder_loss_cfg in self._cfg.loss_list.items():
+                print(decoder_loss_name)
+                print(decoder_loss_cfg)
+
                 new_decoder_loss = {
                     'decoder': SpeechEncDecSelfSupervisedModel.from_config_dict(decoder_loss_cfg.decoder),
                     'loss': SpeechEncDecSelfSupervisedModel.from_config_dict(decoder_loss_cfg.loss)}
@@ -350,11 +353,11 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, FeatExtractMixin)
                 if cur_loss.needs_labels:
                     if self.targets_from_loss[dec_loss_name] is not None:
                         target_loss = self.targets_from_loss[dec_loss_name]
-                        cur_loss_value = self.loss(spec_masks=spec_masks,
+                        cur_loss_value = cur_loss(spec_masks=spec_masks,
                                                     decoder_outputs=outputs[dec_loss_name],
                                                     targets=dec_loss[target_loss])
                     else:
-                        cur_loss_value = self.loss(spec_masks=spec_masks,
+                        cur_loss_value = cur_loss(spec_masks=spec_masks,
                                                     decoder_outputs=outputs[dec_loss_name],
                                                     targets=transcript,
                                                     targets_len=transcript_len)
@@ -388,11 +391,11 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, FeatExtractMixin)
                 if cur_loss.needs_labels:
                     if self.targets_from_loss[dec_loss_name] is not None:
                         target_loss = self.targets_from_loss[dec_loss_name]
-                        cur_loss_value = self.loss(spec_masks=spec_masks,
+                        cur_loss_value = cur_loss(spec_masks=spec_masks,
                                                    decoder_outputs=outputs[dec_loss_name],
                                                    targets=dec_loss[target_loss])
                     else:
-                        cur_loss_value = self.loss(spec_masks=spec_masks,
+                        cur_loss_value = cur_loss(spec_masks=spec_masks,
                                                    decoder_outputs=outputs[dec_loss_name],
                                                    targets=transcript,
                                                    targets_len=transcript_len)
