@@ -150,7 +150,7 @@ class ContrastiveLoss(Loss):
         if self.quantized_targets:
 
             if self.store_ids:
-                targets, prob_ppl_loss, cur_codebook_temp, self.target_ids = self.quantizer(targets)
+                targets, prob_ppl_loss, cur_codebook_temp, self.target_ids = self.quantizer(targets, return_ids=True)
             else:
                 targets, prob_ppl_loss, cur_codebook_temp = self.quantizer(targets)
         else:
