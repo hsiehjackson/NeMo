@@ -193,7 +193,7 @@ class GumbelVectorQuantizer(NeuralModule):
             #BxTxG
 
             #create single id from multiple group ids
-            target_ids = hard_x.new_zeros(bsz, tsz)
+            target_ids = hard_x.new_zeros(bsz, tsz).int()
 
             for i in range(self.groups):
                 target_ids *= self.num_vars
