@@ -38,6 +38,8 @@ class MLMLoss(Loss):
     ):
         super().__init__()
         self.nll_loss = nn.NLLLoss()
+        self.combine_time_steps = combine_time_steps
+        self.mask_threshold = mask_threshold
 
     @typecheck()
     def forward(self, spec_masks, decoder_outputs, targets, target_length=None):
