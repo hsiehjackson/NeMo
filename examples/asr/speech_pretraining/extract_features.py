@@ -144,6 +144,8 @@ def main(cfg: FeatClusteringConfig) -> FeatClusteringConfig:
     else:
         device = torch.device(f'cuda:{cfg.cuda}' if cfg.cuda >= 0 else 'cpu')
 
+    print(device)
+
     # setup model
     if cfg.model_path is not None:
         # restore model from .nemo file path
