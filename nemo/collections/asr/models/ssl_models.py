@@ -325,7 +325,6 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, FeatExtractMixin)
                     outputs[dec_loss_name] = dec_loss['decoder'] \
                         (encoder_output=reg[self.output_from_layer[dec_loss_name]][-1].transpose(-2, -1))
 
-        self.reset_registry(self.encoder)
 
         return spectrograms, spec_masks, outputs
 
