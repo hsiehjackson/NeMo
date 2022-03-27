@@ -392,7 +392,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, FeatExtractMixin)
                         target_loss = self.targets_from_loss[dec_loss_name]
                         cur_loss_value = cur_loss(spec_masks=spec_masks,
                                                    decoder_outputs=outputs[dec_loss_name],
-                                                   targets=dec_loss[target_loss])
+                                                   targets=self.decoder_losses[target_loss]['loss'].target_ids)
                     else:
                         cur_loss_value = cur_loss(spec_masks=spec_masks,
                                                    decoder_outputs=outputs[dec_loss_name],
