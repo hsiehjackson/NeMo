@@ -3,7 +3,7 @@ import torch.nn.functional as F
 from torch import nn
 
 from nemo.core import Loss, typecheck
-from nemo.core.neural_types import LossType, NeuralType, SpectrogramType, VoidType
+from nemo.core.neural_types import LossType, NeuralType, SpectrogramType, VoidType, LabelsType
 
 __all__ = ["MLMLoss"]
 
