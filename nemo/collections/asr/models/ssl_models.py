@@ -360,7 +360,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, FeatExtractMixin)
                         cur_loss_value = cur_loss(spec_masks=spec_masks,
                                                     decoder_outputs=outputs[dec_loss_name],
                                                     targets=transcript,
-                                                    targets_len=transcript_len)
+                                                    target_length=transcript_len)
                 else:
                     cur_loss_value = cur_loss(spectrograms=spectrograms, spec_masks=spec_masks,
                                           decoder_outputs=outputs[dec_loss_name])
