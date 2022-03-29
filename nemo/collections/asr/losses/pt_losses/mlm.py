@@ -53,6 +53,7 @@ class MLMLoss(Loss):
         masks = masks.mean(-1) > self.mask_threshold
 
         out_masked_only = decoder_outputs[masks]
+        masks = masks[:, :targets.shape[1]]
         targets_masked_only = targets[masks]
 
         loss = self.nll_loss(out_masked_only, targets_masked_only)
