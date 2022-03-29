@@ -33,7 +33,7 @@ from nemo.core.classes.mixins import set_access_cfg, AccessMixin
 
 from tqdm.auto import tqdm
 
-from torch import nn
+import pickle
 
 @dataclass
 class AccessConfig:
@@ -58,7 +58,8 @@ class FeatClusteringConfig:
     model_path: Optional[str] = None  # Path to a .nemo file
     pretrained_name: Optional[str] = None  # Name of a pretrained model
 
-    cluster_model_path: Optional[str] = None  # if already have cluster model
+    load_cluster_model_path: Optional[str] = None  # if already have cluster model
+    save_cluster_model_path: Optional[str] = None
 
     # General configs
     # output_filename: Optional[str] = None
@@ -229,67 +230,77 @@ def main(cfg: FeatClusteringConfig) -> FeatClusteringConfig:
 
     asr_model.eval()
     asr_model.to(device)
-    feats_for_fit = []
-    total_feats = 0
 
-    # print(datalayer)
-    print(len(datalayer.dataset))
+    if cfg.load_cluster_model_path is None:
+
+        feats_for_fit = []
+        total_feats = 0
+
+        # print(datalayer)
+        print(len(datalayer.dataset))
 
 
-    for batch in tqdm(datalayer, desc="Obtaining features for fit"):
-        # for i in batch[-1]:
-        #    indexes.add(int(i))
+        for batch in tqdm(datalayer, desc="Obtaining features for fit"):
+            # for i in batch[-1]:
+            #    indexes.add(int(i))
 
-        input_signal = batch[0].to(device)
-        input_signal_length = batch[1].to(device)
+            input_signal = batch[0].to(device)
+            input_signal_length = batch[1].to(device)
 
-        feats, feat_lens = asr_model.get_feats(
-            input_signal=input_signal,
-            input_signal_length=input_signal_length,
-            layer_name=cfg.layer_name
-        )
+            feats, feat_lens = asr_model.get_feats(
+                input_signal=input_signal,
+                input_signal_length=input_signal_length,
+                layer_name=cfg.layer_name
+            )
 
-        feats = feats.reshape(-1, feats.shape[-1])
-        total_feats += feats.shape[0]
+            feats = feats.reshape(-1, feats.shape[-1])
+            total_feats += feats.shape[0]
 
-        feats_for_fit.append(feats)
+            feats_for_fit.append(feats)
 
-        del batch
+            del batch
 
-        print(feats.shape[0], total_feats, cfg.num_feats_for_fit)
+            print(feats.shape[0], total_feats, cfg.num_feats_for_fit)
 
-        if total_feats > cfg.num_feats_for_fit:
-            break
+            if total_feats > cfg.num_feats_for_fit:
+                break
 
-    feats_for_fit = torch.cat(feats_for_fit, dim=0).cpu()
+        feats_for_fit = torch.cat(feats_for_fit, dim=0).cpu()
 
-    # do clustering
-    if cfg.cluster_model == "KMeans":
-        cluster_model = MiniBatchKMeans(n_clusters=cfg.n_clusters,
-                                        max_iter=10000,
-                                        tol=0.0,
-                                        max_no_improvement=200,
-                                        n_init=20,
-                                        reassignment_ratio=0.01,
-                                        batch_size=10000,
-                                        verbose=True)
-    elif cfg.cluster_model == "Birch":
-        cluster_model = Birch(n_clusters=cfg.n_clusters,
-                              copy=False,
-                              compute_labels=False)
-        ###
-    elif cfg.cluster_model == "DBSCAN":
-        cluster_model = DBSCAN(n_jobs=-1)
-        ###
+        # do clustering
+        if cfg.cluster_model == "KMeans":
+            cluster_model = MiniBatchKMeans(n_clusters=cfg.n_clusters,
+                                            max_iter=10000,
+                                            tol=0.0,
+                                            max_no_improvement=200,
+                                            n_init=20,
+                                            reassignment_ratio=0.01,
+                                            batch_size=10000,
+                                            verbose=True)
+        elif cfg.cluster_model == "Birch":
+            cluster_model = Birch(n_clusters=cfg.n_clusters,
+                                  copy=False,
+                                  compute_labels=False)
+            ###
+        elif cfg.cluster_model == "DBSCAN":
+            cluster_model = DBSCAN(n_jobs=-1)
+            ###
+        else:
+            print(cfg.cluster_model, "not valid")
+
+        cluster_model.fit(feats_for_fit)
+        # inertia = -cluster_model.score(feats_for_fit) / len(feats_for_fit)
+        # print("total intertia: %.5f", inertia)
+        print("finished successfully")
+
+        del feats_for_fit
+
+        if cfg.save_cluster_model_path is not None:
+            pickle.dump(cluster_model, cfg.save_cluster_model_path)
+
     else:
-        print(cfg.cluster_model, "not valid")
+        cluster_model = pickle.load(cfg.load_cluster_model_path)
 
-    cluster_model.fit(feats_for_fit)
-    # inertia = -cluster_model.score(feats_for_fit) / len(feats_for_fit)
-    # print("total intertia: %.5f", inertia)
-    print("finished successfully")
-
-    del feats_for_fit
 
     if cfg.apply_to_fit:
         print("Producing labels for dataset:", cfg.fit_manifest)
