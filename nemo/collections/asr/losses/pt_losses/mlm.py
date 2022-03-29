@@ -55,7 +55,7 @@ class MLMLoss(Loss):
         ###
         print(decoder_outputs.shape, masks.shape, targets.shape)
         out_masked_only = decoder_outputs[masks]
-        targets = F.pad(targets, (0, targets.shape[-1] - masks.shape[-1]))
+        targets = F.pad(targets, (0, masks.shape[-1] - targets.shape[-1]))
         targets_masked_only = targets[masks]
 
         loss = self.nll_loss(out_masked_only, targets_masked_only)
