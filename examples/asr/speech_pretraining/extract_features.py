@@ -236,7 +236,7 @@ def main(cfg: FeatClusteringConfig) -> FeatClusteringConfig:
 
     # indexes = set()
 
-    asr_model = nn.DataParallel(asr_model)
+    #asr_model = nn.DataParallel(asr_model)
 
     for batch in tqdm(datalayer, desc="Obtaining features for fit"):
         # for i in batch[-1]:
