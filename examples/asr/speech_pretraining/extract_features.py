@@ -33,6 +33,8 @@ from nemo.core.classes.mixins import set_access_cfg, AccessMixin
 
 from tqdm.auto import tqdm
 
+from torch import nn
+
 @dataclass
 class AccessConfig:
     access_all_intermediate: bool = True
@@ -233,6 +235,8 @@ def main(cfg: FeatClusteringConfig) -> FeatClusteringConfig:
     print(len(datalayer.dataset))
 
     # indexes = set()
+
+    asr_model = nn.DataParallel(asr_model)
 
     for batch in tqdm(datalayer, desc="Obtaining features for fit"):
         # for i in batch[-1]:
