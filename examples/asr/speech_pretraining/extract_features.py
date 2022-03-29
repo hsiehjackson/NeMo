@@ -108,6 +108,8 @@ def produce_labels(datalayer, in_manifest, out_manifest, asr_model, cluster_mode
         cur_labels = cluster_model.predict(feats.cpu())
         cur_labels = cur_labels.reshape(orig_bs, -1)
 
+        print(batch[-1])
+
         for j in range(cur_labels.shape[0]):
             label_dict[int(batch[-1][j])] = cur_labels[j, :feat_lens[j]]
 
@@ -146,7 +148,6 @@ def main(cfg: FeatClusteringConfig) -> FeatClusteringConfig:
     else:
         device = torch.device(f'cuda:{cfg.cuda}' if cfg.cuda >= 0 else 'cpu')
 
-    print(device)
 
     # setup model
     if cfg.model_path is not None:
@@ -234,9 +235,6 @@ def main(cfg: FeatClusteringConfig) -> FeatClusteringConfig:
     # print(datalayer)
     print(len(datalayer.dataset))
 
-    # indexes = set()
-
-    #asr_model = nn.DataParallel(asr_model)
 
     for batch in tqdm(datalayer, desc="Obtaining features for fit"):
         # for i in batch[-1]:
