@@ -296,10 +296,10 @@ def main(cfg: FeatClusteringConfig) -> FeatClusteringConfig:
         del feats_for_fit
 
         if cfg.save_cluster_model_path is not None:
-            pickle.dump(cluster_model, cfg.save_cluster_model_path)
+            pickle.dump(cluster_model, open(cfg.save_cluster_model_path, "wb"))
 
     else:
-        cluster_model = pickle.load(cfg.load_cluster_model_path)
+        cluster_model = pickle.load(open(cfg.load_cluster_model_path, "rb"))
 
 
     if cfg.apply_to_fit:
