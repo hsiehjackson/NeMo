@@ -194,7 +194,7 @@ class DiarizationMixin(ABC):
         """
         pass
 
-from torch import nn
+from torch.nn.parallel import DistributedDataParallel
 
 class FeatExtractMixin(AccessMixin):
     def get_feats(self, input_signal, input_signal_length, layer_name):
@@ -210,7 +210,7 @@ class FeatExtractMixin(AccessMixin):
             input_signal=input_signal, length=input_signal_length,
         )
 
-        model_par = nn.DataParallel(self)
+        model_par = DistributedDataParallel(self)
 
         with torch.no_grad():
             model_par(processed_signal=processed_signal, processed_signal_length=processed_signal_length)
