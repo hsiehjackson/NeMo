@@ -52,8 +52,6 @@ class MLMLoss(Loss):
         bs = decoder_outputs.shape[0]
         masks = masks.mean(-1) > self.mask_threshold
 
-        ###
-        print(decoder_outputs.shape, masks.shape, targets.shape)
         out_masked_only = decoder_outputs[masks]
         targets = F.pad(targets, (0, masks.shape[-1] - targets.shape[-1]))
         targets_masked_only = targets[masks]
