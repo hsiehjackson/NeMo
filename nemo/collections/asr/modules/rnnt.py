@@ -1125,4 +1125,30 @@ class RNNTDecoderJoint(torch.nn.Module, Exportable):
         return (joint_output, decoder_length, state_h, state_c)
 
 
-#TODO add encapsulated rnnt decoder for ssl here?
+class RNNTDecoderJointSSL(torch.nn.Module):
+    def __init__(self, decoder, joint):
+        super().__init__()
+        self.decoder = decoder
+        self.joint = joint
+
+    @property
+    def needs_labels(self):
+        return True
+
+    @property
+    def input_types(self):
+        return OrderedDict({"encoder_output": NeuralType(('B', 'D', 'T'), AcousticEncodedRepresentation()),
+                            "targets": NeuralType(('B', 'T'), LabelsType()),
+                            "target_lengths": NeuralType(tuple('B'), LengthsType()),
+                            })
+
+    @property
+    def output_types(self):
+        return OrderedDict({"log_probs": NeuralType(('B', 'T', 'D'), SpectrogramType())})
+
+    def forward(self, encoder_output, target, target_lengths):
+
+        decoder, target_length, states = self.decoder(targets=target, target_length=target_length)
+        log_probs = self.joint(encoder_outputs=encoder_output, decoder_outputs=decoder)
+
+        return log_probs

@@ -405,6 +405,10 @@ class ConvASRDecoder(NeuralModule, Exportable):
     """
 
     @property
+    def needs_labels(self):
+        return False
+
+    @property
     def input_types(self):
         return OrderedDict({"encoder_output": NeuralType(('B', 'D', 'T'), AcousticEncodedRepresentation())})
 
@@ -474,6 +478,10 @@ class ConvASRDecoder(NeuralModule, Exportable):
 class ConvASRDecoderReconstruction(NeuralModule, Exportable):
     """ASR Decoder for reconstructing masked regions of spectrogram
     """
+
+    @property
+    def needs_labels(self):
+        return False
 
     @property
     def input_types(self):

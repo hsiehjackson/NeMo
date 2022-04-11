@@ -16,7 +16,8 @@ class MLMLoss(Loss):
             "spec_masks": NeuralType(("B", "D", "T"), SpectrogramType()),
             "decoder_outputs": NeuralType(("B", "T", "D"), VoidType()),
             "targets": NeuralType(('B', 'T'), LabelsType()),
-            "target_length": NeuralType(tuple('B'), LengthsType(), optional=True),
+            "decoder_lengths": NeuralType(tuple('B'), LengthsType(), optional=True),
+            "target_lengths": NeuralType(tuple('B'), LengthsType(), optional=True),
         }
 
     @property
@@ -42,7 +43,7 @@ class MLMLoss(Loss):
         self.mask_threshold = mask_threshold
 
     @typecheck()
-    def forward(self, spec_masks, decoder_outputs, targets, target_length=None):
+    def forward(self, spec_masks, decoder_outputs, targets, decoder_lengths=None, target_lengths=None):
 
         #outputs are log_probs
         masks = spec_masks.transpose(-2, -1)
