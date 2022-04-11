@@ -252,6 +252,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, FeatExtractMixin)
             "spectrograms": NeuralType(('B', 'D', 'T'), SpectrogramType()),
             "spec_masks": NeuralType(('B', 'D', 'T'), SpectrogramType()),
             "outputs": NeuralType(('B', 'T', 'D'), VoidType()),
+            "encoded_len": NeuralType(tuple('B'), LengthsType()),
         }
 
     @typecheck()
