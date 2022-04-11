@@ -156,9 +156,8 @@ model:
             activation: "relu"
             dropout: 0.1
       loss:
-        loss_name: "default"
-        warprnnt_numba_kwargs:
-          fastemit_lambda: 1e-3
+        _target_: nemo.collections.asr.losses.RNNTLossForSSL
+        num_classes: 90000
       targets_from_loss: "contr"
 
 
