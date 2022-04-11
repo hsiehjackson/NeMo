@@ -135,16 +135,26 @@ model:
 
     rnnt:
       decoder:
-        _target_: nemo.collections.asr.modules.RNNTDecoderJointSSL
-        normalization_mode: null # Currently only null is supported for export.
-        random_state_sampling: false # Random state sampling: https://arxiv.org/pdf/1910.11455.pdf
-        blank_as_pad: true # This flag must be set in order to support exporting of RNNT models + efficient inference.
-        vocab_size: 90000
-        prednet:
-          pred_hidden: 640
-          pred_rnn_layers: 1
-          t_max: null
-          dropout: 0.1
+        decoder:
+          _target_: nemo.collections.asr.modules.RNNTDecoderJointSSL
+          normalization_mode: null # Currently only null is supported for export.
+          random_state_sampling: false # Random state sampling: https://arxiv.org/pdf/1910.11455.pdf
+          blank_as_pad: true # This flag must be set in order to support exporting of RNNT models + efficient inference.
+          vocab_size: 90000
+          prednet:
+            pred_hidden: 640
+            pred_rnn_layers: 1
+            t_max: null
+            dropout: 0.1
+        joint:
+          _target_: nemo.collections.asr.modules.RNNTJoint
+          log_softmax: null  # 'null' would set it automatically according to CPU/GPU device
+          preserve_memory: false  # dramatically slows down training, but might preserve some memory
+          experimental_fuse_loss_wer: false
+          jointnet:
+            joint_hidden: 640
+            activation: "relu"
+            dropout: 0.1
       loss:
         loss_name: "default"
         warprnnt_numba_kwargs:
