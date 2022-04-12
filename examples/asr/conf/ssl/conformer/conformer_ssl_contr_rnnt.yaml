@@ -153,9 +153,12 @@ model:
           preserve_memory: false  # dramatically slows down training, but might preserve some memory
           experimental_fuse_loss_wer: false
           jointnet:
+            encoder_hidden: 640
+            pred_hidden: 640
             joint_hidden: 640
             activation: "relu"
             dropout: 0.1
+          num_classes: 90000
       loss:
         _target_: nemo.collections.asr.losses.RNNTLossForSSL
         num_classes: 90000
