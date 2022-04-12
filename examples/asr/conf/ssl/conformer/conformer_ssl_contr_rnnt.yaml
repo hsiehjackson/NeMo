@@ -135,8 +135,9 @@ model:
 
     rnnt:
       decoder:
+        _target_: nemo.collections.asr.modules.RNNTDecoderJointSSL
         decoder:
-          _target_: nemo.collections.asr.modules.RNNTDecoderJointSSL
+          _target_: nemo.collections.asr.modules.RNNTDecoder
           normalization_mode: null # Currently only null is supported for export.
           random_state_sampling: false # Random state sampling: https://arxiv.org/pdf/1910.11455.pdf
           blank_as_pad: true # This flag must be set in order to support exporting of RNNT models + efficient inference.
