@@ -16,7 +16,7 @@ class RNNTLossForSSL(Loss):
         """
         return {
             "spec_masks": NeuralType(("B", "D", "T"), SpectrogramType()),
-            "decoder_outputs": NeuralType(("B", "T", "D"), VoidType()),
+            "decoder_outputs": NeuralType(('B', 'T', 'T', 'D'), LogprobsType()),
             "targets": NeuralType(('B', 'T'), LabelsType()),
             "decoder_lengths": NeuralType(tuple('B'), LengthsType(), optional=True),
             "target_lengths": NeuralType(tuple('B'), LengthsType(), optional=True),
