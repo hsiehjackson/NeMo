@@ -1146,9 +1146,9 @@ class RNNTDecoderJointSSL(torch.nn.Module):
     def output_types(self):
         return OrderedDict({"log_probs": NeuralType(('B', 'T', 'D'), SpectrogramType())})
 
-    def forward(self, encoder_output, target, target_lengths):
+    def forward(self, encoder_output, targets, target_lengths):
 
-        decoder, target_length, states = self.decoder(targets=target, target_length=target_length)
+        decoder, target_length, states = self.decoder(targets=targets, target_length=target_lengths)
         log_probs = self.joint(encoder_outputs=encoder_output, decoder_outputs=decoder)
 
         return log_probs
