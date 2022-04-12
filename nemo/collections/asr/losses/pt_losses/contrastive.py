@@ -148,7 +148,6 @@ class ContrastiveLoss(Loss):
         masks = masks.reshape(targets.shape[0], targets.shape[1], -1)
 
         if self.quantized_targets:
-
             if self.store_ids:
                 targets, prob_ppl_loss, cur_codebook_temp, self.target_ids = self.quantizer(targets, return_ids=True)
             else:
