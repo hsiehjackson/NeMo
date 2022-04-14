@@ -26,7 +26,7 @@ class ReduceLabelsConfig:
     out_manifest: str
 
 @hydra_runner(config_name="ReduceLabelsConfig", schema=ReduceLabelsConfig)
-def main(cfg: FeatClusteringConfig) -> FeatClusteringConfig:
+def main(cfg: ReduceLabelsConfig) -> ReduceLabelsConfig:
     logging.info(f'Hydra config: {OmegaConf.to_yaml(cfg)}')
 
     with open(cfg.out_manifest, 'w', encoding='utf-8') as f:
