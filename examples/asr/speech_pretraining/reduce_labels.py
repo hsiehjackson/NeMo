@@ -41,10 +41,6 @@ def main(cfg: ReduceLabelsConfig) -> ReduceLabelsConfig:
                         prev_tok = tok
                         new_list.append(tok)
 
-                print(item['token_labels'])
-                print(new_list)
-                input()
-
                 item['token_labels'] = new_list
 
                 f.write(json.dumps(item) + "\n")
