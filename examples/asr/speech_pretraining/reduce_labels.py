@@ -48,3 +48,7 @@ def main(cfg: ReduceLabelsConfig) -> ReduceLabelsConfig:
                 item['token_labels'] = new_list
 
                 f.write(json.dumps(item) + "\n")
+
+
+if __name__ == '__main__':
+    main()  # noqa pylint: disable=no-value-for-parameter
