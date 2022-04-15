@@ -132,6 +132,7 @@ model:
         codebook_size: 300
         sample_from_same_utterance_only: true
         sample_from_non_masked: false
+      loss_alpha: 5.
 
     mlm:
       decoder:
@@ -153,7 +154,7 @@ model:
         _target_: nemo.collections.asr.losses.MLMLoss
         combine_time_steps: 4
       targets_from_loss: "contr"
-      loss_alpha: 1000.
+      loss_alpha: 300.
       output_from_layer: "layers.5"
 
     mlm_3:
@@ -165,7 +166,7 @@ model:
         _target_: nemo.collections.asr.losses.MLMLoss
         combine_time_steps: 4
       targets_from_loss: "contr"
-      loss_alpha: 1000.
+      loss_alpha: 300.
       output_from_layer: "layers.11"
 
   access:
