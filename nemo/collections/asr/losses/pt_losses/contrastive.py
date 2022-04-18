@@ -66,6 +66,7 @@ class ContrastiveLoss(Loss):
         quantizer_temp_min: float = 0.5,
         quantizer_temp_decay: float = 0.999995,
         mask_threshold: float = 0.8,
+        reduce_ids: bool = False,
     ):
         """
         Loss function representing the contrastive task of identifying the true latent speech representation of
@@ -120,6 +121,7 @@ class ContrastiveLoss(Loss):
         self.mask_threshold = mask_threshold
 
         self.store_ids = True
+        self.reduce_ids = reduce_ids
 
         if not self.quantized_targets:
             self.target_proj = nn.Linear(in_dim * combine_time_steps, proj_dim)
@@ -150,6 +152,25 @@ class ContrastiveLoss(Loss):
         if self.quantized_targets:
             if self.store_ids:
                 targets, prob_ppl_loss, cur_codebook_temp, self.target_ids = self.quantizer(targets, return_ids=True)
+
+                if self.reduce_ids:
+                    sh = self.target_ids.shape
+                    reduced_ids = self.target_ids.new_zeros(sh)
+                    for i in range(sh[0]):
+                        cur_id = -1
+                        cur_j = 0
+                        for j in range(sh[1]):
+                            if self.target_ids[i, j] != cur_id:
+                                cur_id = self.target_ids[i, j]
+                                reduced_ids[i, cur_j] = cur_id
+                                cur_j += 1
+
+                    print(self.target_ids)
+                    print(reduced_ids)
+                    print()
+
+                    self.target_ids = reduced_ids
+
             else:
                 targets, prob_ppl_loss, cur_codebook_temp = self.quantizer(targets)
         else:
