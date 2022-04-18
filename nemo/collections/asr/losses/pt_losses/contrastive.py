@@ -32,6 +32,7 @@ class ContrastiveLoss(Loss):
             "spectrograms": NeuralType(("B", "D", "T"), SpectrogramType()),
             "spec_masks": NeuralType(("B", "D", "T"), SpectrogramType()),
             "decoder_outputs": NeuralType(("B", "T", "D"), VoidType()),
+            "decoder_lengths": NeuralType(tuple('B'), LengthsType(), optional=True),
         }
 
     @property
@@ -140,7 +141,7 @@ class ContrastiveLoss(Loss):
         return negs, neg_idxs
 
     @typecheck()
-    def forward(self, spectrograms, spec_masks, decoder_outputs):
+    def forward(self, spectrograms, spec_masks, decoder_outputs, decoder_lengths=None):
         spec_in = spectrograms.transpose(-2, -1)
         masks = spec_masks.transpose(-2, -1)
         targets = spec_in
@@ -165,13 +166,14 @@ class ContrastiveLoss(Loss):
                                 cur_id = self.target_ids[i, j]
                                 reduced_ids[i, cur_j] = cur_id
                                 cur_j += 1
-                            if self.target_ids[i, j] == 0:
+                            if j >= decoder_lengths[i]:
                                 reduced_lens[i] = cur_j
                                 break
 
 
                     print(self.target_ids[:10, :10])
                     print(reduced_ids[:10, :10])
+                    print(decoder_lengths)
                     print(reduced_lens)
                     print()
 

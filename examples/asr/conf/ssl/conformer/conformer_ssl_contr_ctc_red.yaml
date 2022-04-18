@@ -129,7 +129,8 @@ model:
         proj_dim: *dec_out
         combine_time_steps: 4
         quantized_targets: true
-        codebook_size: 300
+        codebook_size: 512
+        num_groups: 1
         sample_from_same_utterance_only: true
         sample_from_non_masked: false
         reduce_ids: true

@@ -400,7 +400,8 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, FeatExtractMixin)
                                                     target_lengths=transcript_len)
                 else:
                     cur_loss_value = cur_loss(spectrograms=spectrograms, spec_masks=spec_masks,
-                                          decoder_outputs=outputs[dec_loss_name])
+                                          decoder_outputs=outputs[dec_loss_name],
+                                          decoder_lengths=encoded_len)
                 loss_value = loss_value + cur_loss_value * self.loss_alphas[dec_loss_name]
                 tensorboard_logs['train_' + dec_loss_name] = cur_loss_value
 
@@ -445,7 +446,8 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, FeatExtractMixin)
                                                    target_lengths=transcript_len)
                 else:
                     cur_loss_value = cur_loss(spectrograms=spectrograms, spec_masks=spec_masks,
-                                              decoder_outputs=outputs[dec_loss_name])
+                                              decoder_outputs=outputs[dec_loss_name],
+                                              decoder_lengths=encoded_len)
                 loss_value = loss_value + cur_loss_value * self.loss_alphas[dec_loss_name]
 
         if self.feat_pen:
