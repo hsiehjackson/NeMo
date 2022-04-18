@@ -57,7 +57,7 @@ class CTCLossForSSL(nn.CTCLoss, Loss):
         target_lengths = target_lengths.long()
         targets = targets.long()
         # here we transpose because we expect [B, T, D] while PyTorch assumes [T, B, D]
-        log_probs = log_probs.transpose(1, 0)
+        log_probs = decoder_outputs.transpose(1, 0)
         loss = super().forward(
             log_probs=log_probs, targets=targets, input_lengths=input_lengths, target_lengths=target_lengths
         )

@@ -336,9 +336,13 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, FeatExtractMixin)
                 if dec_loss['decoder'].needs_labels:
                     if self.targets_from_loss[dec_loss_name] is not None:
                         target_loss = self.targets_from_loss[dec_loss_name]
+                        target_ids = self.decoder_losses[target_loss]['loss'].target_ids
+                        target_lengths = self.decoder_losses[target_loss]['loss'].target_lengths
+                        if target_lengths is None:
+                            target_lengths = encoded_len
                         outputs[dec_loss_name] = dec_loss['decoder'](encoder_output=dec_input,
-                                                                     targets=self.decoder_losses[target_loss]['loss'].target_ids,
-                                                                     target_lengths=encoded_len)
+                                                                     targets=target_ids,
+                                                                     target_lengths=target_lengths)
                     else:
                         outputs[dec_loss_name] = dec_loss['decoder'](encoder_output=dec_input,
                                                                      targets=targets,
