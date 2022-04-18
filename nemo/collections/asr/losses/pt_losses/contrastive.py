@@ -156,7 +156,7 @@ class ContrastiveLoss(Loss):
                 if self.reduce_ids:
                     sh = self.target_ids.shape
                     reduced_ids = self.target_ids.new_zeros(sh)
-                    reduced_lens = self.target_ids.new_zeros(sh[0]).long()
+                    reduced_lens = self.target_ids.new_ones(sh[0]).long() * sh[1]
                     for i in range(sh[0]):
                         cur_id = -1
                         cur_j = 0
@@ -166,7 +166,7 @@ class ContrastiveLoss(Loss):
                                 reduced_ids[i, cur_j] = cur_id
                                 cur_j += 1
                             if self.target_ids[i, j] == 0:
-                                reduced_lens[i] = j
+                                reduced_lens[i] = cur_j
                                 break
 
 
