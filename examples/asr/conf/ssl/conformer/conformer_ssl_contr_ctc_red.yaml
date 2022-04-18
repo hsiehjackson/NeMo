@@ -139,10 +139,10 @@ model:
       decoder:
         _target_: nemo.collections.asr.modules.ConvASRDecoder
         feat_in: ${model.encoder.d_model}
-        num_classes: 90000
+        num_classes: 512
       loss:
         _target_: nemo.collections.asr.losses.CTCLossForSSL
-        num_classes: 90000
+        num_classes: 512
       targets_from_loss: "contr"
       start_step: 3000
 
