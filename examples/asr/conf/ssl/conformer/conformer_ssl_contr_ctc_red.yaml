@@ -144,6 +144,7 @@ model:
         combine_time_steps: 4
         num_classes: 90000
       targets_from_loss: "contr"
+      start_step: 3000
 
   optim:
     name: adamw

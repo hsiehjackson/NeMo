@@ -61,6 +61,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, FeatExtractMixin)
 
             self.decoder_losses = {}
             self.loss_alphas = {}
+            self.start_step = {}
             self.output_from_layer = {}
             self.targets_from_loss = {}
             # need to be separate for moduledict
@@ -77,6 +78,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, FeatExtractMixin)
                 self.loss_alphas[decoder_loss_name] = decoder_loss_cfg.get("loss_alpha", 1.0)
                 self.output_from_layer[decoder_loss_name] = decoder_loss_cfg.get("output_from_layer", None)
                 self.targets_from_loss[decoder_loss_name] = decoder_loss_cfg.get("targets_from_loss", None)
+                self.start_step[decoder_loss_name] = decoder_loss_cfg.get("start_step", 0)
 
 
             self.decoder_losses = nn.ModuleDict(self.decoder_losses)
@@ -328,6 +330,9 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, FeatExtractMixin)
 
             for dec_loss_name, dec_loss in self.decoder_losses.items():
 
+                if dec_loss['start_step'] > self.trainer.global_step:
+                    continue
+
                 if self.output_from_layer[dec_loss_name] is None:
                     dec_input = encoded
                 else:
@@ -375,6 +380,8 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, FeatExtractMixin)
             loss_value = signal.new_zeros(1)
             for dec_loss_name, dec_loss in self.decoder_losses.items():
                 cur_loss = dec_loss['loss']
+                if dec_loss['start_step'] > self.trainer.global_step:
+                    continue
                 if hasattr(cur_loss, "set_num_updates"):
                     cur_loss.set_num_updates(self.trainer.global_step)
                 if cur_loss.needs_labels:
@@ -420,6 +427,8 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, FeatExtractMixin)
             loss_value = signal.new_zeros(1)
             for dec_loss_name, dec_loss in self.decoder_losses.items():
                 cur_loss = dec_loss['loss']
+                if dec_loss['start_step'] > self.trainer.global_step:
+                    continue
                 if cur_loss.needs_labels:
                     if self.targets_from_loss[dec_loss_name] is not None:
                         target_loss = self.targets_from_loss[dec_loss_name]
