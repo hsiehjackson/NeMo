@@ -18,4 +18,4 @@ from nemo.collections.asr.losses.lattice_losses import LatticeLoss
 from nemo.collections.asr.losses.pt_losses.contrastive import ContrastiveLoss
 from nemo.collections.asr.losses.pt_losses.mlm import MLMLoss
 from nemo.collections.asr.losses.pt_losses.rnnt import RNNTLossForSSL
-from nemo.collections.asr.losses.pt_losses.rnnt import CTCLossForSSL
+from nemo.collections.asr.losses.pt_losses.ctc import CTCLossForSSL
