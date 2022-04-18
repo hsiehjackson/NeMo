@@ -142,7 +142,6 @@ model:
         num_classes: 90000
       loss:
         _target_: nemo.collections.asr.losses.CTCLossForSSL
-        combine_time_steps: 4
         num_classes: 90000
       targets_from_loss: "contr"
       start_step: 3000

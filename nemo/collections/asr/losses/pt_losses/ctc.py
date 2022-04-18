@@ -35,9 +35,8 @@ class CTCLossForSSL(nn.CTCLoss, Loss):
     def __init__(
             self,
             num_classes,
-            zero_infinity=False,
-            reduction='mean_batch',
-            combine_time_steps: int = 1,
+            zero_infinity=True,
+            reduction='mean_batch'
     ):
         self._blank = num_classes
         if reduction == 'mean_batch':
@@ -47,7 +46,6 @@ class CTCLossForSSL(nn.CTCLoss, Loss):
             ctc_reduction = reduction
             self._apply_batch_mean = False
         super().__init__(blank=self._blank, reduction=ctc_reduction, zero_infinity=zero_infinity)
-        self.combine_time_steps = combine_time_steps
 
     @typecheck()
     def forward(self, spec_masks, decoder_outputs, targets, decoder_lengths=None, target_lengths=None):
