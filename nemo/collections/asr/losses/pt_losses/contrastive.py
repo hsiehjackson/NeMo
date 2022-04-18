@@ -170,14 +170,6 @@ class ContrastiveLoss(Loss):
                                 reduced_lens[i] = cur_j
                                 break
 
-
-                    print(self.target_ids[:10, :10])
-                    print(reduced_ids[:10, :10])
-                    print(decoder_lengths)
-                    print(reduced_lens)
-                    print()
-
-
                     self.target_ids = reduced_ids
                     self.target_lengths = reduced_lens
 
