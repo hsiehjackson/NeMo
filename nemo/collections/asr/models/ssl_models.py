@@ -330,7 +330,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, FeatExtractMixin)
 
             for dec_loss_name, dec_loss in self.decoder_losses.items():
 
-                if dec_loss['start_step'] > self.trainer.global_step:
+                if self.start_step[dec_loss_name] > self.trainer.global_step:
                     continue
 
                 if self.output_from_layer[dec_loss_name] is None:
@@ -380,7 +380,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, FeatExtractMixin)
             loss_value = signal.new_zeros(1)
             for dec_loss_name, dec_loss in self.decoder_losses.items():
                 cur_loss = dec_loss['loss']
-                if dec_loss['start_step'] > self.trainer.global_step:
+                if self.start_step[dec_loss_name] > self.trainer.global_step:
                     continue
                 if hasattr(cur_loss, "set_num_updates"):
                     cur_loss.set_num_updates(self.trainer.global_step)
@@ -427,7 +427,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, FeatExtractMixin)
             loss_value = signal.new_zeros(1)
             for dec_loss_name, dec_loss in self.decoder_losses.items():
                 cur_loss = dec_loss['loss']
-                if dec_loss['start_step'] > self.trainer.global_step:
+                if self.start_step[dec_loss_name] > self.trainer.global_step:
                     continue
                 if cur_loss.needs_labels:
                     if self.targets_from_loss[dec_loss_name] is not None:
