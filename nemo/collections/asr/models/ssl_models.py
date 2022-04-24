@@ -25,7 +25,7 @@ from nemo.core.classes.mixins import set_access_cfg
 from nemo.collections.asr.parts.preprocessing.perturb import process_augmentations
 from nemo.core.classes import ModelPT
 from nemo.core.classes.common import PretrainedModelInfo, typecheck
-from nemo.core.neural_types import AudioSignal, LengthsType, NeuralType, SpectrogramType, VoidType, LabelsType
+from nemo.core.neural_types import AudioSignal, LengthsType, NeuralType, SpectrogramType, VoidType, LabelsType, AcousticEncodedRepresentation
 from nemo.utils import logging
 
 __all__ = ['SpeechEncDecSelfSupervisedModel']
@@ -254,7 +254,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, FeatExtractMixin)
         return {
             "spectrograms": NeuralType(('B', 'D', 'T'), SpectrogramType()),
             "spec_masks": NeuralType(('B', 'D', 'T'), SpectrogramType()),
-            "encoded": NeuralType(('B', 'D', 'T'), VoidType()),
+            "encoded": NeuralType(('B', 'D', 'T'), AcousticEncodedRepresentation()),
             "encoded_len": NeuralType(tuple('B'), LengthsType()),
         }
 
