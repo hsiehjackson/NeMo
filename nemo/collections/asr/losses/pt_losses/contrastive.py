@@ -170,8 +170,8 @@ class ContrastiveLoss(Loss):
                                 reduced_lens[i] = cur_j
                                 break
 
-                    self.target_ids = reduced_ids
-                    self.target_lengths = reduced_lens[:, :reduced_ids.max()]
+                    self.target_ids = reduced_ids[:, :reduced_lens.max()]
+                    self.target_lengths = reduced_lens
 
 
                 else:
