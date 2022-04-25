@@ -137,7 +137,7 @@ class AudioText(_Collection):
         if index_by_file_id:
             self.mapping = {}
 
-        for id_, audio_file, duration, offset, text, speaker, orig_sr, token_labels, langs in zip(
+        for id_, audio_file, duration, offset, text, speaker, orig_sr, token_labels, lang in zip(
             ids, audio_files, durations, offsets, texts, speakers, orig_sampling_rates, token_labels, langs
 
         ):
