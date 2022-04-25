@@ -1150,9 +1150,13 @@ class RNNTDecoderJointSSL(torch.nn.Module):
 
         print(encoder_output.shape, targets.shape)
         print(target_lengths)
-        print()
 
         decoder, target_length, states = self.decoder(targets=targets, target_length=target_lengths)
         log_probs = self.joint(encoder_outputs=encoder_output, decoder_outputs=decoder)
+
+        print(decoder.shape, target_length.shape, states.shape)
+        print(target_length)
+        print(log_probs.shape)
+        print()
 
         return log_probs
