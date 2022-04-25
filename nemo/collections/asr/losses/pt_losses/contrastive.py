@@ -171,7 +171,7 @@ class ContrastiveLoss(Loss):
                                 break
 
                     self.target_ids = reduced_ids
-                    self.target_lengths = reduced_lens
+                    self.target_lengths = reduced_lens[:, :reduced_ids.max()]
 
 
                 else:
