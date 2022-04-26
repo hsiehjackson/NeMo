@@ -70,7 +70,7 @@ class AccessMixin(ABC):
         """
         if hasattr(self, "_registry"):
             self._registry.clear()
-        for _, m in module.named_modules():
+        for _, m in self.named_modules():
             if isinstance(m, AccessMixin):
                 m.reset_registry()
 
