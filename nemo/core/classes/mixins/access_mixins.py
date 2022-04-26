@@ -38,10 +38,6 @@ class AccessMixin(ABC):
         super().__init__()
         self._registry = []
 
-    def setup_layer_access(self, access_config):
-        global _ACCESS_CFG
-        _ACCESS_CFG = access_config
-
     def register_accessible_tensor(
             self, tensor
     ):
@@ -51,10 +47,6 @@ class AccessMixin(ABC):
         if self.access_cfg.get('detach', False):
             tensor = tensor.detach()
 
-        if hasattr(self, '_registry'):
-            del self._registry
-        self._registry = []
-
         self._registry.append(tensor)
 
     @classmethod
@@ -63,7 +55,7 @@ class AccessMixin(ABC):
     ):
         """
         Given a module, will recursively extract in nested lists, all of the registries that may exist.
-        The keys of this dictionary are the flattened module names, the values are the internal distillation registry
+        The keys of this dictionary are the flattened module names, the values are the internal registry
         of each such module.
         """
         module_registry = {}
@@ -74,13 +66,11 @@ class AccessMixin(ABC):
 
     def reset_registry(self, module):
         """
-        Recursively reset the registry of distillation tensors to clear up memory.
+        Recursively reset the registries to clear up memory.
         """
-        if hasattr(module, '_registry'):
-            del module._registry
-            module._registry = []
+        module._registry.clear()
         for n, m in module.named_modules():
-            if hasattr(m, "_registry") and len(m._registry) > 0:
+            if hasattr(m, "_registry"):
                 self.reset_registry(m)
 
     @property
