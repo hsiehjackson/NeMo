@@ -412,7 +412,7 @@ class FeatExtractMixin(AccessMixin):
     def get_feats(self, input_signal, input_signal_length, layer_name):
         self.eval()
         self.apply_masking = False
-        self.reset_registry(self.encoder)
+        self.reset_registry()
 
         stride = self.feat_extract_stride#4
         combine = self.feat_extract_combine#1
