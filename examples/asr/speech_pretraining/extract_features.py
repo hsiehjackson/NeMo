@@ -149,6 +149,7 @@ def main(cfg: FeatClusteringConfig) -> FeatClusteringConfig:
         device = torch.device(f'cuda:{cfg.cuda}' if cfg.cuda >= 0 else 'cpu')
 
 
+
     # setup model
     if cfg.model_path is not None:
         # restore model from .nemo file path
@@ -156,7 +157,18 @@ def main(cfg: FeatClusteringConfig) -> FeatClusteringConfig:
         classpath = model_cfg.target  # original class path
         imported_class = model_utils.import_class_by_path(classpath)  # type: ASRModel
         logging.info(f"Restoring model : {imported_class.__name__}")
-        asr_model = imported_class.restore_from(restore_path=cfg.model_path, map_location=device)  # type: ASRModel
+
+        if torch.cuda.is_available():
+            model_cfg.trainer.accelerator = 'gpu'
+            model_cfg.trainer.strategy = 'dp'
+            model_cfg.trainer.gpus = 1
+        else:
+            model_cfg.trainer.accelerator = 'cpu'
+            model_cfg.trainer.strategy = None
+            model_cfg.trainer.gpus = 0
+        trainer = pl.Trainer(**model_cfg.trainer)
+
+        asr_model = imported_class.restore_from(restore_path=cfg.model_path, map_location=device, trainer=trainer)
         model_name = os.path.splitext(os.path.basename(cfg.model_path))[0]
     else:
         # restore model by name
