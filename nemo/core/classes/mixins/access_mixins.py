@@ -68,9 +68,10 @@ class AccessMixin(ABC):
         """
         Recursively reset the registries to clear up memory.
         """
-        self._registry.clear()
+        if hasattr(m, "_registry"):
+            self._registry.clear()
         for _, m in module.named_modules():
-            if hasattr(m, "_registry"):
+            if isinstance(m, AccessMixin):
                 m.reset_registry()
 
     @property

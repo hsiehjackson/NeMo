@@ -410,9 +410,6 @@ class DiarizationMixin(ABC):
 
 class FeatExtractMixin(AccessMixin):
 
-    def __init__(self):
-        super().__init__()
-
     def get_feats(self, input_signal, input_signal_length, layer_name):
         self.eval()
         self.apply_masking = False
