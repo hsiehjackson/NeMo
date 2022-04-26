@@ -132,6 +132,7 @@ model:
         codebook_size: 300
         sample_from_same_utterance_only: true
         sample_from_non_masked: false
+        reduce_ids: true
 
     rnnt:
       decoder:
@@ -163,6 +164,7 @@ model:
         _target_: nemo.collections.asr.losses.RNNTLossForSSL
         num_classes: 90000
       targets_from_loss: "contr"
+      start_step: 3000
 
 
   optim:
