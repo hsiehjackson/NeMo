@@ -47,6 +47,9 @@ class AccessMixin(ABC):
         if self.access_cfg.get('detach', False):
             tensor = tensor.detach()
 
+        if not hasattr(m, '_registry'):
+            self._registry = []
+
         self._registry.append(tensor)
 
     @classmethod
@@ -54,8 +57,8 @@ class AccessMixin(ABC):
             cls, module: torch.nn.Module
     ):
         """
-        Given a module, will recursively extract in nested lists, all of the registries that may exist.
-        The keys of this dictionary are the flattened module names, the values are the internal registry
+        Extract all registries from named submodules, return dictionary where
+        the keys are the flattened module names, the values are the internal registry
         of each such module.
         """
         module_registry = {}
