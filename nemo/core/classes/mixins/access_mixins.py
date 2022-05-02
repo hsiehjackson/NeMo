@@ -13,9 +13,6 @@
 # limitations under the License.
 
 from abc import ABC
-from contextlib import contextmanager
-from enum import Enum
-from typing import Dict, Iterator, List, Optional, Union
 
 import torch
 from omegaconf import DictConfig
@@ -93,3 +90,9 @@ class AccessMixin(ABC):
         """
         global _ACCESS_ENABLED
         return _ACCESS_ENABLED
+
+    @access_enabled.setter
+    def access_enabled(self, access_enabled):
+        global _ACCESS_ENABLED
+        _ACCESS_ENABLED = access_enabled
+
