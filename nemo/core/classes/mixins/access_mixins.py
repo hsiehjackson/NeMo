@@ -22,8 +22,8 @@ _ACCESS_ENABLED = False
 
 
 def set_access_cfg(cfg: 'DictConfig'):
-    if cfg is None or not isinstance(cfg, dict):
-        raise TypeError(f"cfg must be a dict")
+    if cfg is None or not isinstance(cfg, DictConfig):
+        raise TypeError(f"cfg must be a DictConfig")
     global _ACCESS_CFG
     _ACCESS_CFG = cfg
 
