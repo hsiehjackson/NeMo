@@ -563,7 +563,7 @@ class SqueezeExcite(nn.Module):
         self.context_window = context_window
 
 
-class JasperBlock(nn.Module):
+class JasperBlock(nn.Module, AccessMixin):
     """
     Constructs a single "Jasper" block. With modified parameters, also constructs other blocks for models
     such as `QuartzNet` and `Citrinet`.
@@ -1033,6 +1033,9 @@ class JasperBlock(nn.Module):
         out = self.mout(out)
         if self.res is not None and self.dense_residual:
             return xs + [out], lens
+
+        if self.access_cfg.get('access_all_intermediate', False):
+            self.register_accessible_tensor(tensor=out)
 
         return [out], lens
 

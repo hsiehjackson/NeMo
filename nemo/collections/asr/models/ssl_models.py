@@ -369,7 +369,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, FeatExtractMixin)
                                                                       targets=targets, target_lengths=target_lengths)
 
         if self.decoder_losses is None:
-            if hasattr(self.decoder_ssl, needs_labels) and self.decoder_ssl.needs_labels:
+            if hasattr(self.decoder_ssl, "needs_labels") and self.decoder_ssl.needs_labels:
                 outputs = self.decoder_ssl(encoder_output=encoded, targets=targets, target_lengths=target_lengths)
             else:
                 outputs = self.decoder_ssl(encoder_output=encoded)
@@ -409,7 +409,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, FeatExtractMixin)
                     if target_lengths is None:
                         target_lengths = encoded_len
 
-                if hasattr(dec_loss['decoder'], needs_labels) and dec_loss['decoder'].needs_labels:
+                if hasattr(dec_loss['decoder'], "needs_labels") and dec_loss['decoder'].needs_labels:
                     outputs[dec_loss_name] = dec_loss['decoder'](encoder_output=dec_input,
                                                                  targets=targets,
                                                                  target_lengths=target_lengths)
@@ -449,7 +449,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, FeatExtractMixin)
                                                                       targets=targets, target_lengths=target_lengths)
 
         if self.decoder_losses is None:
-            if hasattr(self.decoder_ssl, needs_labels) and self.decoder_ssl.needs_labels:
+            if hasattr(self.decoder_ssl, "needs_labels") and self.decoder_ssl.needs_labels:
                 outputs = self.decoder_ssl(encoder_output=encoded, targets=targets, target_lengths=target_lengths)
             else:
                 outputs = self.decoder_ssl(encoder_output=encoded)
@@ -485,7 +485,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, FeatExtractMixin)
                     if target_lengths is None:
                         target_lengths = encoded_len
 
-                if hasattr(dec_loss['decoder'], needs_labels) and dec_loss['decoder'].needs_labels:
+                if hasattr(dec_loss['decoder'], "needs_labels") and dec_loss['decoder'].needs_labels:
                     outputs[dec_loss_name] = dec_loss['decoder'](encoder_output=dec_input,
                                                                  targets=targets,
                                                                  target_lengths=target_lengths)
