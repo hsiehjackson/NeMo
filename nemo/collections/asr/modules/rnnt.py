@@ -1130,14 +1130,12 @@ class RNNTDecoderJoint(torch.nn.Module, Exportable):
 
 
 class RNNTDecoderJointSSL(torch.nn.Module):
+    needs_labels = True
+
     def __init__(self, decoder, joint):
         super().__init__()
         self.decoder = decoder
         self.joint = joint
-
-    @property
-    def needs_labels(self):
-        return True
 
     @property
     def input_types(self):
