@@ -34,6 +34,8 @@ try:
     PYTORCH_QUANTIZATION_AVAILABLE = True
 except ImportError:
     PYTORCH_QUANTIZATION_AVAILABLE = False
+from nemo.core.classes.mixins import AccessMixin
+
 
 jasper_activations = {
     "hardtanh": nn.Hardtanh,
