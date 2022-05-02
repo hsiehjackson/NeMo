@@ -80,6 +80,9 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, FeatExtractMixin)
                 self.targets_from_loss[decoder_loss_name] = decoder_loss_cfg.get("targets_from_loss", None)
                 self.start_step[decoder_loss_name] = decoder_loss_cfg.get("start_step", 0)
 
+                if self.output_from_layer[decoder_loss_name] is not None:
+                    self.access_enabled = True
+
             self.decoder_losses = nn.ModuleDict(self.decoder_losses)
 
         else:

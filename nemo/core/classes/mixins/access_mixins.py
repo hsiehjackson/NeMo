@@ -12,22 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from omegaconf import DictConfig
 from abc import ABC
 from contextlib import contextmanager
 from enum import Enum
 from typing import Dict, Iterator, List, Optional, Union
 
 import torch
+from omegaconf import DictConfig
 
-_ACCESS_CFG = DictConfig({"access_all_intermediate": False,
-                          "detach": False,
-                          "convert_to_cpu": False
-                          })
+_ACCESS_CFG = DictConfig({"detach": False, "convert_to_cpu": False})
+_ACCESS_ENABLED = False
+
 
 def set_access_cfg(cfg: 'DictConfig'):
     global _ACCESS_CFG
     _ACCESS_CFG = cfg
+
 
 class AccessMixin(ABC):
     """
@@ -38,9 +38,10 @@ class AccessMixin(ABC):
         super().__init__()
         self._registry = []
 
-    def register_accessible_tensor(
-            self, tensor
-    ):
+    def register_accessible_tensor(self, tensor):
+        """
+        Register tensor for later use.
+        """
         if self.access_cfg.get('convert_to_cpu', False):
             tensor = tensor.cpu()
 
@@ -53,9 +54,7 @@ class AccessMixin(ABC):
         self._registry.append(tensor)
 
     @classmethod
-    def get_module_registry(
-            cls, module: torch.nn.Module
-    ):
+    def get_module_registry(cls, module: torch.nn.Module):
         """
         Extract all registries from named submodules, return dictionary where
         the keys are the flattened module names, the values are the internal registry
@@ -85,3 +84,12 @@ class AccessMixin(ABC):
         """
         global _ACCESS_CFG
         return _ACCESS_CFG
+
+    @property
+    def access_enabled(self):
+        """
+        Returns:
+            The global variable representing if we should register intermediate tensors
+        """
+        global _ACCESS_ENABLED
+        return _ACCESS_ENABLED
