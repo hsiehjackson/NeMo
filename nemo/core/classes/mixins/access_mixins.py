@@ -22,6 +22,8 @@ _ACCESS_ENABLED = False
 
 
 def set_access_cfg(cfg: 'DictConfig'):
+    if cfg is None or not isinstance(cfg, dict):
+        raise TypeError(f"cfg must be a dict")
     global _ACCESS_CFG
     _ACCESS_CFG = cfg
 
@@ -92,7 +94,7 @@ class AccessMixin(ABC):
         return _ACCESS_ENABLED
 
     @access_enabled.setter
-    def access_enabled(self, access_enabled):
+    def access_enabled(self, access_enabled: bool):
         global _ACCESS_ENABLED
         _ACCESS_ENABLED = access_enabled
 
