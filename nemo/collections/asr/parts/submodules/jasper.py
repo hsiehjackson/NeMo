@@ -1034,7 +1034,7 @@ class JasperBlock(nn.Module, AccessMixin):
         # compute the output
         out = self.mout(out)
 
-        if self.access_enabled:
+        if self.is_access_enabled():
             self.register_accessible_tensor(tensor=out)
 
         if self.res is not None and self.dense_residual:
