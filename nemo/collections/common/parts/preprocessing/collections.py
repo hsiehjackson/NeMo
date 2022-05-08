@@ -136,6 +136,7 @@ class AudioText(_Collection):
         data, duration_filtered, num_filtered, total_duration = [], 0.0, 0, 0.0
         if index_by_file_id:
             self.mapping = {}
+            self.offsets = {}
 
         for id_, audio_file, duration, offset, text, speaker, orig_sr, token_labels, lang in zip(
             ids, audio_files, durations, offsets, texts, speakers, orig_sampling_rates, token_labels, langs
@@ -177,6 +178,9 @@ class AudioText(_Collection):
             if index_by_file_id:
                 file_id, _ = os.path.splitext(os.path.basename(audio_file))
                 self.mapping[file_id] = len(data) - 1
+                if file_id not in self.offsets:
+                    self.offsets[file_id] = []
+                self.offsets[file_id].append(offset)
 
             # Max number of entities filter.
             if len(data) == max_number:
