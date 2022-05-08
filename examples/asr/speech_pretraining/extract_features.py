@@ -37,7 +37,6 @@ import pickle
 
 @dataclass
 class AccessConfig:
-    access_all_intermediate: bool = True
     detach: bool = True
     convert_to_cpu: bool = True
 
@@ -168,6 +167,7 @@ def main(cfg: FeatClusteringConfig) -> FeatClusteringConfig:
         model_name = cfg.pretrained_name
 
     set_access_cfg(cfg.access)
+    asr_model.set_access_enabled(True)
     asr_model.feat_extract_stride = cfg.stride
     asr_model.feat_extract_combine = cfg.combine
     asr_model.preprocessor.featurizer.pad_to = cfg.pad_to
