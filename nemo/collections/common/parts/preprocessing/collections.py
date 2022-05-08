@@ -177,10 +177,10 @@ class AudioText(_Collection):
             data.append(output_type(id_, audio_file, duration, text_tokens, offset, text, speaker, orig_sr, lang))
             if index_by_file_id:
                 file_id, _ = os.path.splitext(os.path.basename(audio_file))
-                self.mapping[file_id] = len(data) - 1
-                if file_id not in self.offsets:
-                    self.offsets[file_id] = []
-                self.offsets[file_id].append(offset)
+                #self.mapping[file_id] = len(data) - 1
+                if file_id not in self.mapping:
+                    self.mapping[file_id] = []
+                self.mapping[file_id].append(len(data) - 1)
 
             # Max number of entities filter.
             if len(data) == max_number:
