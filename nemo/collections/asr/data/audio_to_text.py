@@ -150,7 +150,7 @@ class ASRManifestProcessor:
         return self.process_text_by_sample(sample)
 
     def process_text_by_file_id(self, file_id: str) -> (List[int], int):
-        manifest_idx = self.collection.mapping[file_id]
+        manifest_idx = self.collection.mapping[file_id][0]
         sample = self.collection[manifest_idx]
         return self.process_text_by_sample(sample)
 
