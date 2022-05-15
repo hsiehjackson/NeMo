@@ -74,8 +74,8 @@ def read_one_audiosegment(manifest, target_sr, rng, tarred_audio=False, audio_da
     if tarred_audio:
         if audio_dataset is None:
             raise TypeError("Expected augmentation dataset but got None")
-        audio_file, file_id = next(audio_dataset)
-        manifest_idx = manifest.mapping[file_id]
+        audio_file, file_id, offset_id = next(audio_dataset)
+        manifest_idx = manifest.mapping[file_id][offset_id]
         manifest_entry = manifest[manifest_idx]
 
         offset = 0 if manifest_entry.offset is None else manifest_entry.offset
@@ -390,15 +390,15 @@ class NoisePerturbation(Perturbation):
     """
 
     def __init__(
-        self,
-        manifest_path=None,
-        min_snr_db=10,
-        max_snr_db=50,
-        max_gain_db=300.0,
-        rng=None,
-        audio_tar_filepaths=None,
-        shuffle_n=100,
-        orig_sr=16000,
+            self,
+            manifest_path=None,
+            min_snr_db=10,
+            max_snr_db=50,
+            max_gain_db=300.0,
+            rng=None,
+            audio_tar_filepaths=None,
+            shuffle_n=100,
+            orig_sr=16000,
     ):
         self._manifest = collections.ASRAudioText(manifest_path, parser=parsers.make_parser([]), index_by_file_id=True)
         self._audiodataset = None
@@ -452,13 +452,13 @@ class NoisePerturbation(Perturbation):
 
         if noise._samples.shape[0] < data._samples.shape[0]:
             noise_idx = self._rng.randint(0, data._samples.shape[0] - noise._samples.shape[0])
-            data._samples[noise_idx : noise_idx + noise._samples.shape[0]] += noise._samples
+            data._samples[noise_idx: noise_idx + noise._samples.shape[0]] += noise._samples
 
         else:
             data._samples += noise._samples
 
     def perturb_with_foreground_noise(
-        self, data, noise, data_rms=None, max_noise_dur=2, max_additions=1,
+            self, data, noise, data_rms=None, max_noise_dur=2, max_additions=1,
     ):
         snr_db = self._rng.uniform(self._min_snr_db, self._max_snr_db)
         if not data_rms:
@@ -477,10 +477,10 @@ class NoisePerturbation(Perturbation):
             noise_samples *= 10.0 ** (noise_gain_db / 20.0)
 
             if noise_samples.shape[0] > data._samples.shape[0]:
-                noise_samples = noise_samples[0 : data._samples.shape[0]]
+                noise_samples = noise_samples[0: data._samples.shape[0]]
 
             noise_idx = self._rng.randint(0, data._samples.shape[0] - noise_samples.shape[0])
-            data._samples[noise_idx : noise_idx + noise_samples.shape[0]] += noise_samples
+            data._samples[noise_idx: noise_idx + noise_samples.shape[0]] += noise_samples
 
 
 class WhiteNoisePerturbation(Perturbation):
@@ -536,24 +536,24 @@ class RirAndNoisePerturbation(Perturbation):
     """
 
     def __init__(
-        self,
-        rir_manifest_path=None,
-        rir_prob=0.5,
-        noise_manifest_paths=None,
-        min_snr_db=0,
-        max_snr_db=50,
-        rir_tar_filepaths=None,
-        rir_shuffle_n=100,
-        noise_tar_filepaths=None,
-        apply_noise_rir=False,
-        orig_sample_rate=None,
-        max_additions=5,
-        max_duration=2.0,
-        bg_noise_manifest_paths=None,
-        bg_min_snr_db=10,
-        bg_max_snr_db=50,
-        bg_noise_tar_filepaths=None,
-        bg_orig_sample_rate=None,
+            self,
+            rir_manifest_path=None,
+            rir_prob=0.5,
+            noise_manifest_paths=None,
+            min_snr_db=0,
+            max_snr_db=50,
+            rir_tar_filepaths=None,
+            rir_shuffle_n=100,
+            noise_tar_filepaths=None,
+            apply_noise_rir=False,
+            orig_sample_rate=None,
+            max_additions=5,
+            max_duration=2.0,
+            bg_noise_manifest_paths=None,
+            bg_min_snr_db=10,
+            bg_max_snr_db=50,
+            bg_noise_tar_filepaths=None,
+            bg_orig_sample_rate=None,
     ):
 
         logging.info("Called Rir aug init")
@@ -680,8 +680,45 @@ class TranscodePerturbation(Perturbation):
             )
 
         new_data = AudioSegment.from_file(transcoded_f.name, target_sr=16000)
-        data._samples = new_data._samples[0 : data._samples.shape[0]]
+        data._samples = new_data._samples[0: data._samples.shape[0]]
         return
+
+
+class RandomSegmentPerturbation(Perturbation):
+    """
+    Returns a random segment from input of duration "duration_sec".
+    If duration_sec > input audio length, pad_to_duration determines the outcome.
+
+    RandomSegmentPerturbation is intended for self-supervised learning.
+    Not for supervised, as extracting corresponding text is not facilitated.
+
+
+    Args:
+        duration_sec (float): duration of the segment to be extracted
+        pad_to_duration (bool): zero pad if length of input audio < duration_sec
+        rng: Random number generator
+    """
+
+    def __init__(self, duration_sec=32.0, pad_to_duration=False, rng=None):
+        if duration_sec <= 0:
+            raise ValueError("duration_sec should be > 0")
+
+        self._duration_sec = duration_sec
+        self._pad_to_duration = pad_to_duration
+        self._rng = random.Random() if rng is None else rng
+
+    def perturb(self, data):
+        if self._duration_sec > data.duration:
+            if not self._pad_to_duration:
+                raise ValueError(f"audio length < {self._duration_sec} sec and pad_to_duration is set to False")
+            start_time = 0.0
+            pad_size = self._duration_sec * data.sample_rate - data.num_samples
+            data.pad(pad_size=pad_size)
+        else:
+            start_time = self._rng.uniform(0.0, data.duration - self._duration_sec)
+
+        end_time = start_time + self._duration_sec
+        data.subsegment(start_time=start_time, end_time=end_time)
 
 
 perturbation_types = {
@@ -694,6 +731,7 @@ perturbation_types = {
     "white_noise": WhiteNoisePerturbation,
     "rir_noise_aug": RirAndNoisePerturbation,
     "transcode_aug": TranscodePerturbation,
+    "random_segment": RandomSegmentPerturbation,
 }
 
 

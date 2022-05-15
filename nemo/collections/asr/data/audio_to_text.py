@@ -27,6 +27,7 @@ from torch.nn import functional as F
 from torch.utils.data import ChainDataset
 
 from nemo.collections.asr.parts.preprocessing.features import WaveformFeaturizer
+from nemo.collections.common import tokenizers
 from nemo.collections.common.parts.preprocessing import collections, parsers
 from nemo.core.classes import Dataset, IterableDataset
 from nemo.core.neural_types import *
@@ -945,10 +946,14 @@ class AudioToBPEDataset(_AudioTextDataset):
 
         class TokenizerWrapper:
             def __init__(self, tokenizer):
+                if isinstance(tokenizer, tokenizers.aggregate_tokenizer.AggregateTokenizer):
+                    self.is_aggregate = True
+                else:
+                    self.is_aggregate = False
                 self._tokenizer = tokenizer
 
-            def __call__(self, text):
-                t = self._tokenizer.text_to_ids(text)
+            def __call__(self, *args):
+                t = self._tokenizer.text_to_ids(*args)
                 return t
 
         super().__init__(
@@ -1115,6 +1120,7 @@ class _TarredAudioToTextDataset(IterableDataset):
             self._dataset.rename(audio='wav;ogg;flac', key='__key__')
             .to_tuple('audio', 'key')
             .pipe(self._filter)
+            .pipe(self._loop_offsets)
             .map(f=self._build_sample)
         )
 
@@ -1143,17 +1149,48 @@ class _TarredAudioToTextDataset(IterableDataset):
 
         return TarredAudioFilter(self.manifest_processor.collection)
 
+    def _loop_offsets(self, iterator):
+
+        class TarredAudioLoopOffsets:
+            def __init__(self, collection):
+                self.iterator = iterator
+                self.collection = collection
+                self.current_fn = None
+                self.current_bytes = None
+                self.offset_id = 0
+
+            def __iter__(self):
+                return self
+
+            def __next__(self):
+                if self.current_fn is None:
+                    self.current_bytes, self.current_fn = next(self.iterator)
+                    self.offset_id = 0
+                else:
+                    offset_list = self.collection.mapping[self.current_fn]
+                    if len(offset_list) == self.offset_id + 1:
+                        self.current_bytes, self.current_fn = next(self.iterator)
+                        self.offset_id = 0
+                    else:
+                        self.offset_id += 1
+
+                return self.current_bytes, self.current_fn, self.offset_id
+
+
+
+        return TarredAudioLoopOffsets(self.manifest_processor.collection)
+
     def _collate_fn(self, batch):
         return _speech_collate_fn(batch, self.pad_id)
 
     def _build_sample(self, tup):
         """Builds the training sample by combining the data from the WebDataset with the manifest info.
         """
-        audio_bytes, audio_filename = tup
+        audio_bytes, audio_filename, offset_id = tup
 
         # Grab manifest entry from self.manifest_preprocessor.collection
         file_id, _ = os.path.splitext(os.path.basename(audio_filename))
-        manifest_idx = self.manifest_processor.collection.mapping[file_id]
+        manifest_idx = self.manifest_processor.collection.mapping[file_id][offset_id]
         manifest_entry = self.manifest_processor.collection[manifest_idx]
 
         offset = manifest_entry.offset
@@ -1187,6 +1224,7 @@ class _TarredAudioToTextDataset(IterableDataset):
             tl += 1
 
         if self.return_sample_id:
+            #need to return offset as well
             return f, fl, torch.tensor(t).long(), torch.tensor(tl).long(), manifest_idx
         else:
             return f, fl, torch.tensor(t).long(), torch.tensor(tl).long()
@@ -1448,10 +1486,14 @@ class TarredAudioToBPEDataset(_TarredAudioToTextDataset):
 
         class TokenizerWrapper:
             def __init__(self, tokenizer):
+                if isinstance(tokenizer, tokenizers.aggregate_tokenizer.AggregateTokenizer):
+                    self.is_aggregate = True
+                else:
+                    self.is_aggregate = False
                 self._tokenizer = tokenizer
 
-            def __call__(self, text):
-                t = self._tokenizer.text_to_ids(text)
+            def __call__(self, *args):
+                t = self._tokenizer.text_to_ids(*args)
                 return t
 
         super().__init__(
