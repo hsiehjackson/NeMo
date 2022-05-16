@@ -174,7 +174,7 @@ class TestASRModulesBasicTests:
         res0 = instance0(input_signal=input_signal, length=length)
         res = instance1(input_spec=res0[0], length=length)
 
-        assert res.shape == torch.Size([4, 64, audio_length])
+        assert res.shape == res0[0].shape
 
     @pytest.mark.unit
     def test_MaskedPatchAugmentation_config(self):

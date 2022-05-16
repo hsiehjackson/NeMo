@@ -53,7 +53,7 @@ def ssl_models():
                     'feat_out': model_defaults['dec_out'],
                     'stride_layers': 2,
                     'non_stride_layers': 0,
-                    'conv_transpose': False
+                    'stride_transpose': False
                 },
                 'loss': {
                     '_target_': 'nemo.collections.asr.losses.ContrastiveLoss',
