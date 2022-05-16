@@ -122,8 +122,8 @@ class TestSSLModel:
 
             # batch size 4
             spectrograms, spec_masks, encoded, encoded_len = \
-                asr_model.forward(input_signal=input_signal, input_signal_length=length)
+                ssl_model.forward(input_signal=input_signal, input_signal_length=length)
 
-            loss_value, loss_val_dict = self.decoder_loss_step(spectrograms, spec_masks,
+            loss_value, loss_val_dict = ssl_model.decoder_loss_step(spectrograms, spec_masks,
                                                                encoded, encoded_len)
 
