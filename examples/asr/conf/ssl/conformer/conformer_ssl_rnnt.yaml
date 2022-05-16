@@ -133,7 +133,7 @@ model:
           preserve_memory: false  # dramatically slows down training, but might preserve some memory
           experimental_fuse_loss_wer: false
           jointnet:
-            encoder_hidden: 640
+            encoder_hidden: ${model.encoder.d_model}
             pred_hidden: 640
             joint_hidden: 640
             activation: "relu"
