@@ -58,7 +58,7 @@ def ssl_models():
                     'conv_transpose': False
                 },
                 'loss': {
-                    '_target_': 'nemo.collections.asr.losses.ContrastiveLoss'',
+                    '_target_': 'nemo.collections.asr.losses.ContrastiveLoss',
                     'in_dim': 80,
                     'proj_dim': model_defaults['dec_out'],
                     'combine_time_steps': 4,
@@ -71,12 +71,12 @@ def ssl_models():
         'mlm':
             {
                 'decoder': {
-                    '_target_': 'nemo.collections.asr.modules.ConvASRDecoder'',
+                    '_target_': 'nemo.collections.asr.modules.ConvASRDecoder',
                     'feat_in': model_defaults['enc_hidden'],
                     'num_classes': 90000,
                 },
                 'loss': {
-                    '_target_': 'nemo.collections.asr.losses.MLMLoss'',
+                    '_target_': 'nemo.collections.asr.losses.MLMLoss',
                     'combine_time_steps': 4
                 }
 
