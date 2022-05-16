@@ -339,11 +339,9 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, FeatExtractMixin)
                                        target_lengths=target_lengths)
             else:
                 loss_value = self.loss(spectrograms=spectrograms, spec_masks=spec_masks, decoder_outputs=outputs)
-            #tensorboard_logs = {'train_loss': loss_value, 'learning_rate': self._optimizer.param_groups[0]['lr']}
         else:
 
-            #tensorboard_logs = {'learning_rate': self._optimizer.param_groups[0]['lr']}
-            loss_value = signal.new_zeros(1)
+            loss_value = encoded.new_zeros(1)
 
             outputs = {}
 
