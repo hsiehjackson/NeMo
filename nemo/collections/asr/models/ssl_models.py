@@ -349,7 +349,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, FeatExtractMixin)
 
             for dec_loss_name, dec_loss in self.decoder_losses.items():
 
-                if self.start_step[dec_loss_name] > self.trainer.global_step:
+                if hasattr(self, "trainer") and self.start_step[dec_loss_name] > self.trainer.global_step:
                     continue
 
                 if self.output_from_layer[dec_loss_name] is None:
