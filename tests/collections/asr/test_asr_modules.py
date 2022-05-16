@@ -163,7 +163,7 @@ class TestASRModulesBasicTests:
         # Make sure constructor works
         audio_length = 128
         instance1 = modules.MaskedPatchAugmentation(
-            patch_size = 16, mask_patches = 0.5,req_masks = 2, freq_width = 10
+            patch_size = 16, mask_patches = 0.5, freq_masks = 2, freq_width = 10
         )
         assert isinstance(instance1, modules.MaskedPatchAugmentation)
 
