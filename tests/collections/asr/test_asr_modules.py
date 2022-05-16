@@ -162,9 +162,7 @@ class TestASRModulesBasicTests:
     def test_MaskedPatchAugmentation(self):
         # Make sure constructor works
         audio_length = 128
-        instance1 = modules.MaskedPatchAugmentation(
-            patch_size = 16, mask_patches = 0.5, freq_masks = 2, freq_width = 10
-        )
+        instance1 = modules.MaskedPatchAugmentation(patch_size=16, mask_patches=0.5, freq_masks=2, freq_width=10)
         assert isinstance(instance1, modules.MaskedPatchAugmentation)
 
         # Make sure forward doesn't throw with expected input
@@ -180,8 +178,7 @@ class TestASRModulesBasicTests:
     def test_MaskedPatchAugmentation_config(self):
         # Test that dataclass matches signature of module
         result = config_utils.assert_dataclass_signature_match(
-            modules.MaskedPatchAugmentation,
-            modules.audio_preprocessing.MaskedPatchAugmentation,
+            modules.MaskedPatchAugmentation, modules.audio_preprocessing.MaskedPatchAugmentation,
         )
         signatures_match, cls_subset, dataclass_subset = result
 

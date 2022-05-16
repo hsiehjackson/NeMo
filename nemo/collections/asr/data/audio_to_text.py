@@ -1150,7 +1150,6 @@ class _TarredAudioToTextDataset(IterableDataset):
         return TarredAudioFilter(self.manifest_processor.collection)
 
     def _loop_offsets(self, iterator):
-
         class TarredAudioLoopOffsets:
             def __init__(self, collection):
                 self.iterator = iterator
@@ -1175,8 +1174,6 @@ class _TarredAudioToTextDataset(IterableDataset):
                         self.offset_id += 1
 
                 return self.current_bytes, self.current_fn, self.offset_id
-
-
 
         return TarredAudioLoopOffsets(self.manifest_processor.collection)
 
@@ -1226,7 +1223,7 @@ class _TarredAudioToTextDataset(IterableDataset):
             tl += 1
 
         if self.return_sample_id:
-            #need to return offset as well
+            # need to return offset as well
             return f, fl, torch.tensor(t).long(), torch.tensor(tl).long(), manifest_idx
         else:
             return f, fl, torch.tensor(t).long(), torch.tensor(tl).long()

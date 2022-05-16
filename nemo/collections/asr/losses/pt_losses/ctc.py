@@ -7,6 +7,7 @@ from nemo.core.neural_types import LossType, NeuralType, SpectrogramType, VoidTy
 
 __all__ = ["CTCLossForSSL"]
 
+
 class CTCLossForSSL(nn.CTCLoss, Loss):
     @property
     def input_types(self):
@@ -32,12 +33,7 @@ class CTCLossForSSL(nn.CTCLoss, Loss):
     def needs_labels(self):
         return True
 
-    def __init__(
-            self,
-            num_classes,
-            zero_infinity=True,
-            reduction='mean_batch'
-    ):
+    def __init__(self, num_classes, zero_infinity=True, reduction='mean_batch'):
         self._blank = num_classes
         if reduction == 'mean_batch':
             ctc_reduction = 'none'

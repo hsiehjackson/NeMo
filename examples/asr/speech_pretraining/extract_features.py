@@ -16,24 +16,21 @@ import contextlib
 import glob
 import json
 import os
+import pickle
 from dataclasses import dataclass
 from typing import List, Optional, Union
 
 import pytorch_lightning as pl
 import torch
 from omegaconf import OmegaConf
+from sklearn.cluster import DBSCAN, Birch, MiniBatchKMeans
+from tqdm.auto import tqdm
 
 from nemo.collections.asr.models import ASRModel
+from nemo.core.classes.mixins import AccessMixin, set_access_cfg
 from nemo.core.config import hydra_runner
 from nemo.utils import logging, model_utils
 
-from sklearn.cluster import MiniBatchKMeans, Birch, DBSCAN
-
-from nemo.core.classes.mixins import set_access_cfg, AccessMixin
-
-from tqdm.auto import tqdm
-
-import pickle
 
 @dataclass
 class AccessConfig:
@@ -97,9 +94,7 @@ def produce_labels(datalayer, in_manifest, out_manifest, asr_model, cluster_mode
         input_signal_length = batch[1].to(device)
 
         feats, feat_lens = asr_model.get_feats(
-            input_signal=input_signal,
-            input_signal_length=input_signal_length,
-            layer_name=layer_name
+            input_signal=input_signal, input_signal_length=input_signal_length, layer_name=layer_name
         )
 
         orig_bs = feats.shape[0]
@@ -108,9 +103,8 @@ def produce_labels(datalayer, in_manifest, out_manifest, asr_model, cluster_mode
         cur_labels = cluster_model.predict(feats.cpu())
         cur_labels = cur_labels.reshape(orig_bs, -1)
 
-
         for j in range(cur_labels.shape[0]):
-            label_dict[int(batch[-1][j])] = cur_labels[j, :feat_lens[j]]
+            label_dict[int(batch[-1][j])] = cur_labels[j, : feat_lens[j]]
 
         del batch
 
@@ -147,10 +141,7 @@ def main(cfg: FeatClusteringConfig) -> FeatClusteringConfig:
     else:
         device = torch.device(f'cuda:{cfg.cuda}' if cfg.cuda >= 0 else 'cpu')
 
-
-    trainer = pl.Trainer(accelerator='gpu',
-                         strategy='dp',
-                         gpus=1)
+    trainer = pl.Trainer(accelerator='gpu', strategy='dp', gpus=1)
 
     # setup model
     if cfg.model_path is not None:
@@ -242,7 +233,6 @@ def main(cfg: FeatClusteringConfig) -> FeatClusteringConfig:
         # print(datalayer)
         print(len(datalayer.dataset))
 
-
         for batch in tqdm(datalayer, desc="Obtaining features for fit"):
             # for i in batch[-1]:
             #    indexes.add(int(i))
@@ -251,9 +241,7 @@ def main(cfg: FeatClusteringConfig) -> FeatClusteringConfig:
             input_signal_length = batch[1].to(device)
 
             feats, feat_lens = asr_model.get_feats(
-                input_signal=input_signal,
-                input_signal_length=input_signal_length,
-                layer_name=cfg.layer_name
+                input_signal=input_signal, input_signal_length=input_signal_length, layer_name=cfg.layer_name
             )
 
             feats = feats.reshape(-1, feats.shape[-1])
@@ -272,18 +260,18 @@ def main(cfg: FeatClusteringConfig) -> FeatClusteringConfig:
 
         # do clustering
         if cfg.cluster_model == "KMeans":
-            cluster_model = MiniBatchKMeans(n_clusters=cfg.n_clusters,
-                                            max_iter=10000,
-                                            tol=0.0,
-                                            max_no_improvement=200,
-                                            n_init=20,
-                                            reassignment_ratio=0.01,
-                                            batch_size=10000,
-                                            verbose=True)
+            cluster_model = MiniBatchKMeans(
+                n_clusters=cfg.n_clusters,
+                max_iter=10000,
+                tol=0.0,
+                max_no_improvement=200,
+                n_init=20,
+                reassignment_ratio=0.01,
+                batch_size=10000,
+                verbose=True,
+            )
         elif cfg.cluster_model == "Birch":
-            cluster_model = Birch(n_clusters=cfg.n_clusters,
-                                  copy=False,
-                                  compute_labels=False)
+            cluster_model = Birch(n_clusters=cfg.n_clusters, copy=False, compute_labels=False)
             ###
         elif cfg.cluster_model == "DBSCAN":
             cluster_model = DBSCAN(n_jobs=-1)
@@ -304,11 +292,11 @@ def main(cfg: FeatClusteringConfig) -> FeatClusteringConfig:
     else:
         cluster_model = pickle.load(open(cfg.load_cluster_model_path, "rb"))
 
-
     if cfg.apply_to_fit:
         print("Producing labels for dataset:", cfg.fit_manifest)
-        produce_labels(datalayer, cfg.fit_manifest, cfg.out_manifests[0], asr_model, cluster_model, cfg.layer_name,
-                       device)
+        produce_labels(
+            datalayer, cfg.fit_manifest, cfg.out_manifests[0], asr_model, cluster_model, cfg.layer_name, device
+        )
     # produce labels
 
     for idx in range(len(cfg.apply_manifests)):

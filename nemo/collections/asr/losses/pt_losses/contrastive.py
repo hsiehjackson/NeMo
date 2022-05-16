@@ -173,10 +173,8 @@ class ContrastiveLoss(Loss):
                     self.target_ids = reduced_ids.narrow(1, 0, reduced_lens.max())
                     self.target_lengths = reduced_lens
 
-
                 else:
                     self.target_lengths = None
-
 
             else:
                 targets, prob_ppl_loss, cur_codebook_temp = self.quantizer(targets)

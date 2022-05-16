@@ -3,11 +3,20 @@ import torch.nn.functional as F
 from torch import nn
 
 from nemo.core import Loss, typecheck
-from nemo.core.neural_types import LossType, NeuralType, SpectrogramType, VoidType, LabelsType, LengthsType, LogprobsType
+from nemo.core.neural_types import (
+    LossType,
+    NeuralType,
+    SpectrogramType,
+    VoidType,
+    LabelsType,
+    LengthsType,
+    LogprobsType,
+)
 from nemo.collections.asr.losses.rnnt import RNNTLoss
 
 
 __all__ = ["RNNTLossForSSL"]
+
 
 class RNNTLossForSSL(Loss):
     @property
@@ -34,14 +43,9 @@ class RNNTLossForSSL(Loss):
     def needs_labels(self):
         return True
 
-    def __init__(
-            self,
-            num_classes
-    ):
+    def __init__(self, num_classes):
         super().__init__()
-        self.loss = RNNTLoss(
-            num_classes=num_classes
-        )
+        self.loss = RNNTLoss(num_classes=num_classes)
 
     @typecheck()
     def forward(self, spec_masks, decoder_outputs, targets, decoder_lengths=None, target_lengths=None):

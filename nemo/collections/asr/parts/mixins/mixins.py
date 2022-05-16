@@ -406,24 +406,25 @@ class DiarizationMixin(ABC):
         """
         pass
 
-#from torch.nn.parallel import DistributedDataParallel
+
+# from torch.nn.parallel import DistributedDataParallel
+
 
 class FeatExtractMixin(AccessMixin):
-
     def get_feats(self, input_signal, input_signal_length, layer_name):
         self.eval()
         self.apply_masking = False
         self.reset_registry()
 
-        stride = self.feat_extract_stride#4
-        combine = self.feat_extract_combine#1
+        stride = self.feat_extract_stride  # 4
+        combine = self.feat_extract_combine  # 1
         div = stride * combine
 
         processed_signal, processed_signal_length = self.preprocessor(
             input_signal=input_signal, length=input_signal_length,
         )
 
-        #model_par = DistributedDataParallel(self)
+        # model_par = DistributedDataParallel(self)
 
         with torch.no_grad():
             self(processed_signal=processed_signal, processed_signal_length=processed_signal_length)

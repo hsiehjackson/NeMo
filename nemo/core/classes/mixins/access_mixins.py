@@ -91,4 +91,3 @@ class AccessMixin(ABC):
     def set_access_enabled(self, access_enabled: bool):
         global _ACCESS_ENABLED
         _ACCESS_ENABLED = access_enabled
-

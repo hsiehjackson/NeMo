@@ -2,28 +2,27 @@ import contextlib
 import glob
 import json
 import os
+import pickle
 from dataclasses import dataclass
 from typing import List, Optional, Union
 
 import pytorch_lightning as pl
 import torch
 from omegaconf import OmegaConf
+from sklearn.cluster import DBSCAN, Birch, MiniBatchKMeans
+from tqdm.auto import tqdm
 
 from nemo.collections.asr.models import ASRModel
+from nemo.core.classes.mixins import AccessMixin, set_access_cfg
 from nemo.core.config import hydra_runner
 from nemo.utils import logging, model_utils
 
-from sklearn.cluster import MiniBatchKMeans, Birch, DBSCAN
 
-from nemo.core.classes.mixins import set_access_cfg, AccessMixin
-
-from tqdm.auto import tqdm
-
-import pickle
 @dataclass
 class ReduceLabelsConfig:
     in_manifest: str
     out_manifest: str
+
 
 @hydra_runner(config_name="ReduceLabelsConfig", schema=ReduceLabelsConfig)
 def main(cfg: ReduceLabelsConfig) -> ReduceLabelsConfig:

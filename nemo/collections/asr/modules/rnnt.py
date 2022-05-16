@@ -1130,7 +1130,6 @@ class RNNTDecoderJoint(torch.nn.Module, Exportable):
 
 
 class RNNTDecoderJointSSL(torch.nn.Module):
-
     def __init__(self, decoder, joint):
         super().__init__()
         self.decoder = decoder
@@ -1142,10 +1141,13 @@ class RNNTDecoderJointSSL(torch.nn.Module):
 
     @property
     def input_types(self):
-        return OrderedDict({"encoder_output": NeuralType(('B', 'D', 'T'), AcousticEncodedRepresentation()),
-                            "targets": NeuralType(('B', 'T'), LabelsType()),
-                            "target_lengths": NeuralType(tuple('B'), LengthsType()),
-                            })
+        return OrderedDict(
+            {
+                "encoder_output": NeuralType(('B', 'D', 'T'), AcousticEncodedRepresentation()),
+                "targets": NeuralType(('B', 'T'), LabelsType()),
+                "target_lengths": NeuralType(tuple('B'), LengthsType()),
+            }
+        )
 
     @property
     def output_types(self):
@@ -1155,6 +1157,5 @@ class RNNTDecoderJointSSL(torch.nn.Module):
 
         decoder, target_length, states = self.decoder(targets=targets, target_length=target_lengths)
         log_probs = self.joint(encoder_outputs=encoder_output, decoder_outputs=decoder)
-
 
         return log_probs

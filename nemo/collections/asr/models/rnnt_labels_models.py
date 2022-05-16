@@ -34,12 +34,10 @@ from nemo.utils import logging, model_utils
 class EncDecRNNTLabelsModel(EncDecRNNTModel, FeatExtractMixin):
     """Base class for encoder decoder RNNT-based models for direct training on non-text label sequences."""
 
-
     def __init__(self, cfg: DictConfig, trainer: Trainer = None):
         # Convert to Hydra 1.0 compatible DictConfig
         cfg = model_utils.convert_model_config_to_dict_config(cfg)
         cfg = model_utils.maybe_update_config_version(cfg)
-
 
         if not isinstance(cfg, DictConfig):
             cfg = OmegaConf.create(cfg)
@@ -61,7 +59,7 @@ class EncDecRNNTLabelsModel(EncDecRNNTModel, FeatExtractMixin):
         )"""
 
         # Setup fused Joint step if flag is set
-        #if self.joint.fuse_loss_wer:
+        # if self.joint.fuse_loss_wer:
         #    self.joint.set_loss(self.loss)
         #    self.joint.set_wer(self.wer)
 
@@ -98,9 +96,7 @@ class EncDecRNNTLabelsModel(EncDecRNNTModel, FeatExtractMixin):
                 logging.warning(f"Could not load dataset as `manifest_filepath` was None. Provided config : {config}")
                 return None
 
-            dataset = audio_to_text_dataset.get_char_dataset(
-                config=config, augmentor=augmentor
-            )
+            dataset = audio_to_text_dataset.get_char_dataset(config=config, augmentor=augmentor)
 
         if type(dataset) is ChainDataset:
             collate_fn = dataset.datasets[0].collate_fn
@@ -194,7 +190,6 @@ class EncDecRNNTLabelsModel(EncDecRNNTModel, FeatExtractMixin):
             print()
 
         return tensorboard_logs
-
 
     def multi_validation_epoch_end(self, outputs, dataloader_idx: int = 0):
         val_loss_mean = torch.stack([x['val_loss'] for x in outputs]).mean()

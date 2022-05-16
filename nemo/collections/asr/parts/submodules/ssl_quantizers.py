@@ -185,14 +185,14 @@ class GumbelVectorQuantizer(NeuralModule):
             x = x.transpose(1, 2)  # BTC -> BCT
 
         if return_ids:
-            #hard_x
-            #BTxGxCb
-            #one_hot
+            # hard_x
+            # BTxGxCb
+            # one_hot
 
             hard_x_max = hard_x.argmax(-1).reshape(bsz, tsz, -1)
-            #BxTxG
+            # BxTxG
 
-            #create single id from multiple group ids
+            # create single id from multiple group ids
             target_ids = hard_x.new_zeros(bsz, tsz).long()
 
             for i in range(self.groups):
