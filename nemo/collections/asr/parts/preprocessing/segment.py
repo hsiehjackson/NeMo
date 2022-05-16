@@ -159,6 +159,9 @@ class AudioSegment(object):
             try:
                 samples = Audio.from_file(audio_file)
                 sample_rate = samples.frame_rate
+                print(audio_file)
+                print(len(samples), offset, duration)
+                print()
                 if offset > 0:
                     # pydub does things in milliseconds
                     seconds = offset * 1000
