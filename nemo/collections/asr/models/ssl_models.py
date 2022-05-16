@@ -393,8 +393,6 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, FeatExtractMixin)
                     outputs[dec_loss_name] = dec_loss['decoder'](encoder_output=dec_input)
 
                 cur_loss = dec_loss['loss']
-                if self.start_step[dec_loss_name] > self.trainer.global_step:
-                    continue
                 if self.training and hasattr(cur_loss, "set_num_updates"):
                     cur_loss.set_num_updates(self.trainer.global_step)
                 if cur_loss.needs_labels:
