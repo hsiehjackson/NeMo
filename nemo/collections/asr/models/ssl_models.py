@@ -322,61 +322,15 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, FeatExtractMixin)
 
         return spectrograms, spec_masks, encoded, encoded_len
 
-        """
-        if self.decoder_losses is None:
-            if self.decoder_ssl.needs_labels:
-                outputs = self.decoder_ssl(encoder_output=encoded, targets=targets, target_lengths=target_lengths)
-            else:
-                outputs = self.decoder_ssl(encoder_output=encoded)
-        else:
-            outputs = {}
-
-            reg = self.get_module_registry(self.encoder)
-
-            for dec_loss_name, dec_loss in self.decoder_losses.items():
-
-                if self.start_step[dec_loss_name] > self.trainer.global_step:
-                    continue
-
-                if self.output_from_layer[dec_loss_name] is None:
-                    dec_input = encoded
-                else:
-                    dec_input = reg[self.output_from_layer[dec_loss_name]][-1].transpose(-2, -1)
-
-                if dec_loss['decoder'].needs_labels:
-                    if self.targets_from_loss[dec_loss_name] is not None:
-                        target_loss = self.targets_from_loss[dec_loss_name]
-                        target_ids = self.decoder_losses[target_loss]['loss'].target_ids
-                        target_lengths = self.decoder_losses[target_loss]['loss'].target_lengths
-                        if target_lengths is None:
-                            target_lengths = encoded_len
-                        outputs[dec_loss_name] = dec_loss['decoder'](encoder_output=dec_input,
-                                                                     targets=target_ids,
-                                                                     target_lengths=target_lengths)
-                    else:
-                        outputs[dec_loss_name] = dec_loss['decoder'](encoder_output=dec_input,
-                                                                     targets=targets,
-                                                                     target_lengths=target_lengths)
-                else:
-                    outputs[dec_loss_name] = dec_loss['decoder'](encoder_output=dec_input)
-
-
-        return spectrograms, spec_masks, outputs, encoded_len
-        """
-
-    # PTL-specific methods
-    def training_step(self, batch, batch_nb):
-        signal, signal_len, targets, target_lengths = batch
-        spectrograms, spec_masks, encoded, encoded_len = self.forward(input_signal=signal,
-                                                                      input_signal_length=signal_len,
-                                                                      targets=targets, target_lengths=target_lengths)
+    def decoder_loss_step(self, spectrograms, spec_masks, encoded, encoded_len, targets = None, target_lengths = None):
+        loss_val_dict = {}
 
         if self.decoder_losses is None:
             if hasattr(self.decoder_ssl, "needs_labels") and self.decoder_ssl.needs_labels:
                 outputs = self.decoder_ssl(encoder_output=encoded, targets=targets, target_lengths=target_lengths)
             else:
                 outputs = self.decoder_ssl(encoder_output=encoded)
-            if hasattr(self.loss, "set_num_updates"):
+            if self.training and hasattr(self.loss, "set_num_updates"):
                 self.loss.set_num_updates(self.trainer.global_step)
             if self.loss.needs_labels:
                 loss_value = self.loss(spec_masks=spec_masks, decoder_outputs=outputs,
@@ -385,10 +339,10 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, FeatExtractMixin)
                                        target_lengths=target_lengths)
             else:
                 loss_value = self.loss(spectrograms=spectrograms, spec_masks=spec_masks, decoder_outputs=outputs)
-            tensorboard_logs = {'train_loss': loss_value, 'learning_rate': self._optimizer.param_groups[0]['lr']}
+            #tensorboard_logs = {'train_loss': loss_value, 'learning_rate': self._optimizer.param_groups[0]['lr']}
         else:
 
-            tensorboard_logs = {'learning_rate': self._optimizer.param_groups[0]['lr']}
+            #tensorboard_logs = {'learning_rate': self._optimizer.param_groups[0]['lr']}
             loss_value = signal.new_zeros(1)
 
             outputs = {}
@@ -422,7 +376,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, FeatExtractMixin)
                 cur_loss = dec_loss['loss']
                 if self.start_step[dec_loss_name] > self.trainer.global_step:
                     continue
-                if hasattr(cur_loss, "set_num_updates"):
+                if self.training and hasattr(cur_loss, "set_num_updates"):
                     cur_loss.set_num_updates(self.trainer.global_step)
                 if cur_loss.needs_labels:
                     cur_loss_value = cur_loss(spec_masks=spec_masks,
@@ -435,9 +389,26 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, FeatExtractMixin)
                                               decoder_outputs=outputs[dec_loss_name],
                                               decoder_lengths=encoded_len)
                 loss_value = loss_value + cur_loss_value * self.loss_alphas[dec_loss_name]
-                tensorboard_logs['train_' + dec_loss_name] = cur_loss_value
+                loss_val_dict[dec_loss_name] = cur_loss_value
 
-            tensorboard_logs['train_loss'] = loss_value
+        return loss_value, loss_val_dict
+
+    # PTL-specific methods
+    def training_step(self, batch, batch_nb):
+        signal, signal_len, targets, target_lengths = batch
+        spectrograms, spec_masks, encoded, encoded_len = self.forward(input_signal=signal,
+                                                                      input_signal_length=signal_len,
+                                                                      targets=targets, target_lengths=target_lengths)
+
+        loss_value, loss_val_dict = self.decoder_loss_step(spectrograms, spec_masks,
+                                                           encoded, encoded_len,
+                                                           targets, target_lengths)
+
+        tensorboard_logs = {'learning_rate': self._optimizer.param_groups[0]['lr']}
+
+        for loss_name, loss_val in loss_val_dict:
+            tensorboard_logs['train_' + loss_name] = loss_val
+
 
         if self.feat_pen:
             loss_value += self.feat_pen
@@ -451,65 +422,9 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, FeatExtractMixin)
                                                                       input_signal_length=signal_len,
                                                                       targets=targets, target_lengths=target_lengths)
 
-        if self.decoder_losses is None:
-            if hasattr(self.decoder_ssl, "needs_labels") and self.decoder_ssl.needs_labels:
-                outputs = self.decoder_ssl(encoder_output=encoded, targets=targets, target_lengths=target_lengths)
-            else:
-                outputs = self.decoder_ssl(encoder_output=encoded)
-            if self.loss.needs_labels:
-                loss_value = self.loss(spec_masks=spec_masks, decoder_outputs=outputs,
-                                       targets=targets,
-                                       decoder_lengths=encoded_len,
-                                       target_lengths=target_lengths)
-            else:
-                loss_value = self.loss(spectrograms=spectrograms, spec_masks=spec_masks, decoder_outputs=outputs)
-        else:
-
-            loss_value = signal.new_zeros(1)
-
-            outputs = {}
-
-            reg = self.get_module_registry(self.encoder)
-
-            for dec_loss_name, dec_loss in self.decoder_losses.items():
-
-                if self.start_step[dec_loss_name] > self.trainer.global_step:
-                    continue
-
-                if self.output_from_layer[dec_loss_name] is None:
-                    dec_input = encoded
-                else:
-                    dec_input = reg[self.output_from_layer[dec_loss_name]][-1].transpose(-2, -1)
-
-                if self.targets_from_loss[dec_loss_name] is not None:
-                    target_loss = self.targets_from_loss[dec_loss_name]
-                    targets = self.decoder_losses[target_loss]['loss'].target_ids
-                    target_lengths = self.decoder_losses[target_loss]['loss'].target_lengths
-                    if target_lengths is None:
-                        target_lengths = encoded_len
-
-                if hasattr(dec_loss['decoder'], "needs_labels") and dec_loss['decoder'].needs_labels:
-                    outputs[dec_loss_name] = dec_loss['decoder'](encoder_output=dec_input,
-                                                                 targets=targets,
-                                                                 target_lengths=target_lengths)
-                else:
-                    outputs[dec_loss_name] = dec_loss['decoder'](encoder_output=dec_input)
-
-                cur_loss = dec_loss['loss']
-                if self.start_step[dec_loss_name] > self.trainer.global_step:
-                    continue
-                if cur_loss.needs_labels:
-                    cur_loss_value = cur_loss(spec_masks=spec_masks,
-                                                  decoder_outputs=outputs[dec_loss_name],
-                                                  targets=targets,
-                                                  decoder_lengths=encoded_len,
-                                                  target_lengths=target_lengths)
-                else:
-                    cur_loss_value = cur_loss(spectrograms=spectrograms, spec_masks=spec_masks,
-                                              decoder_outputs=outputs[dec_loss_name],
-                                              decoder_lengths=encoded_len)
-                loss_value = loss_value + cur_loss_value * self.loss_alphas[dec_loss_name]
-
+        loss_value, _ = self.decoder_loss_step(spectrograms, spec_masks,
+                                                           encoded, encoded_len,
+                                                           targets, target_lengths)
 
         if self.feat_pen:
             loss_value += self.feat_pen

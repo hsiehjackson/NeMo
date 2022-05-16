@@ -93,7 +93,7 @@ def ssl_models():
 
     model_instance_contr_mlm = SpeechEncDecSelfSupervisedModel(cfg=modelConfig_contr_mlm)
 
-    ssl_models = [model_instance]
+    ssl_models = [model_instance_contr_mlm]
 
     return ssl_models
 
@@ -115,27 +115,15 @@ class TestSSLModel:
             ssl_model = ssl_model.eval()
 
             ssl_model.preprocessor.featurizer.dither = 0.0
-            ssl_model.preprocessor.featurizer.pad_to = 0
+            ssl_model.preprocessor.featurizer.pad_to = 16
 
             input_signal = torch.randn(size=(4, 512))
             length = torch.randint(low=161, high=500, size=[4])
 
-            with torch.no_grad():
-                # batch size 1
-                logprobs_instance = []
-                for i in range(input_signal.size(0)):
-                    logprobs_ins, _, _ = asr_model.forward(
-                        input_signal=input_signal[i : i + 1], input_signal_length=length[i : i + 1]
-                    )
-                    logprobs_instance.append(logprobs_ins)
-                    print(len(logprobs_ins))
-                logprobs_instance = torch.cat(logprobs_instance, 0)
+            # batch size 4
+            spectrograms, spec_masks, encoded, encoded_len = \
+                asr_model.forward(input_signal=input_signal, input_signal_length=length)
 
-                # batch size 4
-                logprobs_batch, _, _ = asr_model.forward(input_signal=input_signal, input_signal_length=length)
+            loss_value, loss_val_dict = self.decoder_loss_step(spectrograms, spec_masks,
+                                                               encoded, encoded_len)
 
-            assert logprobs_instance.shape == logprobs_batch.shape
-            diff = torch.mean(torch.abs(logprobs_instance - logprobs_batch))
-            assert diff <= 1e-6
-            diff = torch.max(torch.abs(logprobs_instance - logprobs_batch))
-            assert diff <= 1e-6
