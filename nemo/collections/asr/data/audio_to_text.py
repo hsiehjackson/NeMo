@@ -150,7 +150,7 @@ class ASRManifestProcessor:
         return self.process_text_by_sample(sample)
 
     def process_text_by_file_id(self, file_id: str) -> (List[int], int):
-        manifest_idx = self.collection.mapping[file_id]
+        manifest_idx = self.collection.mapping[file_id][0]
         sample = self.collection[manifest_idx]
         return self.process_text_by_sample(sample)
 
@@ -1196,6 +1196,8 @@ class _TarredAudioToTextDataset(IterableDataset):
         offset = manifest_entry.offset
         if offset is None:
             offset = 0
+
+        print(audio_filename, offset_id, offset)
 
         # Convert audio bytes to IO stream for processing (for SoundFile to read)
         audio_filestream = io.BytesIO(audio_bytes)
