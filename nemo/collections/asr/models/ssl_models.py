@@ -344,7 +344,12 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, FeatExtractMixin)
                 outputs = self.decoder_ssl(encoder_output=encoded, targets=targets, target_lengths=target_lengths)
             else:
                 outputs = self.decoder_ssl(encoder_output=encoded)
-            if self.training and hasattr(self.loss, "set_num_updates"):
+            if (
+                self.training
+                and hasattr(self.loss, "set_num_updates")
+                and hasattr(self, "trainer")
+                and self.trainer is not None
+            ):
                 self.loss.set_num_updates(self.trainer.global_step)
             if self.loss.needs_labels:
                 loss_value = self.loss(
@@ -393,7 +398,12 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, FeatExtractMixin)
                     outputs[dec_loss_name] = dec_loss['decoder'](encoder_output=dec_input)
 
                 cur_loss = dec_loss['loss']
-                if self.training and hasattr(cur_loss, "set_num_updates"):
+                if (
+                    self.training
+                    and hasattr(cur_loss, "set_num_updates")
+                    and hasattr(self, "trainer")
+                    and self.trainer is not None
+                ):
                     cur_loss.set_num_updates(self.trainer.global_step)
                 if cur_loss.needs_labels:
                     cur_loss_value = cur_loss(
