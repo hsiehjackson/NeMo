@@ -78,6 +78,7 @@ def ssl_models():
                 'stride_layers': 0,
                 'non_stride_layers': 0,
                 'stride_transpose': False,
+                'num_negatives': 3
             },
             'loss': {
                 '_target_': 'nemo.collections.asr.losses.ContrastiveLoss',
@@ -158,8 +159,8 @@ class TestSSLModel:
             ssl_model.preprocessor.featurizer.dither = 0.0
             ssl_model.preprocessor.featurizer.pad_to = 16
 
-            input_signal = torch.randn(size=(4, 512))
-            length = torch.randint(low=161, high=500, size=[4])
+            input_signal = torch.randn(size=(4, 64000))
+            length = torch.randint(low=48000, high=64000, size=[4])
 
             with torch.no_grad():
                 # batch size 4
