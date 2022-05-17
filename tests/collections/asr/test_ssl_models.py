@@ -137,12 +137,12 @@ def ssl_models():
     }
     modelConfig_contr_mlm_multi['loss_list'] = DictConfig(loss_list_contr_mlm_multi)"""
 
-    model_instance_contr_mlm = SpeechEncDecSelfSupervisedModel(cfg=modelConfig_contr_mlm)
+    ssl_model = SpeechEncDecSelfSupervisedModel(cfg=modelConfig_contr_mlm)
     #model_instance_contr_mlm_multi = SpeechEncDecSelfSupervisedModel(cfg=modelConfig_contr_mlm_multi)
 
     #ssl_models = [model_instance_contr_mlm, model_instance_contr_mlm_multi]
 
-    return model_instance_contr_mlm
+    return ssl_model
 
 
 class TestSSLModel:
