@@ -112,7 +112,7 @@ def ssl_models():
         }
     )
 
-    modelConfig_contr_mlm_multi = modelConfig_contr_mlm.copy()
+    """modelConfig_contr_mlm_multi = modelConfig_contr_mlm.copy()
 
     loss_list_contr_mlm_multi = loss_list_contr_mlm.copy()
     loss_list_contr_mlm_multi['mlm_2'] = {
@@ -135,42 +135,85 @@ def ssl_models():
         'output_from_layer': "encoder.1",
         'targets_from_loss': "contr"
     }
-    modelConfig_contr_mlm_multi['loss_list'] = DictConfig(loss_list_contr_mlm_multi)
+    modelConfig_contr_mlm_multi['loss_list'] = DictConfig(loss_list_contr_mlm_multi)"""
 
     model_instance_contr_mlm = SpeechEncDecSelfSupervisedModel(cfg=modelConfig_contr_mlm)
-    model_instance_contr_mlm_multi = SpeechEncDecSelfSupervisedModel(cfg=modelConfig_contr_mlm_multi)
+    #model_instance_contr_mlm_multi = SpeechEncDecSelfSupervisedModel(cfg=modelConfig_contr_mlm_multi)
 
-    ssl_models = [model_instance_contr_mlm, model_instance_contr_mlm_multi]
+    #ssl_models = [model_instance_contr_mlm, model_instance_contr_mlm_multi]
 
-    return ssl_models
+    return model_instance_contr_mlm
 
 
 class TestSSLModel:
     @pytest.mark.unit
-    def test_constructor(self, ssl_models):
-        for ssl_model in ssl_models:
-            ssl_model.train()
-            confdict = ssl_model.to_config_dict()
-            instance2 = SpeechEncDecSelfSupervisedModel.from_config_dict(confdict)
-            assert isinstance(instance2, SpeechEncDecSelfSupervisedModel)
+    def test_constructor(self, ssl_model):
+        confdict = ssl_model.to_config_dict()
+        instance2 = SpeechEncDecSelfSupervisedModel.from_config_dict(confdict)
+        assert isinstance(instance2, SpeechEncDecSelfSupervisedModel)
 
     @pytest.mark.unit
-    def test_forward(self, ssl_models):
+    def test_contr_mlm(self, ssl_model):
 
-        for ssl_model in ssl_models:
+        ssl_model.preprocessor.featurizer.dither = 0.0
+        ssl_model.preprocessor.featurizer.pad_to = 16
 
-            ssl_model.preprocessor.featurizer.dither = 0.0
-            ssl_model.preprocessor.featurizer.pad_to = 16
+        input_signal = torch.randn(size=(4, 64000))
+        length = torch.randint(low=48000, high=64000, size=[4])
 
-            input_signal = torch.randn(size=(4, 64000))
-            length = torch.randint(low=48000, high=64000, size=[4])
+        with torch.no_grad():
+            # batch size 4
+            spectrograms, spec_masks, encoded, encoded_len = ssl_model.forward(
+                input_signal=input_signal, input_signal_length=length
+            )
 
-            with torch.no_grad():
-                # batch size 4
-                spectrograms, spec_masks, encoded, encoded_len = ssl_model.forward(
-                    input_signal=input_signal, input_signal_length=length
-                )
+        loss_value, loss_val_dict = ssl_model.decoder_loss_step(spectrograms, spec_masks, encoded, encoded_len)
 
-                loss_value, loss_val_dict = ssl_model.decoder_loss_step(spectrograms, spec_masks, encoded, encoded_len)
+        assert len(loss_val_dict) == 2
 
-            assert ssl_model.decoder_losses is None or (len(loss_val_dict) == len(ssl_model.decoder_losses))
+    @pytest.mark.unit
+    def test_contr_mlm_multi(self, ssl_model):
+        modelConfig_contr_mlm_multi = ssl_model.to_config_dict()
+
+        loss_list_contr_mlm_multi = modelConfig_contr_mlm_multi['loss_list']
+        loss_list_contr_mlm_multi['mlm_2'] = {
+            'decoder': {
+                '_target_': 'nemo.collections.asr.modules.ConvASRDecoder',
+                'feat_in': model_defaults['enc_hidden'],
+                'num_classes': 4096,
+            },
+            'loss': {'_target_': 'nemo.collections.asr.losses.MLMLoss', 'combine_time_steps': 1},
+            'output_from_layer': "encoder.0",
+            'targets_from_loss': "contr"
+        }
+        loss_list_contr_mlm_multi['mlm_3'] = {
+            'decoder': {
+                '_target_': 'nemo.collections.asr.modules.ConvASRDecoder',
+                'feat_in': model_defaults['enc_hidden'],
+                'num_classes': 4096,
+            },
+            'loss': {'_target_': 'nemo.collections.asr.losses.MLMLoss', 'combine_time_steps': 1},
+            'output_from_layer': "encoder.1",
+            'targets_from_loss': "contr"
+        }
+        modelConfig_contr_mlm_multi['loss_list'] = DictConfig(loss_list_contr_mlm_multi)
+
+        #modelConfig_contr_mlm_multi['encoder']['']
+
+        model_instance_contr_mlm_multi = SpeechEncDecSelfSupervisedModel(cfg=modelConfig_contr_mlm_multi)
+
+        ssl_model.preprocessor.featurizer.dither = 0.0
+        ssl_model.preprocessor.featurizer.pad_to = 16
+
+        input_signal = torch.randn(size=(4, 64000))
+        length = torch.randint(low=48000, high=64000, size=[4])
+
+        with torch.no_grad():
+            # batch size 4
+            spectrograms, spec_masks, encoded, encoded_len = ssl_model.forward(
+                input_signal=input_signal, input_signal_length=length
+            )
+
+            loss_value, loss_val_dict = ssl_model.decoder_loss_step(spectrograms, spec_masks, encoded, encoded_len)
+
+        assert len(loss_val_dict) == 4
