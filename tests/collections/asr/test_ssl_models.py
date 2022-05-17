@@ -9,7 +9,10 @@ from nemo.collections.asr.models import SpeechEncDecSelfSupervisedModel
 
 @pytest.fixture()
 def ssl_model():
-    preprocessor = {'cls': 'nemo.collections.asr.modules.AudioToMelSpectrogramPreprocessor', 'params': dict({})}
+    preprocessor = {'cls': 'nemo.collections.asr.modules.AudioToMelSpectrogramPreprocessor', 'params': dict({
+        'pad_to': 16,
+        'dither': 0
+    })}
 
     model_defaults = {'enc_hidden': 32, 'dec_out': 128}
 
@@ -152,24 +155,6 @@ class TestSSLModel:
         instance2 = SpeechEncDecSelfSupervisedModel.from_config_dict(confdict)
         assert isinstance(instance2, SpeechEncDecSelfSupervisedModel)
 
-    @pytest.mark.unit
-    def test_contr_mlm(self, ssl_model):
-
-        ssl_model.preprocessor.featurizer.dither = 0.0
-        ssl_model.preprocessor.featurizer.pad_to = 16
-
-        input_signal = torch.randn(size=(4, 64000))
-        length = torch.randint(low=48000, high=64000, size=[4])
-
-        with torch.no_grad():
-            # batch size 4
-            spectrograms, spec_masks, encoded, encoded_len = ssl_model.forward(
-                input_signal=input_signal, input_signal_length=length
-            )
-
-        loss_value, loss_val_dict = ssl_model.decoder_loss_step(spectrograms, spec_masks, encoded, encoded_len)
-
-        assert len(loss_val_dict) == 2
 
     @pytest.mark.unit
     def test_contr_nonquant(self, ssl_model):
@@ -184,14 +169,10 @@ class TestSSLModel:
 
         ssl_model = SpeechEncDecSelfSupervisedModel(cfg=modelConfig_contr_nonquant)
 
-        ssl_model.preprocessor.featurizer.dither = 0.0
-        ssl_model.preprocessor.featurizer.pad_to = 16
-
         input_signal = torch.randn(size=(4, 64000))
         length = torch.randint(low=48000, high=64000, size=[4])
 
         with torch.no_grad():
-            # batch size 4
             spectrograms, spec_masks, encoded, encoded_len = ssl_model.forward(
                 input_signal=input_signal, input_signal_length=length
             )
@@ -199,6 +180,21 @@ class TestSSLModel:
             loss_value, loss_val_dict = ssl_model.decoder_loss_step(spectrograms, spec_masks, encoded, encoded_len)
 
         assert len(loss_val_dict) == 1
+
+    @pytest.mark.unit
+    def test_contr_mlm(self, ssl_model):
+
+        input_signal = torch.randn(size=(4, 64000))
+        length = torch.randint(low=48000, high=64000, size=[4])
+
+        with torch.no_grad():
+            spectrograms, spec_masks, encoded, encoded_len = ssl_model.forward(
+                input_signal=input_signal, input_signal_length=length
+            )
+
+        loss_value, loss_val_dict = ssl_model.decoder_loss_step(spectrograms, spec_masks, encoded, encoded_len)
+
+        assert len(loss_val_dict) == 2
 
     @pytest.mark.unit
     def test_contr_mlm_multi(self, ssl_model):
@@ -231,14 +227,10 @@ class TestSSLModel:
 
         ssl_model = SpeechEncDecSelfSupervisedModel(cfg=modelConfig_contr_mlm_multi)
 
-        ssl_model.preprocessor.featurizer.dither = 0.0
-        ssl_model.preprocessor.featurizer.pad_to = 16
-
         input_signal = torch.randn(size=(4, 64000))
         length = torch.randint(low=48000, high=64000, size=[4])
 
         with torch.no_grad():
-            # batch size 4
             spectrograms, spec_masks, encoded, encoded_len = ssl_model.forward(
                 input_signal=input_signal, input_signal_length=length
             )
