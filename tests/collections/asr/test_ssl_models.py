@@ -85,7 +85,7 @@ def ssl_models():
                 'proj_dim': model_defaults['dec_out'],
                 'combine_time_steps': 1,
                 'quantized_targets': True,
-                'codebook_size': 300,
+                'codebook_size': 64,
                 'sample_from_same_utterance_only': True,
                 'sample_from_non_masked': False,
             },
@@ -156,19 +156,18 @@ class TestSSLModel:
 
         for ssl_model in ssl_models:
 
-            ssl_model = ssl_model.eval()
-
             ssl_model.preprocessor.featurizer.dither = 0.0
             ssl_model.preprocessor.featurizer.pad_to = 16
 
             input_signal = torch.randn(size=(4, 512))
             length = torch.randint(low=161, high=500, size=[4])
 
-            # batch size 4
-            spectrograms, spec_masks, encoded, encoded_len = ssl_model.forward(
-                input_signal=input_signal, input_signal_length=length
-            )
+            with torch.no_grad():
+                # batch size 4
+                spectrograms, spec_masks, encoded, encoded_len = ssl_model.forward(
+                    input_signal=input_signal, input_signal_length=length
+                )
 
-            loss_value, loss_val_dict = ssl_model.decoder_loss_step(spectrograms, spec_masks, encoded, encoded_len)
+                loss_value, loss_val_dict = ssl_model.decoder_loss_step(spectrograms, spec_masks, encoded, encoded_len)
 
             assert ssl_model.decoder_losses is None or (len(loss_val_dict) == len(ssl_model.decoder_losses))
