@@ -178,7 +178,7 @@ class TestSSLModel:
         loss_list_contr_nonquant = dict(modelConfig_contr_nonquant['loss_list'])
         del loss_list_contr_nonquant['mlm']
 
-        loss_list_contr_nonquant['contr']['quantized_targets'] = False
+        loss_list_contr_nonquant['contr']['loss']['quantized_targets'] = False
 
         modelConfig_contr_nonquant['loss_list'] = DictConfig(loss_list_contr_nonquant)
 
