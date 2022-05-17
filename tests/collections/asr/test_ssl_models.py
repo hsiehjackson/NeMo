@@ -172,6 +172,35 @@ class TestSSLModel:
         assert len(loss_val_dict) == 2
 
     @pytest.mark.unit
+    def test_contr_nonquant(self, ssl_model):
+        modelConfig_contr_nonquant = ssl_model.to_config_dict()
+
+        loss_list_contr_nonquant = dict(modelConfig_contr_nonquant['loss_list'])
+        del loss_list_contr_nonquant['mlm']
+
+        loss_list_contr_nonquant['contr']['quantized_targets'] = False
+
+        modelConfig_contr_nonquant['loss_list'] = DictConfig(loss_list_contr_nonquant)
+
+        ssl_model = SpeechEncDecSelfSupervisedModel(cfg=modelConfig_contr_nonquant)
+
+        ssl_model.preprocessor.featurizer.dither = 0.0
+        ssl_model.preprocessor.featurizer.pad_to = 16
+
+        input_signal = torch.randn(size=(4, 64000))
+        length = torch.randint(low=48000, high=64000, size=[4])
+
+        with torch.no_grad():
+            # batch size 4
+            spectrograms, spec_masks, encoded, encoded_len = ssl_model.forward(
+                input_signal=input_signal, input_signal_length=length
+            )
+
+            loss_value, loss_val_dict = ssl_model.decoder_loss_step(spectrograms, spec_masks, encoded, encoded_len)
+
+        assert len(loss_val_dict) == 1
+
+    @pytest.mark.unit
     def test_contr_mlm_multi(self, ssl_model):
         modelConfig_contr_mlm_multi = ssl_model.to_config_dict()
 
@@ -199,8 +228,6 @@ class TestSSLModel:
             'targets_from_loss': "contr"
         }
         modelConfig_contr_mlm_multi['loss_list'] = DictConfig(loss_list_contr_mlm_multi)
-
-        #modelConfig_contr_mlm_multi['encoder']['']
 
         ssl_model = SpeechEncDecSelfSupervisedModel(cfg=modelConfig_contr_mlm_multi)
 
