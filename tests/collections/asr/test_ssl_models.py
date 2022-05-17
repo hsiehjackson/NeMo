@@ -11,7 +11,7 @@ from nemo.collections.asr.models import SpeechEncDecSelfSupervisedModel
 def ssl_models():
     preprocessor = {'cls': 'nemo.collections.asr.modules.AudioToMelSpectrogramPreprocessor', 'params': dict({})}
 
-    model_defaults = {'enc_hidden': 1024, 'pred_hidden': 64, 'dec_out': 128}
+    model_defaults = {'enc_hidden': 512, 'dec_out': 128}
 
     encoder = {
         'cls': 'nemo.collections.asr.modules.ConvASREncoder',
@@ -20,6 +20,30 @@ def ssl_models():
             'activation': 'relu',
             'conv_mask': True,
             'jasper': [
+                {
+                    'filters': model_defaults['enc_hidden'],
+                    'repeat': 1,
+                    'kernel': [1],
+                    'stride': [1],
+                    'dilation': [1],
+                    'dropout': 0.0,
+                    'residual': False,
+                    'separable': True,
+                    'se': True,
+                    'se_context_size': -1,
+                },
+                {
+                    'filters': model_defaults['enc_hidden'],
+                    'repeat': 1,
+                    'kernel': [1],
+                    'stride': [1],
+                    'dilation': [1],
+                    'dropout': 0.0,
+                    'residual': False,
+                    'separable': True,
+                    'se': True,
+                    'se_context_size': -1,
+                },
                 {
                     'filters': model_defaults['enc_hidden'],
                     'repeat': 1,
@@ -51,7 +75,7 @@ def ssl_models():
                 'feat_in': model_defaults['enc_hidden'],
                 'feat_hidden': 128,
                 'feat_out': model_defaults['dec_out'],
-                'stride_layers': 2,
+                'stride_layers': 0,
                 'non_stride_layers': 0,
                 'stride_transpose': False,
             },
@@ -59,7 +83,7 @@ def ssl_models():
                 '_target_': 'nemo.collections.asr.losses.ContrastiveLoss',
                 'in_dim': 80,
                 'proj_dim': model_defaults['dec_out'],
-                'combine_time_steps': 4,
+                'combine_time_steps': 1,
                 'quantized_targets': True,
                 'codebook_size': 300,
                 'sample_from_same_utterance_only': True,
@@ -72,7 +96,7 @@ def ssl_models():
                 'feat_in': model_defaults['enc_hidden'],
                 'num_classes': 90000,
             },
-            'loss': {'_target_': 'nemo.collections.asr.losses.MLMLoss', 'combine_time_steps': 4},
+            'loss': {'_target_': 'nemo.collections.asr.losses.MLMLoss', 'combine_time_steps': 1},
         },
     }
 
@@ -86,9 +110,34 @@ def ssl_models():
         }
     )
 
-    model_instance_contr_mlm = SpeechEncDecSelfSupervisedModel(cfg=modelConfig_contr_mlm)
+    modelConfig_contr_mlm_multi = modelConfig_contr_mlm.copy()
 
-    ssl_models = [model_instance_contr_mlm]
+    loss_list_contr_mlm_multi = loss_list_contr_mlm.copy()
+    loss_list_contr_mlm_multi['mlm_2'] = {
+        'decoder': {
+            '_target_': 'nemo.collections.asr.modules.ConvASRDecoder',
+            'feat_in': model_defaults['enc_hidden'],
+            'num_classes': 90000,
+        },
+        'loss': {'_target_': 'nemo.collections.asr.losses.MLMLoss', 'combine_time_steps': 1},
+        'output_from_layer': "layers.0"
+    }
+    loss_list_contr_mlm_multi['mlm_3'] = {
+        'decoder': {
+            '_target_': 'nemo.collections.asr.modules.ConvASRDecoder',
+            'feat_in': model_defaults['enc_hidden'],
+            'num_classes': 90000,
+        },
+        'loss': {'_target_': 'nemo.collections.asr.losses.MLMLoss', 'combine_time_steps': 1},
+        'output_from_layer': "layers.1"
+    }
+    modelConfig_contr_mlm_multi['loss_list'] = DictConfig(loss_list_contr_mlm_multi)
+
+    model_instance_contr_mlm = SpeechEncDecSelfSupervisedModel(cfg=modelConfig_contr_mlm)
+    model_instance_contr_mlm_multi = SpeechEncDecSelfSupervisedModel(cfg=modelConfig_contr_mlm_multi)
+
+
+    ssl_models = [model_instance_contr_mlm, model_instance_contr_mlm_multi]
 
     return ssl_models
 
@@ -121,3 +170,5 @@ class TestSSLModel:
             )
 
             loss_value, loss_val_dict = ssl_model.decoder_loss_step(spectrograms, spec_masks, encoded, encoded_len)
+
+            assert ssl_model.decoder_losses is None or (len(loss_val_dict) == len(ssl_model.decoder_losses))

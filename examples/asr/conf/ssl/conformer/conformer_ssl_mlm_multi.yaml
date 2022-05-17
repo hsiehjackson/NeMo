@@ -149,7 +149,6 @@ model:
       output_from_layer: "layers.11"
 
   access:
-    access_all_intermediate: true
     detach: false
     convert_to_cpu: false
 
