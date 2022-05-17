@@ -8,7 +8,7 @@ from nemo.collections.asr.models import SpeechEncDecSelfSupervisedModel
 
 
 @pytest.fixture()
-def ssl_models():
+def ssl_model():
     preprocessor = {'cls': 'nemo.collections.asr.modules.AudioToMelSpectrogramPreprocessor', 'params': dict({})}
 
     model_defaults = {'enc_hidden': 32, 'dec_out': 128}
