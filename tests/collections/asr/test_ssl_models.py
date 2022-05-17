@@ -177,7 +177,7 @@ class TestSSLModel:
 
         model_defaults = modelConfig_contr_mlm_multi['model_defaults']
 
-        loss_list_contr_mlm_multi = modelConfig_contr_mlm_multi['loss_list']
+        loss_list_contr_mlm_multi = dict(modelConfig_contr_mlm_multi['loss_list'])
         loss_list_contr_mlm_multi['mlm_2'] = {
             'decoder': {
                 '_target_': 'nemo.collections.asr.modules.ConvASRDecoder',
@@ -202,7 +202,7 @@ class TestSSLModel:
 
         #modelConfig_contr_mlm_multi['encoder']['']
 
-        model_instance_contr_mlm_multi = SpeechEncDecSelfSupervisedModel(cfg=modelConfig_contr_mlm_multi)
+        ssl_model = SpeechEncDecSelfSupervisedModel(cfg=modelConfig_contr_mlm_multi)
 
         ssl_model.preprocessor.featurizer.dither = 0.0
         ssl_model.preprocessor.featurizer.pad_to = 16
