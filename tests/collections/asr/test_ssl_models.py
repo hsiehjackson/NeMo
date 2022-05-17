@@ -81,7 +81,7 @@ def ssl_models():
             },
             'loss': {
                 '_target_': 'nemo.collections.asr.losses.ContrastiveLoss',
-                'in_dim': 80,
+                'in_dim': 64,
                 'proj_dim': model_defaults['dec_out'],
                 'combine_time_steps': 1,
                 'quantized_targets': True,
