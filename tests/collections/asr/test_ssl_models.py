@@ -78,7 +78,6 @@ def ssl_models():
                 'stride_layers': 0,
                 'non_stride_layers': 0,
                 'stride_transpose': False,
-                'num_negatives': 3
             },
             'loss': {
                 '_target_': 'nemo.collections.asr.losses.ContrastiveLoss',
@@ -89,6 +88,7 @@ def ssl_models():
                 'codebook_size': 64,
                 'sample_from_same_utterance_only': True,
                 'sample_from_non_masked': False,
+                'num_negatives': 3,
             },
         },
         'mlm': {
