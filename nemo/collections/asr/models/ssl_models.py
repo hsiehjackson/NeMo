@@ -71,6 +71,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, FeatExtractMixin)
             self.loss_alphas = {}
             self.start_step = {}
             self.output_from_layer = {}
+            self.transpose_encoded = {}
             self.targets_from_loss = {}
             # need to be separate for moduledict
 
@@ -88,6 +89,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, FeatExtractMixin)
                 self.output_from_layer[decoder_loss_name] = decoder_loss_cfg.get("output_from_layer", None)
                 self.targets_from_loss[decoder_loss_name] = decoder_loss_cfg.get("targets_from_loss", None)
                 self.start_step[decoder_loss_name] = decoder_loss_cfg.get("start_step", 0)
+                self.transpose_encoded[decoder_loss_name] = decoder_loss_cfg.get("transpose_encoded", False)
 
                 if self.output_from_layer[decoder_loss_name] is not None:
                     self.set_access_enabled(True)
@@ -381,7 +383,10 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, FeatExtractMixin)
                 if self.output_from_layer[dec_loss_name] is None:
                     dec_input = encoded
                 else:
-                    dec_input = reg[self.output_from_layer[dec_loss_name]][-1].transpose(-2, -1)
+                    dec_input = reg[self.output_from_layer[dec_loss_name]][-1]\
+
+                if self.transpose_encoded[dec_loss_name]:
+                    dec_input = dec_input.transpose(-2, -1)
 
                 if self.targets_from_loss[dec_loss_name] is not None:
                     target_loss = self.targets_from_loss[dec_loss_name]
