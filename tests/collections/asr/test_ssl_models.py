@@ -175,6 +175,8 @@ class TestSSLModel:
     def test_contr_mlm_multi(self, ssl_model):
         modelConfig_contr_mlm_multi = ssl_model.to_config_dict()
 
+        model_defaults = modelConfig_contr_mlm_multi['model_defaults']
+
         loss_list_contr_mlm_multi = modelConfig_contr_mlm_multi['loss_list']
         loss_list_contr_mlm_multi['mlm_2'] = {
             'decoder': {
