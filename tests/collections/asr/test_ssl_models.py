@@ -98,6 +98,7 @@ def ssl_models():
                 'num_classes': 90000,
             },
             'loss': {'_target_': 'nemo.collections.asr.losses.MLMLoss', 'combine_time_steps': 1},
+            'targets_from_loss': "contr"
         },
     }
 
@@ -122,6 +123,7 @@ def ssl_models():
         },
         'loss': {'_target_': 'nemo.collections.asr.losses.MLMLoss', 'combine_time_steps': 1},
         'output_from_layer': "layers.0",
+        'targets_from_loss': "contr"
     }
     loss_list_contr_mlm_multi['mlm_3'] = {
         'decoder': {
@@ -131,6 +133,7 @@ def ssl_models():
         },
         'loss': {'_target_': 'nemo.collections.asr.losses.MLMLoss', 'combine_time_steps': 1},
         'output_from_layer': "layers.1",
+        'targets_from_loss': "contr"
     }
     modelConfig_contr_mlm_multi['loss_list'] = DictConfig(loss_list_contr_mlm_multi)
 
