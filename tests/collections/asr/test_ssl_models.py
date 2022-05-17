@@ -11,7 +11,7 @@ from nemo.collections.asr.models import SpeechEncDecSelfSupervisedModel
 def ssl_models():
     preprocessor = {'cls': 'nemo.collections.asr.modules.AudioToMelSpectrogramPreprocessor', 'params': dict({})}
 
-    model_defaults = {'enc_hidden': 512, 'dec_out': 128}
+    model_defaults = {'enc_hidden': 128, 'dec_out': 128}
 
     encoder = {
         'cls': 'nemo.collections.asr.modules.ConvASREncoder',
