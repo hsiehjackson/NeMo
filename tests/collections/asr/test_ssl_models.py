@@ -11,7 +11,7 @@ from nemo.collections.asr.models import SpeechEncDecSelfSupervisedModel
 def ssl_models():
     preprocessor = {'cls': 'nemo.collections.asr.modules.AudioToMelSpectrogramPreprocessor', 'params': dict({})}
 
-    model_defaults = {'enc_hidden': 128, 'dec_out': 128}
+    model_defaults = {'enc_hidden': 32, 'dec_out': 128}
 
     encoder = {
         'cls': 'nemo.collections.asr.modules.ConvASREncoder',
@@ -95,7 +95,7 @@ def ssl_models():
             'decoder': {
                 '_target_': 'nemo.collections.asr.modules.ConvASRDecoder',
                 'feat_in': model_defaults['enc_hidden'],
-                'num_classes': 90000,
+                'num_classes': 4096,
             },
             'loss': {'_target_': 'nemo.collections.asr.losses.MLMLoss', 'combine_time_steps': 1},
             'targets_from_loss': "contr"
@@ -119,7 +119,7 @@ def ssl_models():
         'decoder': {
             '_target_': 'nemo.collections.asr.modules.ConvASRDecoder',
             'feat_in': model_defaults['enc_hidden'],
-            'num_classes': 90000,
+            'num_classes': 4096,
         },
         'loss': {'_target_': 'nemo.collections.asr.losses.MLMLoss', 'combine_time_steps': 1},
         'output_from_layer': "encoder.0",
@@ -129,7 +129,7 @@ def ssl_models():
         'decoder': {
             '_target_': 'nemo.collections.asr.modules.ConvASRDecoder',
             'feat_in': model_defaults['enc_hidden'],
-            'num_classes': 90000,
+            'num_classes': 4096,
         },
         'loss': {'_target_': 'nemo.collections.asr.losses.MLMLoss', 'combine_time_steps': 1},
         'output_from_layer': "encoder.1",
