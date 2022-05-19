@@ -154,7 +154,7 @@ class ContrastiveLoss(Loss):
                 targets, prob_ppl_loss, cur_codebook_temp, self.target_ids = self.quantizer(targets, return_ids=True)
 
                 if self.reduce_ids:
-                    sh = self.target_ids.shape
+                    """sh = self.target_ids.shape
                     reduced_ids = self.target_ids.new_zeros(sh)
                     reduced_lens = self.target_ids.new_ones(sh[0]).long() * sh[1]
                     for i in range(sh[0]):
@@ -167,7 +167,16 @@ class ContrastiveLoss(Loss):
                                 cur_j += 1
                             if j >= decoder_lengths[i]:
                                 reduced_lens[i] = cur_j
-                                break
+                                break"""
+
+                    reduced_ids = torch.unique_consecutive(self.target_ids, dim=-1)
+                    min_val, reduced_lens = torch.min(reduced_ids, dim=-1)
+                    reduced_lens[min_val == 0] = decoder_lengths[min_val == 0]
+
+                    print(reduced_ids[:5, :10])
+                    print(min_val)
+                    print(reduced_lens)
+                    print()
 
                     self.target_ids = reduced_ids.narrow(1, 0, reduced_lens.max())
                     self.target_lengths = reduced_lens
