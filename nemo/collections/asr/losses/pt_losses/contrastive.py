@@ -160,11 +160,6 @@ class ContrastiveLoss(Loss):
                     reduced_ids = reduced_ids.scatter_(1, indices, self.target_ids)
                     reduced_lens = indices.max(dim=-1)[0] + 1
 
-                    print(reduced_ids[:5, :10])
-                    print(reduced_ids.shape)
-                    print(reduced_lens)
-                    print()
-
                     self.target_ids = reduced_ids.narrow(1, 0, reduced_lens.max())
                     self.target_lengths = reduced_lens
 
