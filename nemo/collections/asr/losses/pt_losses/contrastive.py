@@ -157,7 +157,7 @@ class ContrastiveLoss(Loss):
                     unique_x, indices = torch.unique_consecutive(self.target_ids, return_inverse=True)
                     indices -= indices.min(dim=1, keepdims=True)[0]
                     reduced_ids = torch.zeros_like(x)
-                    reduced_ids = reduced_ids.scatter_(1, indices, x)
+                    reduced_ids = reduced_ids.scatter_(1, indices, self.target_ids)
                     reduced_lens = indices.max(dim=-1)[0] + 1
 
                     print(reduced_ids[:5, :10])
