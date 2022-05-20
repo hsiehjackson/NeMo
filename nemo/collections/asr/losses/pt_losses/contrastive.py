@@ -154,29 +154,14 @@ class ContrastiveLoss(Loss):
                 targets, prob_ppl_loss, cur_codebook_temp, self.target_ids = self.quantizer(targets, return_ids=True)
 
                 if self.reduce_ids:
-                    """sh = self.target_ids.shape
-                    reduced_ids = self.target_ids.new_zeros(sh)
-                    reduced_lens = self.target_ids.new_ones(sh[0]).long() * sh[1]
-                    for i in range(sh[0]):
-                        cur_id = -1
-                        cur_j = 0
-                        for j in range(sh[1]):
-                            if self.target_ids[i, j] != cur_id:
-                                cur_id = self.target_ids[i, j]
-                                reduced_ids[i, cur_j] = cur_id
-                                cur_j += 1
-                            if j >= decoder_lengths[i]:
-                                reduced_lens[i] = cur_j
-                                break"""
-
-                    reduced_ids = torch.unique_consecutive(self.target_ids, dim=-1)
-                    min_val, reduced_lens = torch.min(reduced_ids, dim=-1)
+                    unique_x, indices = torch.unique_consecutive(self.target_ids, return_inverse=True)
+                    indices -= indices.min(dim=1, keepdims=True)[0]
+                    reduced_ids = torch.zeros_like(x)
+                    reduced_ids = reduced_ids.scatter_(1, indices, x)
+                    reduced_lens = indices.max(dim=-1)[0] + 1
 
                     print(reduced_ids[:5, :10])
-                    print(min_val)
-
-                    reduced_lens[min_val == 0] = decoder_lengths[min_val == 0].long()
-
+                    print(reduced_ids.shape)
                     print(reduced_lens)
                     print()
 
