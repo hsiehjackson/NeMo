@@ -52,7 +52,8 @@ class CTCLossForSSL(CTCLoss):
 
     @typecheck()
     def forward(self, spec_masks, decoder_outputs, targets, decoder_lengths=None, target_lengths=None):
+        log_probs = decoder_outputs
         loss = super().forward(
-            log_probs=decoder_outputs, targets=targets, input_lengths=decoder_lengths, target_lengths=target_lengths
+            log_probs=log_probs, targets=targets, input_lengths=decoder_lengths, target_lengths=target_lengths
         )
         return loss
