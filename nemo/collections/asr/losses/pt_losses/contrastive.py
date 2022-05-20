@@ -171,10 +171,12 @@ class ContrastiveLoss(Loss):
 
                     reduced_ids = torch.unique_consecutive(self.target_ids, dim=-1)
                     min_val, reduced_lens = torch.min(reduced_ids, dim=-1)
-                    reduced_lens[min_val == 0] = decoder_lengths[min_val == 0]
 
                     print(reduced_ids[:5, :10])
                     print(min_val)
+
+                    reduced_lens[min_val == 0] = decoder_lengths[min_val == 0].long()
+
                     print(reduced_lens)
                     print()
 
