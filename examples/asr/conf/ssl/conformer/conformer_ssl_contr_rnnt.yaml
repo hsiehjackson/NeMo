@@ -129,7 +129,7 @@ model:
         proj_dim: *dec_out
         combine_time_steps: 4
         quantized_targets: true
-        codebook_size: 100
+        codebook_size: 40
         sample_from_same_utterance_only: true
         sample_from_non_masked: false
         reduce_ids: true
@@ -142,7 +142,7 @@ model:
           normalization_mode: null # Currently only null is supported for export.
           random_state_sampling: false # Random state sampling: https://arxiv.org/pdf/1910.11455.pdf
           blank_as_pad: true # This flag must be set in order to support exporting of RNNT models + efficient inference.
-          vocab_size: 10000
+          vocab_size: 1600
           prednet:
             pred_hidden: 640
             pred_rnn_layers: 1
@@ -159,10 +159,10 @@ model:
             joint_hidden: 640
             activation: "relu"
             dropout: 0.1
-          num_classes: 10000
+          num_classes: 1600
       loss:
         _target_: nemo.collections.asr.losses.RNNTLossForSSL
-        num_classes: 10000
+        num_classes: 1600
       targets_from_loss: "contr"
       start_step: 1000
 
