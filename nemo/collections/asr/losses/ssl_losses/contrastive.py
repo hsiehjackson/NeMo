@@ -67,6 +67,7 @@ class ContrastiveLoss(Loss):
         quantizer_temp_decay: float = 0.999995,
         mask_threshold: float = 0.8,
         reduce_ids: bool = False,
+        multiplier: float = 16.0
     ):
         """
         Loss function representing the contrastive task of identifying the true latent speech representation of
@@ -119,12 +120,14 @@ class ContrastiveLoss(Loss):
         self.sample_from_codebook = sample_from_codebook
         self.group_loss = group_loss
         self.mask_threshold = mask_threshold
+        self.multiplier = multiplier
 
         self.store_ids = True
         self.reduce_ids = reduce_ids
 
         if not self.quantized_targets:
             self.target_proj = nn.Linear(in_dim * combine_time_steps, proj_dim)
+
 
     def sample_negatives(self, y, num):
         # y - T'xBxC or T'xC
@@ -262,6 +265,8 @@ class ContrastiveLoss(Loss):
 
         if not isinstance(loss, torch.Tensor):
             loss = torch.Tensor([0]).to(device=decoder_outputs.device)
+
+        loss *= self.multiplier / spectrograms.shape[0]
 
         return loss
 
