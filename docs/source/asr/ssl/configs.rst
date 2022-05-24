@@ -93,8 +93,8 @@ minimum duration of your samples in large enough for the number of negatives to 
     _target_: nemo.collections.asr.modules.MaskedPatchAugmentation
     patch_size: 48 # size of a single patch
     mask_patches: 0.5 # fraction of patches to mask (can be fixed int amount instead)
-    freq_masks: 3 # Cut two frequency bands
-    freq_width: 20 # ... of width 15 at maximum
+    freq_masks: 3 # Cut three frequency bands
+    freq_width: 20 # ... of width 20 at maximum
 
 
 Model Architecture Configurations
