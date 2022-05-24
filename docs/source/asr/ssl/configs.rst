@@ -23,10 +23,11 @@ runtime (samples below the provided segment length will be padded). You can enab
 dataset config:
 
 .. code-block:: yaml
-    augmentor:
-        random_segment:
-            prob: 1.0
-            duration_sec: 16 # specify the duration you want
+
+  augmentor:
+    random_segment:
+      prob: 1.0
+      duration_sec: 16 # specify the duration you want
 
 3) You can also use bucketing to ensure similar utterance lengths within batches.
 See `Bucketing documentation <../datasets.html#Bucketing Datasets>`__.
@@ -89,11 +90,11 @@ minimum duration of your samples in large enough for the number of negatives to 
 .. code-block:: yaml
 
   spec_augment:
-      _target_: nemo.collections.asr.modules.MaskedPatchAugmentation
-      patch_size: 48 # size of a single patch
-      mask_patches: 0.5 # fraction of patches to mask (can be fixed int amount instead)
-      freq_masks: 3 # Cut two frequency bands
-      freq_width: 20 # ... of width 15 at maximum
+    _target_: nemo.collections.asr.modules.MaskedPatchAugmentation
+    patch_size: 48 # size of a single patch
+    mask_patches: 0.5 # fraction of patches to mask (can be fixed int amount instead)
+    freq_masks: 3 # Cut two frequency bands
+    freq_width: 20 # ... of width 15 at maximum
 
 
 Model Architecture Configurations
@@ -172,22 +173,29 @@ In order to do this, instead of specifying a single ``decoder`` and ``loss`` in 
 which can contain any amount of corresponding decoders and losses. For each decoder-loss pair,
 we can specify a separate named sub-config, which contains the following fields:
 
-1) ``decoder`` - The decoder config, specifying a ``target`` class and parameters.
+1. ``decoder`` - The decoder config, specifying a ``target`` class and parameters.
 
-2) ``loss`` - The corresponding loss config, specifying a ``target`` class and parameters.
 
-3) ``loss_alpha`` - A multiplier on this loss (1.0 by default).
+2. ``loss`` - The corresponding loss config, specifying a ``target`` class and parameters.
 
-4) ``targets_from_loss`` - This parameter specifies which contrastive loss we should extract labels from. It is necessary for
+
+3. ``loss_alpha`` - A multiplier on this loss (1.0 by default).
+
+
+4. ``targets_from_loss`` - This parameter specifies which contrastive loss we should extract labels from. It is necessary for
 any loss which requires labels, if labels aren't present in your manifest.
 
-5) ``transpose_encoded`` - This parameter is used to optionally transpose the encoded features before passing them into this loss.
 
-6) ``start_step`` - The training step at which we should start using this decoder+loss.
+5. ``transpose_encoded`` - This parameter is used to optionally transpose the encoded features before passing them into this loss.
 
-7) ``output_from_layer`` - This parameter can be used to specify the name of the layer that
+
+6. ``start_step`` - The training step at which we should start using this decoder+loss.
+
+
+7. ``output_from_layer`` - This parameter can be used to specify the name of the layer that
 we should extract encoded features from to pass into this decoder. If it's not specified or set to null, the final encoder
 layer is used.
+
 
 The following is an example of a `loss_list` for a combination of contrastive+mlm losses,
 where the mlm loss used targets from the quantization module of the contrastive loss.
