@@ -406,7 +406,7 @@ model:
     contrastive:
       decoder:
         _target_: nemo.collections.asr.modules.ConvASRDecoderReconstruction
-        feat_in: ${model_defaults.enc_final}
+        feat_in: ${model.model_defaults.enc_final}
         feat_hidden: 128
         feat_out: ${model_defaults.decoder_out_channels}
         stride_layers: 0
@@ -427,7 +427,7 @@ model:
     mlm:
       decoder:
         _target_: nemo.collections.asr.modules.ConvASRDecoder
-        feat_in: ${model.encoder.d_model}
+        feat_in: ${model.model_defaults.enc_final}
         num_classes: 90000
       loss:
         _target_: nemo.collections.asr.losses.MLMLoss
@@ -445,7 +445,7 @@ model:
     # scheduler setup
     sched:
       name: NoamAnnealing
-      d_model: ${model.encoder.d_model}
+      d_model: ${model.model_defaults.enc_final}
       # scheduler config override
       warmup_steps: 25000
       warmup_ratio: null
