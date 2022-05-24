@@ -413,7 +413,6 @@ model:
         #if loss.combine_time_steps is less than the encoder stride, then a corresponding amount of stride_layers needs to
         #be added to the decoder (here stride and combine_time_steps are both 4)
         non_stride_layers: 0
-        num_negatives: 50
       loss:
         _target_: nemo.collections.asr.losses.ContrastiveLoss
         in_dim: ${model.preprocessor.features}
@@ -422,6 +421,7 @@ model:
         quantized_targets: true #should quantizer or linear layer be used
         # (quantizer is required to extract pseudo-labels for other losses)
         codebook_size: 300
+        num_negatives: 50
         sample_from_same_utterance_only: true #should negatives be sampled only from the same utterance
         sample_from_non_masked: false #should negatives be sampled from non-masked steps
 
