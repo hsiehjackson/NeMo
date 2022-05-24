@@ -421,7 +421,7 @@ model:
         quantized_targets: true #should quantizer or linear layer be used
         # (quantizer is required to extract pseudo-labels for other losses)
         codebook_size: 300
-        num_negatives: 50
+        num_negatives: 40
         sample_from_same_utterance_only: true #should negatives be sampled only from the same utterance
         sample_from_non_masked: false #should negatives be sampled from non-masked steps
 
