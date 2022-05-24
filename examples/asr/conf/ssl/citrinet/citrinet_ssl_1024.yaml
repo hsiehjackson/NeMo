@@ -413,6 +413,7 @@ model:
         #if loss.combine_time_steps is less than the encoder stride, then a corresponding amount of stride_layers needs to
         #be added to the decoder (here stride and combine_time_steps are both 4)
         non_stride_layers: 0
+        num_negatives: 50
       loss:
         _target_: nemo.collections.asr.losses.ContrastiveLoss
         in_dim: ${model.preprocessor.features}
