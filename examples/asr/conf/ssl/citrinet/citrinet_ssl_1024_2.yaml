@@ -432,6 +432,7 @@ model:
       decoder:
         _target_: nemo.collections.asr.modules.ConvASRDecoderReconstruction
         feat_in: ${model.model_defaults.enc_final}
+        feat_hidden: 128
         feat_out: 90000
         stride_layers: 1
         stride_transpose: true
