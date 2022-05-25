@@ -208,21 +208,21 @@ loss_list:
     targets_from_loss: "contr_3"
     loss_alpha: 1000.
 
-  optim:
-    name: adamw
-    lr: 5.0
-    # optimizer arguments
-    betas: [0.9, 0.98]
-    weight_decay: 1e-3
+optim:
+  name: adamw
+  lr: 5.0
+  # optimizer arguments
+  betas: [0.9, 0.98]
+  weight_decay: 1e-3
 
-    # scheduler setup
-    sched:
-      name: NoamAnnealing
-      d_model: ${model.encoder.d_model}
-      # scheduler config override
-      warmup_steps: 25000
-      warmup_ratio: null
-      min_lr: 1e-6
+  # scheduler setup
+  sched:
+    name: NoamAnnealing
+    d_model: ${model.encoder.d_model}
+    # scheduler config override
+    warmup_steps: 25000
+    warmup_ratio: null
+    min_lr: 1e-6
 
 trainer:
   devices: -1 # number of GPUs, -1 would use all available GPUs
