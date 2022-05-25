@@ -114,115 +114,114 @@ model:
 
   decoder_out: 128
 
-decoder_out: 128
 
-loss_list:
-  contr:
-    decoder:
-      _target_: nemo.collections.asr.modules.ConvASRDecoderReconstruction
-      feat_in: ${model.encoder.d_model}
-      feat_hidden: 128
-      feat_out: ${model.decoder_out}
-      stride_layers: 0
-      non_stride_layers: 0
-    loss:
-      _target_: nemo.collections.asr.losses.ContrastiveLoss
-      in_dim: ${model.preprocessor.features}
-      proj_dim: ${model.decoder_out}
-      combine_time_steps: 4
-      quantized_targets: true
-      codebook_size: 300
-      sample_from_same_utterance_only: true
-      sample_from_non_masked: false
-    output_from_layer: "layers.5"
-    transpose_encoded: true
+  loss_list:
+    contr:
+      decoder:
+        _target_: nemo.collections.asr.modules.ConvASRDecoderReconstruction
+        feat_in: ${model.encoder.d_model}
+        feat_hidden: 128
+        feat_out: ${model.decoder_out}
+        stride_layers: 0
+        non_stride_layers: 0
+      loss:
+        _target_: nemo.collections.asr.losses.ContrastiveLoss
+        in_dim: ${model.preprocessor.features}
+        proj_dim: ${model.decoder_out}
+        combine_time_steps: 4
+        quantized_targets: true
+        codebook_size: 300
+        sample_from_same_utterance_only: true
+        sample_from_non_masked: false
+      output_from_layer: "layers.5"
+      transpose_encoded: true
 
-  contr_2:
-    decoder:
-      _target_: nemo.collections.asr.modules.ConvASRDecoderReconstruction
-      feat_in: ${model.encoder.d_model}
-      feat_hidden: 128
-      feat_out: ${model.decoder_out}
-      stride_layers: 0
-      non_stride_layers: 0
-    loss:
-      _target_: nemo.collections.asr.losses.ContrastiveLoss
-      in_dim: ${model.preprocessor.features}
-      proj_dim: ${model.decoder_out}
-      combine_time_steps: 4
-      quantized_targets: true
-      codebook_size: 300
-      sample_from_same_utterance_only: true
-      sample_from_non_masked: false
-    output_from_layer: "layers.5"
-    transpose_encoded: true
+    contr_2:
+      decoder:
+        _target_: nemo.collections.asr.modules.ConvASRDecoderReconstruction
+        feat_in: ${model.encoder.d_model}
+        feat_hidden: 128
+        feat_out: ${model.decoder_out}
+        stride_layers: 0
+        non_stride_layers: 0
+      loss:
+        _target_: nemo.collections.asr.losses.ContrastiveLoss
+        in_dim: ${model.preprocessor.features}
+        proj_dim: ${model.decoder_out}
+        combine_time_steps: 4
+        quantized_targets: true
+        codebook_size: 300
+        sample_from_same_utterance_only: true
+        sample_from_non_masked: false
+      output_from_layer: "layers.5"
+      transpose_encoded: true
 
-  contr_3:
-    decoder:
-      _target_: nemo.collections.asr.modules.ConvASRDecoderReconstruction
-      feat_in: ${model.encoder.d_model}
-      feat_hidden: 128
-      feat_out: ${model.decoder_out}
-      stride_layers: 0
-      non_stride_layers: 0
-    loss:
-      _target_: nemo.collections.asr.losses.ContrastiveLoss
-      in_dim: ${model.preprocessor.features}
-      proj_dim: ${model.decoder_out}
-      combine_time_steps: 4
-      quantized_targets: true
-      codebook_size: 300
-      sample_from_same_utterance_only: true
-      sample_from_non_masked: false
+    contr_3:
+      decoder:
+        _target_: nemo.collections.asr.modules.ConvASRDecoderReconstruction
+        feat_in: ${model.encoder.d_model}
+        feat_hidden: 128
+        feat_out: ${model.decoder_out}
+        stride_layers: 0
+        non_stride_layers: 0
+      loss:
+        _target_: nemo.collections.asr.losses.ContrastiveLoss
+        in_dim: ${model.preprocessor.features}
+        proj_dim: ${model.decoder_out}
+        combine_time_steps: 4
+        quantized_targets: true
+        codebook_size: 300
+        sample_from_same_utterance_only: true
+        sample_from_non_masked: false
 
-  mlm:
-    decoder:
-      _target_: nemo.collections.asr.modules.ConvASRDecoder
-      feat_in: ${model.encoder.d_model}
-      num_classes: 90000
-    loss:
-      _target_: nemo.collections.asr.losses.MLMLoss
-      combine_time_steps: 4
-    targets_from_loss: "contr"
-    loss_alpha: 1000.
+    mlm:
+      decoder:
+        _target_: nemo.collections.asr.modules.ConvASRDecoder
+        feat_in: ${model.encoder.d_model}
+        num_classes: 90000
+      loss:
+        _target_: nemo.collections.asr.losses.MLMLoss
+        combine_time_steps: 4
+      targets_from_loss: "contr"
+      loss_alpha: 1000.
 
-  mlm_2:
-    decoder:
-      _target_: nemo.collections.asr.modules.ConvASRDecoder
-      feat_in: ${model.encoder.d_model}
-      num_classes: 90000
-    loss:
-      _target_: nemo.collections.asr.losses.MLMLoss
-      combine_time_steps: 4
-    targets_from_loss: "contr_2"
-    loss_alpha: 1000.
+    mlm_2:
+      decoder:
+        _target_: nemo.collections.asr.modules.ConvASRDecoder
+        feat_in: ${model.encoder.d_model}
+        num_classes: 90000
+      loss:
+        _target_: nemo.collections.asr.losses.MLMLoss
+        combine_time_steps: 4
+      targets_from_loss: "contr_2"
+      loss_alpha: 1000.
 
-  mlm_3:
-    decoder:
-      _target_: nemo.collections.asr.modules.ConvASRDecoder
-      feat_in: ${model.encoder.d_model}
-      num_classes: 90000
-    loss:
-      _target_: nemo.collections.asr.losses.MLMLoss
-      combine_time_steps: 4
-    targets_from_loss: "contr_3"
-    loss_alpha: 1000.
+    mlm_3:
+      decoder:
+        _target_: nemo.collections.asr.modules.ConvASRDecoder
+        feat_in: ${model.encoder.d_model}
+        num_classes: 90000
+      loss:
+        _target_: nemo.collections.asr.losses.MLMLoss
+        combine_time_steps: 4
+      targets_from_loss: "contr_3"
+      loss_alpha: 1000.
 
-optim:
-  name: adamw
-  lr: 5.0
-  # optimizer arguments
-  betas: [0.9, 0.98]
-  weight_decay: 1e-3
+  optim:
+    name: adamw
+    lr: 5.0
+    # optimizer arguments
+    betas: [0.9, 0.98]
+    weight_decay: 1e-3
 
-  # scheduler setup
-  sched:
-    name: NoamAnnealing
-    d_model: ${model.encoder.d_model}
-    # scheduler config override
-    warmup_steps: 25000
-    warmup_ratio: null
-    min_lr: 1e-6
+    # scheduler setup
+    sched:
+      name: NoamAnnealing
+      d_model: ${model.encoder.d_model}
+      # scheduler config override
+      warmup_steps: 25000
+      warmup_ratio: null
+      min_lr: 1e-6
 
 trainer:
   devices: -1 # number of GPUs, -1 would use all available GPUs
