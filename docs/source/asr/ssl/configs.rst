@@ -404,6 +404,7 @@ respectively from 6th, 12th and final layer.
       targets_from_loss: "contr"
       loss_alpha: 300.
       output_from_layer: "layers.5"
+      transpose_encoded: true
 
     mlm_3:
       decoder:
@@ -416,3 +417,4 @@ respectively from 6th, 12th and final layer.
       targets_from_loss: "contr"
       loss_alpha: 300.
       output_from_layer: "layers.11"
+      transpose_encoded: true
