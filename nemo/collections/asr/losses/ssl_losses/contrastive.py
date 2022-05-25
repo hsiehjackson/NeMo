@@ -132,6 +132,9 @@ class ContrastiveLoss(Loss):
     def sample_negatives(self, y, num):
         # y - T'xBxC or T'xC
 
+        print(y.shape, num)
+        print()
+
         high = y.shape[0]
         neg_idxs = torch.multinomial(torch.ones((num, high), device=y.device), self.num_negatives)
 
@@ -148,6 +151,8 @@ class ContrastiveLoss(Loss):
         masks = spec_masks.transpose(-2, -1)
         targets = spec_in
         # BxTxC
+
+        print(spec_in.shape, decoder_outputs.shape)
 
         targets = targets.reshape(targets.shape[0], targets.shape[1] // self.combine_time_steps, -1)
         masks = masks.reshape(targets.shape[0], targets.shape[1], -1)
