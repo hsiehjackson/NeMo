@@ -489,7 +489,7 @@ class ConvASRDecoderReconstruction(NeuralModule, Exportable):
         feat_in,
         feat_out,
         feat_hidden,
-        stride_layers,
+        stride_layers=0,
         non_stride_layers=0,
         kernel_size=11,
         init_mode="xavier_uniform",
