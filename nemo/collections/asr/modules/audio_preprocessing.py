@@ -572,7 +572,8 @@ class MaskedPatchAugmentation(NeuralModule):
 
         if self.mask_patches is None:
             # masking specified as fraction
-            mask_patches = int(min_len * self._mask_fraction // self.patch_size)
+            len_fraction = int(min_len * self._mask_fraction)
+            mask_patches = len_fraction // self.patch_size + int(len_fraction % self.patch_size != 0)
         else:
             mask_patches = self.mask_patches
 
