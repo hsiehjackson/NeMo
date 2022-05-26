@@ -182,7 +182,8 @@ we can specify a separate named sub-config, which contains the following fields:
 3. ``loss_alpha`` - A multiplier on this loss (1.0 by default).
 
 
-4. ``targets_from_loss`` - This parameter specifies which contrastive loss we should extract labels from. It is necessary for
+4. ``targets_from_loss`` - This parameter specifies which contrastive loss we should extract labels from.
+It is necessary for
 any loss which requires labels, if labels aren't present in your manifest.
 
 
@@ -193,7 +194,8 @@ any loss which requires labels, if labels aren't present in your manifest.
 
 
 7. ``output_from_layer`` - This parameter can be used to specify the name of the layer that
-we should extract encoded features from to pass into this decoder. If it's not specified or set to null, the final encoder
+we should extract encoded features from to pass into this decoder.
+If it's not specified or set to null, the final encoder
 layer is used.
 
 
