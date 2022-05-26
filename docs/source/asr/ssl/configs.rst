@@ -183,7 +183,7 @@ we can specify a separate named sub-config, which contains the following fields:
 
 
 The following is an example of a `loss_list` for a combination of contrastive+mlm losses,
-where the mlm loss used targets from the quantization module of the contrastive loss.
+where the mlm loss uses targets from the quantization module of the contrastive loss.
 
 
 .. code-block:: yaml
