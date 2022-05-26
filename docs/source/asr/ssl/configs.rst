@@ -30,7 +30,7 @@ dataset config:
       duration_sec: 16 # specify the duration you want
 
 3) You can also use bucketing to ensure similar utterance lengths within batches.
-See `Bucketing documentation <../datasets.html##bucketing-datasets>`__.
+See `Bucketing documentation <../datasets.html#bucketing-datasets>`__.
 
 An example of SSL train and validation configuration should look similar to the following:
 
@@ -174,29 +174,12 @@ which can contain any amount of corresponding decoders and losses. For each deco
 we can specify a separate named sub-config, which contains the following fields:
 
 1. ``decoder`` - The decoder config, specifying a ``target`` class and parameters.
-
-
 2. ``loss`` - The corresponding loss config, specifying a ``target`` class and parameters.
-
-
 3. ``loss_alpha`` - A multiplier on this loss (1.0 by default).
-
-
-4. ``targets_from_loss`` - This parameter specifies which contrastive loss we should extract labels from.
-It is necessary for
-any loss which requires labels, if labels aren't present in your manifest.
-
-
+4. ``targets_from_loss`` - This parameter specifies which contrastive loss we should extract labels from. It is necessary for any loss which requires labels, if labels aren't present in your manifest.
 5. ``transpose_encoded`` - This parameter is used to optionally transpose the encoded features before passing them into this loss.
-
-
 6. ``start_step`` - The training step at which we should start using this decoder+loss.
-
-
-7. ``output_from_layer`` - This parameter can be used to specify the name of the layer that
-we should extract encoded features from to pass into this decoder.
-If it's not specified or set to null, the final encoder
-layer is used.
+7. ``output_from_layer`` - This parameter can be used to specify the name of the layer that we should extract encoded features from to pass into this decoder. If it's not specified or set to null, the final encoder layer is used.
 
 
 The following is an example of a `loss_list` for a combination of contrastive+mlm losses,
