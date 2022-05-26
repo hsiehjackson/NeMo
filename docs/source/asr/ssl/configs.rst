@@ -30,7 +30,7 @@ dataset config:
       duration_sec: 16 # specify the duration you want
 
 3) You can also use bucketing to ensure similar utterance lengths within batches.
-See `Bucketing documentation <../datasets.html#Bucketing Datasets>`__.
+See `Bucketing documentation <../datasets.html##bucketing-datasets>`__.
 
 An example of SSL train and validation configuration should look similar to the following:
 
@@ -109,7 +109,7 @@ Unlike the encoders, the decoders and corresponding losses will be specific to t
 you can discard them when transferring the model to fine-tuning.
 
 The most basic method of pre-training we can use is to have the model solve a contrastive task
-(this is the approach used in wav2vec 2.0:cite:`wav2vec2`)
+(this is the approach used in wav2vec 2.0 :cite:`wav2vec2`)
 We can define the corresponding decoder and loss configs in the following way for an encoder with stride 4x.
 
 .. code-block:: yaml
