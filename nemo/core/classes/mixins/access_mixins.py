@@ -36,6 +36,7 @@ class AccessMixin(ABC):
     def __init__(self):
         super().__init__()
         self._registry = []
+        self.set_access_enabled(access_enabled=False)
 
     def register_accessible_tensor(self, tensor):
         """
