@@ -65,6 +65,8 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
 
         self.decoder_losses = None
 
+        need_intermediate_access = False
+
         if "loss_list" in self._cfg:
 
             self.decoder_losses = {}
@@ -92,7 +94,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
                 self.transpose_encoded[decoder_loss_name] = decoder_loss_cfg.get("transpose_encoded", False)
 
                 if self.output_from_layer[decoder_loss_name] is not None:
-                    self.set_access_enabled(True)
+                    need_intermediate_access = True
 
             self.decoder_losses = nn.ModuleDict(self.decoder_losses)
 
@@ -117,6 +119,9 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
             self.feat_pen, self.pen_factor = 0.0, self._cfg.feature_penalty
         else:
             self.feat_pen, self.pen_factor = None, None
+
+        if need_intermediate_access:
+            self.set_access_enabled(True)
 
         if "access" in self._cfg:
             set_access_cfg(self._cfg.access)
