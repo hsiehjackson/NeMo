@@ -38,6 +38,10 @@ class AccessMixin(ABC):
         self._registry = []
         self.set_access_enabled(access_enabled=False)
 
+        print("---")
+        print("access:", self.is_access_enabled())
+        print("---")
+
     def register_accessible_tensor(self, tensor):
         """
         Register tensor for later use.
