@@ -36,11 +36,6 @@ class AccessMixin(ABC):
     def __init__(self):
         super().__init__()
         self._registry = []
-        self.set_access_enabled(access_enabled=False)
-
-        print("---")
-        print("access:", self.is_access_enabled())
-        print("---")
 
     def register_accessible_tensor(self, tensor):
         """
@@ -54,6 +49,9 @@ class AccessMixin(ABC):
 
         if not hasattr(self, '_registry'):
             self._registry = []
+
+        if len(self._registry) > 0:
+            self._registry.clear()
 
         self._registry.append(tensor)
 
