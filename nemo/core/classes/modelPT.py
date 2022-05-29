@@ -886,7 +886,7 @@ class ModelPT(LightningModule, Model):
         """
         return self._test_names[dataloader_idx]
 
-    def load_part_of_state_dict(self, state_dict, include, exclude, load_from_string):
+    def load_part_of_state_dict(self, state_dict, include, exclude, load_from_string, replace=None, replace_with=None):
 
         excluded_param_names = []
         # create dict
@@ -905,10 +905,17 @@ class ModelPT(LightningModule, Model):
                     should_add = False
                     break
             if should_add:
+                print()
+                print(k)
+                for idx in range(len(replace)):
+                    k = k.replace(replace[idx], replace_with[idx])
+                    print(k)
+                print()
                 dict_to_load[k] = v
 
         # Restore checkpoint part into current model
-        self.load_state_dict(dict_to_load, strict=False)
+        res = self.load_state_dict(dict_to_load, strict=False)
+        print(res)
         logging.info(f'Model checkpoint partially restored from {load_from_string}')
         if len(excluded_param_names) > 0:
             logging.info(
@@ -945,6 +952,8 @@ class ModelPT(LightningModule, Model):
                         path:<path/to/model2>
                         include:["decoder"]
                         exclude:["embed"]
+                        replace:["aaa", "bbb"]
+                        replace_with:["111", "222"]
 
             init_from_pretrained_model: Str name of a pretrained model checkpoint (obtained via cloud).
                 The model will be downloaded (or a cached copy will be used), instantiated and then
@@ -1001,9 +1010,13 @@ class ModelPT(LightningModule, Model):
 
                         include = model_load_cfg.pop('include', [""])
                         exclude = model_load_cfg.pop('exclude', [])
+                        replace = model_load_cfg.pop('replace', [])
+                        replace_with = model_load_cfg.pop('replace', [])
+
 
                         self.load_part_of_state_dict(
-                            restored_model.state_dict(), include, exclude, f'nemo file with path `{model_path}`'
+                            restored_model.state_dict(), include, exclude, f'nemo file with path `{model_path}`',
+                            replace, replace_with
                         )
 
                         del restored_model
