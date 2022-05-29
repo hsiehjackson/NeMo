@@ -1011,7 +1011,7 @@ class ModelPT(LightningModule, Model):
                         include = model_load_cfg.pop('include', [""])
                         exclude = model_load_cfg.pop('exclude', [])
                         replace = model_load_cfg.pop('replace', [])
-                        replace_with = model_load_cfg.pop('replace', [])
+                        replace_with = model_load_cfg.pop('replace_with', [])
 
 
                         self.load_part_of_state_dict(
