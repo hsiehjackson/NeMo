@@ -135,6 +135,7 @@ model:
         codebook_size: 300
         sample_from_same_utterance_only: true #should negatives be sampled only from the same utterance
         sample_from_non_masked: false #should negatives be sampled from non-masked steps
+        combined_group_ids: false
 
     mlm:
       decoder:
