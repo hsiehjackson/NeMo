@@ -48,12 +48,13 @@ class MLMLoss(Loss):
         return True
 
     def __init__(
-        self, combine_time_steps: int = 1, mask_threshold: float = 0.8,
+        self, combine_time_steps: int = 1, mask_threshold: float = 0.8, groups: int = 1
     ):
         super().__init__()
         self.nll_loss = nn.NLLLoss()
         self.combine_time_steps = combine_time_steps
         self.mask_threshold = mask_threshold
+        self.groups = groups
 
     @typecheck()
     def forward(self, spec_masks, decoder_outputs, targets, decoder_lengths=None, target_lengths=None):
@@ -66,8 +67,19 @@ class MLMLoss(Loss):
         masks = masks.mean(-1) > self.mask_threshold
 
         out_masked_only = decoder_outputs[masks]
-        targets = F.pad(targets, (0, masks.shape[-1] - targets.shape[-1]))
+
+        print(out_masked_only.shape.shape, targets.shape)
+
+        targets = targets.reshape(targets.shape[0], targets.shape[1] // self.groups, self.groups)
+        targets = F.pad(targets, (0, 0, 0, masks.shape[-1] - targets.shape[-2]))
         targets_masked_only = targets[masks]
+        targets_masked_only = targets_masked_only.reshape(-1)
+
+        out_masked_only = out_masked_only.reshape(out_masked_only.shape[0] * self.groups,
+                                                  out_masked_only.shape[1] // self.groups)
+
+        print(out_masked_only.shape.shape, targets_masked_only.shape)
+
 
         loss = self.nll_loss(out_masked_only, targets_masked_only)
         loss = torch.mean(loss)

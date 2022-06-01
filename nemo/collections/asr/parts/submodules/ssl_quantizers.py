@@ -144,7 +144,7 @@ class GumbelVectorQuantizer(NeuralModule):
             "quantize_prob_ppl": NeuralType(elements_type=LossType()),
         }
 
-    def forward(self, x, return_ids=False):
+    def forward(self, x, return_ids=False, combined_ids=True):
 
         if not self.time_first:
             x = x.transpose(1, 2)
@@ -188,12 +188,15 @@ class GumbelVectorQuantizer(NeuralModule):
             hard_x_max = hard_x.argmax(-1).reshape(bsz, tsz, -1)
             # BxTxG
 
-            # create single id from multiple group ids
-            target_ids = hard_x.new_zeros(bsz, tsz).long()
+            if combined_ids:
+                # create single id from multiple group ids
+                target_ids = hard_x.new_zeros(bsz, tsz).long()
 
-            for i in range(self.groups):
-                target_ids *= self.num_vars
-                target_ids += hard_x_max[:, :, i]
+                for i in range(self.groups):
+                    target_ids *= self.num_vars
+                    target_ids += hard_x_max[:, :, i]
+            else:
+                target_ids = hard_x_max.reshape(bsz, tsz * self.groups)
 
             return x, quantize_prob_ppl, cur_codebook_temp, target_ids
         else:
