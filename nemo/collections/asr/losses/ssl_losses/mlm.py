@@ -68,7 +68,7 @@ class MLMLoss(Loss):
 
         out_masked_only = decoder_outputs[masks]
 
-        print(out_masked_only.shape.shape, targets.shape)
+        print(out_masked_only.shape, targets.shape)
 
         targets = targets.reshape(targets.shape[0], targets.shape[1] // self.groups, self.groups)
         targets = F.pad(targets, (0, 0, 0, masks.shape[-1] - targets.shape[-2]))
