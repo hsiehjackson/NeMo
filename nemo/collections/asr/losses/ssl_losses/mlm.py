@@ -80,7 +80,9 @@ class MLMLoss(Loss):
 
         print(out_masked_only.shape, targets_masked_only.shape)
 
+        print(out_masked_only.argmax(-1)[:30])
         print(targets_masked_only[:30])
+        print()
 
         loss = self.nll_loss(out_masked_only, targets_masked_only)
         loss = torch.mean(loss)
