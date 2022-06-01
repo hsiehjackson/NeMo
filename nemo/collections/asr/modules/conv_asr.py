@@ -35,10 +35,8 @@ from nemo.collections.asr.parts.submodules.tdnn_attention import (
     TDNNModule,
     TDNNSEModule,
 )
-from nemo.collections.asr.parts.utils import adapter_utils
 from nemo.core.classes.common import typecheck
 from nemo.core.classes.exportable import Exportable
-from nemo.core.classes.mixins import adapter_mixins
 from nemo.core.classes.module import NeuralModule
 from nemo.core.neural_types import (
     AcousticEncodedRepresentation,
@@ -397,7 +395,7 @@ class ParallelConvASREncoder(NeuralModule, Exportable):
         return s_input[-1], length
 
 
-class ConvASRDecoder(NeuralModule, Exportable, adapter_mixins.AdapterModuleMixin):
+class ConvASRDecoder(NeuralModule, Exportable):
     """Simple ASR Decoder for use with CTC-based models such as JasperNet and QuartzNet
 
      Based on these papers:
@@ -443,11 +441,6 @@ class ConvASRDecoder(NeuralModule, Exportable, adapter_mixins.AdapterModuleMixin
 
     @typecheck()
     def forward(self, encoder_output):
-        # Adapter module forward step
-        if self.is_adapter_available():
-            encoder_output = encoder_output.transpose(1, 2)  # [B, T, C]
-            encoder_output = self.forward_enabled_adapters(encoder_output)
-            encoder_output = encoder_output.transpose(1, 2)  # [B, C, T]
 
         return torch.nn.functional.log_softmax(self.decoder_layers(encoder_output).transpose(1, 2), dim=-1)
 
@@ -470,16 +463,6 @@ class ConvASRDecoder(NeuralModule, Exportable, adapter_mixins.AdapterModuleMixin
             logging.warning(f"Turned off {m_count} masked convolutions")
         Exportable._prepare_for_export(self, **kwargs)
 
-    # Adapter method overrides
-    def add_adapter(self, name: str, cfg: DictConfig):
-        # Update the config with correct input dim
-        cfg = self._update_adapter_cfg_input_dim(cfg)
-        # Add the adapter
-        super().add_adapter(name=name, cfg=cfg)
-
-    def _update_adapter_cfg_input_dim(self, cfg: DictConfig):
-        cfg = adapter_utils.update_adapter_cfg_input_dim(self, cfg, module_dim=self._feat_in)
-        return cfg
 
     @property
     def vocabulary(self):
@@ -887,33 +870,6 @@ class SpeakerDecoder(NeuralModule, Exportable):
         return out, embs[-1].squeeze(-1)
 
 
-class ConvASREncoderAdapter(ConvASREncoder, adapter_mixins.AdapterModuleMixin):
-
-    # Higher level forwarding
-    def add_adapter(self, name: str, cfg: dict):
-        for jasper_block in self.encoder:  # type: adapter_mixins.AdapterModuleMixin
-            cfg = self._update_adapter_cfg_input_dim(jasper_block, cfg)
-            jasper_block.add_adapter(name, cfg)
-
-    def is_adapter_available(self) -> bool:
-        return any([jasper_block.is_adapter_available() for jasper_block in self.encoder])
-
-    def set_enabled_adapters(self, name: Optional[str] = None, enabled: bool = True):
-        for jasper_block in self.encoder:  # type: adapter_mixins.AdapterModuleMixin
-            jasper_block.set_enabled_adapters(name=name, enabled=enabled)
-
-    def get_enabled_adapters(self) -> List[str]:
-        names = set([])
-        for jasper_block in self.encoder:  # type: adapter_mixins.AdapterModuleMixin
-            names.update(jasper_block.get_enabled_adapters())
-
-        names = sorted(list(names))
-        return names
-
-    def _update_adapter_cfg_input_dim(self, block: JasperBlock, cfg):
-        cfg = adapter_utils.update_adapter_cfg_input_dim(self, cfg, module_dim=block.planes)
-        return cfg
-
 
 @dataclass
 class JasperEncoderConfig:
@@ -971,9 +927,3 @@ class ConvASRDecoderClassificationConfig:
     return_logits: bool = True
     pooling_type: str = 'avg'
 
-
-"""
-Register any additional information
-"""
-if adapter_mixins.get_registered_adapter(ConvASREncoder) is None:
-    adapter_mixins.register_adapter(base_class=ConvASREncoder, adapter_class=ConvASREncoderAdapter)
