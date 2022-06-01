@@ -78,7 +78,7 @@ class MLMLoss(Loss):
         out_masked_only = out_masked_only.reshape(out_masked_only.shape[0] * self.groups,
                                                   out_masked_only.shape[1] // self.groups)
 
-        print(out_masked_only.shape.shape, targets_masked_only.shape)
+        print(out_masked_only.shape, targets_masked_only.shape)
 
 
         loss = self.nll_loss(out_masked_only, targets_masked_only)
