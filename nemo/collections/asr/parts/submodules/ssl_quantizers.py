@@ -196,7 +196,7 @@ class GumbelVectorQuantizer(NeuralModule):
                     target_ids *= self.num_vars
                     target_ids += hard_x_max[:, :, i]
             else:
-                target_ids = hard_x_max.reshape(bsz, tsz * self.groups)
+                target_ids = hard_x_max.reshape(bsz, tsz * self.groups).long()
 
             return x, quantize_prob_ppl, cur_codebook_temp, target_ids
         else:
