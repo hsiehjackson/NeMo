@@ -55,6 +55,7 @@ class ConformerLayer(torch.nn.Module, AdapterModuleMixin, AccessMixin):
         pos_bias_v=None,
         linear_type='standard',
         linear_blocks=4,
+        replace_linear_in_attn=False
     ):
         super(ConformerLayer, self).__init__()
 
@@ -73,17 +74,32 @@ class ConformerLayer(torch.nn.Module, AdapterModuleMixin, AccessMixin):
 
         # multi-headed self-attention module
         self.norm_self_att = LayerNorm(d_model)
-        if self_attention_model == 'rel_pos':
-            self.self_attn = RelPositionMultiHeadAttention(
-                n_head=n_heads, n_feat=d_model, dropout_rate=dropout_att, pos_bias_u=pos_bias_u, pos_bias_v=pos_bias_v
-            )
-        elif self_attention_model == 'abs_pos':
-            self.self_attn = MultiHeadAttention(n_head=n_heads, n_feat=d_model, dropout_rate=dropout_att)
+        if replace_linear_in_attn:
+            if self_attention_model == 'rel_pos':
+                self.self_attn = RelPositionMultiHeadAttention(
+                    n_head=n_heads, n_feat=d_model, dropout_rate=dropout_att, pos_bias_u=pos_bias_u, pos_bias_v=pos_bias_v,
+                    linear_type=linear_type, linear_blocks=linear_blocks
+                )
+            elif self_attention_model == 'abs_pos':
+                self.self_attn = MultiHeadAttention(n_head=n_heads, n_feat=d_model, dropout_rate=dropout_att,
+                                                    linear_type=linear_type, linear_blocks=linear_blocks)
+            else:
+                raise ValueError(
+                    f"'{self_attention_model}' is not not a valid value for 'self_attention_model', "
+                    f"valid values can be from ['rel_pos', 'abs_pos']"
+                )
         else:
-            raise ValueError(
-                f"'{self_attention_model}' is not not a valid value for 'self_attention_model', "
-                f"valid values can be from ['rel_pos', 'abs_pos']"
-            )
+            if self_attention_model == 'rel_pos':
+                self.self_attn = RelPositionMultiHeadAttention(
+                    n_head=n_heads, n_feat=d_model, dropout_rate=dropout_att, pos_bias_u=pos_bias_u, pos_bias_v=pos_bias_v
+                )
+            elif self_attention_model == 'abs_pos':
+                self.self_attn = MultiHeadAttention(n_head=n_heads, n_feat=d_model, dropout_rate=dropout_att)
+            else:
+                raise ValueError(
+                    f"'{self_attention_model}' is not not a valid value for 'self_attention_model', "
+                    f"valid values can be from ['rel_pos', 'abs_pos']"
+                )
 
         # second feed forward module
         self.norm_feed_forward2 = LayerNorm(d_model)

@@ -37,6 +37,8 @@ import math
 import torch
 import torch.nn as nn
 
+from nemo.collections.asr.parts.submodules.structured_linear import MonarchLinear
+
 __all__ = [
     'RelPositionMultiHeadAttention',
     'RelPositionalEncoding',
@@ -52,7 +54,7 @@ class MultiHeadAttention(nn.Module):
         dropout_rate (float): dropout rate
     """
 
-    def __init__(self, n_head, n_feat, dropout_rate):
+    def __init__(self, n_head, n_feat, dropout_rate, linear_type='standard', linear_blocks=4):
         """Construct an MultiHeadedAttention object."""
         super(MultiHeadAttention, self).__init__()
         assert n_feat % n_head == 0
@@ -60,10 +62,16 @@ class MultiHeadAttention(nn.Module):
         self.d_k = n_feat // n_head
         self.s_d_k = math.sqrt(self.d_k)
         self.h = n_head
-        self.linear_q = nn.Linear(n_feat, n_feat)
-        self.linear_k = nn.Linear(n_feat, n_feat)
-        self.linear_v = nn.Linear(n_feat, n_feat)
-        self.linear_out = nn.Linear(n_feat, n_feat)
+        if linear_type == 'standard':
+            self.linear_q = nn.Linear(n_feat, n_feat)
+            self.linear_k = nn.Linear(n_feat, n_feat)
+            self.linear_v = nn.Linear(n_feat, n_feat)
+            self.linear_out = nn.Linear(n_feat, n_feat)
+        elif linear_type == 'monarch':
+            self.linear_q = MonarchLinear(in_features=n_feat, out_features=n_feat, nblocks=linear_blocks)
+            self.linear_k = MonarchLinear(in_features=n_feat, out_features=n_feat, nblocks=linear_blocks)
+            self.linear_v = MonarchLinear(in_features=n_feat, out_features=n_feat, nblocks=linear_blocks)
+            self.linear_out = MonarchLinear(in_features=n_feat, out_features=n_feat, nblocks=linear_blocks)
         self.dropout = nn.Dropout(p=dropout_rate)
 
     def forward_qkv(self, query, key, value):
@@ -134,11 +142,14 @@ class RelPositionMultiHeadAttention(MultiHeadAttention):
         dropout_rate (float): dropout rate
     """
 
-    def __init__(self, n_head, n_feat, dropout_rate, pos_bias_u, pos_bias_v):
+    def __init__(self, n_head, n_feat, dropout_rate, pos_bias_u, pos_bias_v, linear_type='standard', linear_blocks=4):
         """Construct an RelPositionMultiHeadedAttention object."""
-        super().__init__(n_head, n_feat, dropout_rate)
+        super().__init__(n_head, n_feat, dropout_rate, linear_type, linear_blocks)
         # linear transformation for positional encoding
-        self.linear_pos = nn.Linear(n_feat, n_feat, bias=False)
+        if linear_type == 'standard':
+            self.linear_pos = nn.Linear(n_feat, n_feat, bias=False)
+        elif linear_type == 'monarch':
+            self.linear_pos = MonarchLinear(in_features=n_feat, out_features=n_feat, nblocks=linear_blocks)
         # these two learnable biases are used in matrix c and matrix d
         # as described in https://arxiv.org/abs/1901.02860 Section 3.3
         if pos_bias_u is None or pos_bias_v is None:
