@@ -121,7 +121,6 @@ class StructuredLinear(nn.Module):
         return x
 
     def postprocess(self, output):
-        print(output.shape, self.out_features)
         out_features_extended = output.shape[-1]
         if out_features_extended > self.out_features:
             output = output[..., :self.out_features]
