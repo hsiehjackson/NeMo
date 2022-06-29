@@ -165,5 +165,7 @@ class MonarchLinear(StructuredLinear):
         self.reset_parameters_bias()
 
     def forward_matmul(self, x):
+        print(x.shape, x.mean(dim=-1))
         output = blockdiag_butterfly_multiply(self.preprocess(x), self.blkdiag1, self.blkdiag2)
+        print(x.shape, x.mean(dim=-1))
         return self.postprocess(output)
