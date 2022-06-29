@@ -22,7 +22,6 @@ class BlockdiagButterflyMultiply(torch.autograd.Function):
     """
 
     @staticmethod
-    @torch.cuda.amp.custom_fwd(cast_inputs=torch.float16)
     def forward(ctx, x, w1_bfly, w2_bfly):
         batch_shape, n = x.shape[:-1], x.shape[-1]
         batch_dim = np.prod(batch_shape)
@@ -41,7 +40,6 @@ class BlockdiagButterflyMultiply(torch.autograd.Function):
         return out2
 
     @staticmethod
-    @torch.cuda.amp.custom_bwd
     def backward(ctx, dout):
         x, w1_bfly, w2_bfly, out1 = ctx.saved_tensors
         batch_shape, n = x.shape[:-1], x.shape[-1]
@@ -168,5 +166,7 @@ class MonarchLinear(StructuredLinear):
         self.reset_parameters_bias()
 
     def forward_matmul(self, x):
+        print("a", output.shape, output.mean())
         output = blockdiag_butterfly_multiply(self.preprocess(x), self.blkdiag1, self.blkdiag2)
+        print("b", output.shape, output.mean())
         return self.postprocess(output)
