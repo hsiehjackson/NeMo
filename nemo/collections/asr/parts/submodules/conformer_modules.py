@@ -24,6 +24,7 @@ from nemo.collections.asr.parts.utils.activations import Swish
 from nemo.core.classes.mixins import AccessMixin
 from nemo.core.classes.mixins.adapter_mixins import AdapterModuleMixin
 from nemo.utils import logging
+from nemo.collections.asr.parts.submodules.structured_linear import MonarchLinear
 
 __all__ = ['ConformerConvolution', 'ConformerFeedForward', 'ConformerLayer']
 
@@ -191,7 +192,6 @@ class ConformerConvolution(nn.Module):
         x = x.transpose(1, 2)
         return x
 
-from structured_linear import MonarchLinear
 
 class ConformerFeedForward(nn.Module):
     """
