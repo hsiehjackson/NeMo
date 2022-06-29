@@ -133,7 +133,7 @@ class ConformerEncoder(NeuralModule, Exportable):
         dropout_att=0.0,
         linear_type='standard',
         linear_blocks=4,
-        replace_linear_in_attn=replace_linear_in_attn=False,
+        replace_linear_in_attn=False
     ):
         super().__init__()
 
