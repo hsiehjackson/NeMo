@@ -153,6 +153,17 @@ class MonarchLinear(StructuredLinear):
             self.blkdiag1 = nn.Parameter(torch.empty(nblocks, out_blksz, in_blksz))
             self.blkdiag2 = nn.Parameter(torch.empty(nblocks, out_blksz, out_blksz))
 
+    def reset_parameters(self) -> None:
+        # Mimic init.kaiming_uniform: https://github.com/pytorch/pytorch/blob/24087d07ca7ffa244575d259711dd7c99245a67a/torch/nn/init.py#L360
+        for blkdiag in [self.blkdiag1, self.blkdiag2]:
+            fan_in = blkdiag.shape[-1]
+            gain = init.calculate_gain(nonlinearity='leaky_relu', param=math.sqrt(5))
+            std = gain / math.sqrt(fan_in)
+            bound = math.sqrt(3.0) * std  # Calculate uniform bounds from standard deviation
+            with torch.no_grad():
+                blkdiag.uniform_(-bound, bound)
+        self.reset_parameters_bias()
+
     def forward_matmul(self, x):
         output = blockdiag_butterfly_multiply(self.preprocess(x), self.blkdiag1, self.blkdiag2)
         return self.postprocess(output)
