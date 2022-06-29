@@ -52,6 +52,7 @@ class ConformerLayer(torch.nn.Module, AdapterModuleMixin, AccessMixin):
         dropout_att=0.1,
         pos_bias_u=None,
         pos_bias_v=None,
+        linear_type='standard',
     ):
         super(ConformerLayer, self).__init__()
 
@@ -61,7 +62,7 @@ class ConformerLayer(torch.nn.Module, AdapterModuleMixin, AccessMixin):
 
         # first feed forward module
         self.norm_feed_forward1 = LayerNorm(d_model)
-        self.feed_forward1 = ConformerFeedForward(d_model=d_model, d_ff=d_ff, dropout=dropout)
+        self.feed_forward1 = ConformerFeedForward(d_model=d_model, d_ff=d_ff, dropout=dropout, linear_type=linear_type)
 
         # convolution module
         self.norm_conv = LayerNorm(d_model)
@@ -83,7 +84,7 @@ class ConformerLayer(torch.nn.Module, AdapterModuleMixin, AccessMixin):
 
         # second feed forward module
         self.norm_feed_forward2 = LayerNorm(d_model)
-        self.feed_forward2 = ConformerFeedForward(d_model=d_model, d_ff=d_ff, dropout=dropout)
+        self.feed_forward2 = ConformerFeedForward(d_model=d_model, d_ff=d_ff, dropout=dropout, linear_type=linear_type)
 
         self.dropout = nn.Dropout(dropout)
         self.norm_out = LayerNorm(d_model)
@@ -190,18 +191,25 @@ class ConformerConvolution(nn.Module):
         x = x.transpose(1, 2)
         return x
 
+from structured_linear import MonarchLinear
 
 class ConformerFeedForward(nn.Module):
     """
     feed-forward module of Conformer model.
     """
 
-    def __init__(self, d_model, d_ff, dropout, activation=Swish()):
+    def __init__(self, d_model, d_ff, dropout, activation=Swish(), linear_type='standard'):
         super(ConformerFeedForward, self).__init__()
-        self.linear1 = nn.Linear(d_model, d_ff)
+        if linear_type == "standard":
+            self.linear1 = nn.Linear(d_model, d_ff)
+        else:
+            self.linear1 = MonarchLinear(in_features=d_model, out_features=d_ff, nblocks=4)
         self.activation = activation
         self.dropout = nn.Dropout(p=dropout)
-        self.linear2 = nn.Linear(d_ff, d_model)
+        if linear_type == "standard":
+            self.linear2 = nn.Linear(d_ff, d_model)
+        else:
+            self.linear2 = MonarchLinear(in_features=d_ff, out_features=d_model, nblocks=4)
 
     def forward(self, x):
         x = self.linear1(x)
