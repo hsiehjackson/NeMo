@@ -160,6 +160,7 @@ class MonarchLinear(StructuredLinear):
         else:
             self.blkdiag1 = nn.Parameter(torch.empty(nblocks, out_blksz, in_blksz))
             self.blkdiag2 = nn.Parameter(torch.empty(nblocks, out_blksz, out_blksz))
+        self.reset_parameters()
 
     def reset_parameters(self) -> None:
         # Mimic init.kaiming_uniform: https://github.com/pytorch/pytorch/blob/24087d07ca7ffa244575d259711dd7c99245a67a/torch/nn/init.py#L360
