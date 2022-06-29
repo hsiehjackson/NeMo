@@ -123,9 +123,12 @@ class StructuredLinear(nn.Module):
         return x
 
     def postprocess(self, output):
+        print(output.shape, self.out_features)
         out_features_extended = output.shape[-1]
+        print("a", output.shape, output.mean())
         if out_features_extended > self.out_features:
             output = output[..., :self.out_features]
+        print("b", output.shape, output.mean())
         return output
 
     def forward_matmul(self, x):
@@ -165,7 +168,5 @@ class MonarchLinear(StructuredLinear):
         self.reset_parameters_bias()
 
     def forward_matmul(self, x):
-        print(x.shape, x.mean(dim=-1))
         output = blockdiag_butterfly_multiply(self.preprocess(x), self.blkdiag1, self.blkdiag2)
-        print(x.shape, x.mean(dim=-1))
         return self.postprocess(output)
