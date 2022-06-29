@@ -215,8 +215,13 @@ class ConformerFeedForward(nn.Module):
             self.linear2 = MonarchLinear(in_features=d_ff, out_features=d_model, nblocks=linear_blocks)
 
     def forward(self, x):
+        print(x.shape, x.mean(dim=-1))
         x = self.linear1(x)
+        print(x.shape, x.mean(dim=-1))
         x = self.activation(x)
+        print(x.shape, x.mean(dim=-1))
         x = self.dropout(x)
+        print(x.shape, x.mean(dim=-1))
         x = self.linear2(x)
+        print(x.shape, x.mean(dim=-1))
         return x
