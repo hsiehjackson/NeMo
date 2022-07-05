@@ -22,6 +22,7 @@ class BlockdiagButterflyMultiply(torch.autograd.Function):
     """
 
     @staticmethod
+    @torch.cuda.amp.custom_fwd(cast_inputs=torch.float16)
     def forward(ctx, x, w1_bfly, w2_bfly):
         batch_shape, n = x.shape[:-1], x.shape[-1]
         batch_dim = np.prod(batch_shape)
@@ -40,6 +41,7 @@ class BlockdiagButterflyMultiply(torch.autograd.Function):
         return out2
 
     @staticmethod
+    @torch.cuda.amp.custom_bwd
     def backward(ctx, dout):
         x, w1_bfly, w2_bfly, out1 = ctx.saved_tensors
         batch_shape, n = x.shape[:-1], x.shape[-1]
