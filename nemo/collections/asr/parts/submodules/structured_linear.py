@@ -8,6 +8,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn import init
 
+import functools
+from typing import Optional
+
+import einops
+
 
 class BlockdiagButterflyMultiply(torch.autograd.Function):
     """This is a faster implementation, with careful memory copies for the fastest
