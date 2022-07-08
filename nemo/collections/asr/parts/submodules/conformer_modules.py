@@ -24,7 +24,7 @@ from nemo.collections.asr.parts.utils.activations import Swish
 from nemo.core.classes.mixins import AccessMixin
 from nemo.core.classes.mixins.adapter_mixins import AdapterModuleMixin
 from nemo.utils import logging
-from nemo.collections.asr.parts.submodules.structured_linear import MonarchLinear
+from nemo.collections.asr.parts.submodules.structured_linear import MonarchLinear, PixelflyLinear
 
 __all__ = ['ConformerConvolution', 'ConformerFeedForward', 'ConformerLayer']
 
@@ -221,12 +221,20 @@ class ConformerFeedForward(nn.Module):
         super(ConformerFeedForward, self).__init__()
         if linear_type == "standard":
             self.linear1 = nn.Linear(d_model, d_ff)
+        elif linear_type == "pixelfly":
+            self.linear1 = PixelflyLinear(in_features=d_model, out_features=d_ff,
+                                          block_size=d_model // 8, butterfly_size=d_model // 64,
+                                          n_factors=2, lowrank_size=d_model // 128)
         else:
             self.linear1 = MonarchLinear(in_features=d_model, out_features=d_ff, nblocks=linear_blocks)
         self.activation = activation
         self.dropout = nn.Dropout(p=dropout)
         if linear_type == "standard":
             self.linear2 = nn.Linear(d_ff, d_model)
+        elif linear_type == "pixelfly":
+            self.linear2 = PixelflyLinear(in_features=d_ff, out_features=d_model,
+                                          block_size=d_model // 8, butterfly_size=d_model // 64,
+                                          n_factors=2, lowrank_size=d_model // 128)
         else:
             self.linear2 = MonarchLinear(in_features=d_ff, out_features=d_model, nblocks=linear_blocks)
 
