@@ -174,7 +174,7 @@ class MonarchLinear(StructuredLinear):
         output = blockdiag_butterfly_multiply(self.preprocess(x), self.blkdiag1, self.blkdiag2)
         return self.postprocess(output)
 
-@functools.lru_cache
+@functools.lru_cache()
 def get_butterfly_indices(
     out_features: int,
     in_features: int,
