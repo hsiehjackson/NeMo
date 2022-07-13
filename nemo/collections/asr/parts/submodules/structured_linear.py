@@ -11,7 +11,7 @@ from torch.nn import init
 import functools
 from typing import Optional
 
-import einops
+#import einops
 
 
 class BlockdiagButterflyMultiply(torch.autograd.Function):
