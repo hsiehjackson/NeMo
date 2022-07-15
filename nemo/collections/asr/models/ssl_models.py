@@ -81,6 +81,8 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
 
         self.decoder_losses = None
 
+        self.default_quantizer = None
+
         if "loss_list" in self._cfg:
 
             self.decoder_losses = {}
@@ -104,11 +106,18 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
                 self.start_step[decoder_loss_name] = decoder_loss_cfg.get("start_step", 0)
                 self.transpose_encoded[decoder_loss_name] = decoder_loss_cfg.get("transpose_encoded", False)
 
+                if self.default_quantizer is None and isinstance(new_decoder_loss['loss'], 'ContrastiveLoss') \
+                        and new_decoder_loss['loss'].quantized_targets:
+                    self.default_quantizer = new_decoder_loss['loss'].quantizer
+
             self.decoder_losses = nn.ModuleDict(self.decoder_losses)
 
         else:
             self.decoder_ssl = SpeechEncDecSelfSupervisedModel.from_config_dict(self._cfg.decoder)
             self.loss = SpeechEncDecSelfSupervisedModel.from_config_dict(self._cfg.loss)
+
+            if isinstance(self.loss, 'ContrastiveLoss') and self.loss.quantized_targets:
+                self.default_quantizer = self.loss.quantizer
 
         self.spec_augmentation = SpeechEncDecSelfSupervisedModel.from_config_dict(self._cfg.spec_augment)
 
@@ -524,6 +533,17 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
         return {
             'val_loss': loss_value,
         }
+
+    def quantize(self, input_signal, input_signal_length, combine_time_steps=4):
+        processed_signal, processed_signal_length = self.preprocessor(
+            input_signal=input_signal, length=input_signal_length,
+        )
+        processed_signal = processed_signal.transpose(-2, -1)
+        processed_signal = processed_signal.reshape(processed_signal.shape[0],
+                                                    processed_signal.shape[1] // combine_time_steps,
+                                                    -1)
+        quantized_x, _, _, quantized_ids = self.default_quantizer(processed_signal, return_ids=True)
+        return quantized_x, quantized_ids
 
     def multi_validation_epoch_end(self, outputs, dataloader_idx: int = 0):
         val_loss_mean = torch.stack([x['val_loss'] for x in outputs]).mean()
