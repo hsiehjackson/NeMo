@@ -96,6 +96,10 @@ def produce_labels(datalayer, in_manifest, out_manifest, asr_model, device):
             input_signal=input_signal, input_signal_length=input_signal_length,
         )
 
+        print(input_signal_length[0])
+        print(quantized_ids[0])
+        input()
+
         for j in range(quantized_ids.shape[0]):
             label_dict[int(batch[-1][j])] = quantized_ids[j, : input_signal_length[j]]
 
