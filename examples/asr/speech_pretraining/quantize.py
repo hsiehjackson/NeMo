@@ -227,7 +227,7 @@ def main(cfg: FeatClusteringConfig) -> FeatClusteringConfig:
     if cfg.apply_to_fit:
         print("Producing labels for dataset:", cfg.fit_manifest)
         produce_labels(
-            datalayer, cfg.fit_manifest, cfg.out_manifests[0], asr_model, cluster_model, cfg.layer_name, device
+            datalayer, cfg.fit_manifest, cfg.out_manifests[0], asr_model, device
         )
     # produce labels
 
