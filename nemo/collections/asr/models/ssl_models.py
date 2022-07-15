@@ -544,7 +544,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
                                                     processed_signal.shape[1] // combine_time_steps,
                                                     -1)
         quantized_x, _, _, quantized_ids = self.default_quantizer(processed_signal, return_ids=True)
-        return quantized_x, quantized_ids
+        return quantized_x, quantized_ids, processed_signal_length
 
     def multi_validation_epoch_end(self, outputs, dataloader_idx: int = 0):
         val_loss_mean = torch.stack([x['val_loss'] for x in outputs]).mean()
