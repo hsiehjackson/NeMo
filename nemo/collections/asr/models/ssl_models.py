@@ -35,6 +35,7 @@ from nemo.core.neural_types import (
     SpectrogramType,
 )
 from nemo.utils import logging
+from nemo.collections.asr.losses import ContrastiveLoss
 
 __all__ = ['SpeechEncDecSelfSupervisedModel']
 
@@ -106,7 +107,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
                 self.start_step[decoder_loss_name] = decoder_loss_cfg.get("start_step", 0)
                 self.transpose_encoded[decoder_loss_name] = decoder_loss_cfg.get("transpose_encoded", False)
 
-                if self.default_quantizer is None and isinstance(new_decoder_loss['loss'], 'ContrastiveLoss') \
+                if self.default_quantizer is None and isinstance(new_decoder_loss['loss'], ContrastiveLoss) \
                         and new_decoder_loss['loss'].quantized_targets:
                     self.default_quantizer = new_decoder_loss['loss'].quantizer
 
@@ -116,7 +117,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
             self.decoder_ssl = SpeechEncDecSelfSupervisedModel.from_config_dict(self._cfg.decoder)
             self.loss = SpeechEncDecSelfSupervisedModel.from_config_dict(self._cfg.loss)
 
-            if isinstance(self.loss, 'ContrastiveLoss') and self.loss.quantized_targets:
+            if isinstance(self.loss, ContrastiveLoss) and self.loss.quantized_targets:
                 self.default_quantizer = self.loss.quantizer
 
         self.spec_augmentation = SpeechEncDecSelfSupervisedModel.from_config_dict(self._cfg.spec_augment)
