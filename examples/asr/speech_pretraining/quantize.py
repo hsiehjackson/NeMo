@@ -147,7 +147,8 @@ def main(cfg: FeatClusteringConfig) -> FeatClusteringConfig:
         classpath = model_cfg.target  # original class path
         imported_class = model_utils.import_class_by_path(classpath)  # type: ASRModel
         logging.info(f"Restoring model : {imported_class.__name__}")
-        asr_model = imported_class.restore_from(restore_path=cfg.model_path, map_location=device, trainer=trainer)
+        asr_model = imported_class.restore_from(restore_path=cfg.model_path, map_location=device,
+                                                trainer=trainer, strict=False)
         model_name = os.path.splitext(os.path.basename(cfg.model_path))[0]
     else:
         # restore model by name
