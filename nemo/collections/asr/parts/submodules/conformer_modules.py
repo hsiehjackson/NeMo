@@ -24,7 +24,7 @@ from nemo.collections.asr.parts.utils.activations import Swish
 from nemo.core.classes.mixins import AccessMixin
 from nemo.core.classes.mixins.adapter_mixins import AdapterModuleMixin
 from nemo.utils import logging
-from nemo.collections.asr.parts.submodules.structured_linear import MonarchLinear, PixelflyLinear
+from nemo.collections.asr.parts.submodules.structured_linear import *
 
 __all__ = ['ConformerConvolution', 'ConformerFeedForward', 'ConformerLayer']
 
@@ -219,28 +219,37 @@ class ConformerFeedForward(nn.Module):
 
     def __init__(self, d_model, d_ff, dropout, activation=Swish(), linear_type='standard', linear_blocks=4):
         super(ConformerFeedForward, self).__init__()
-        if linear_type == "standard":
-            self.linear1 = nn.Linear(d_model, d_ff)
-        elif linear_type == "pixelfly":
-            self.linear1 = PixelflyLinear(in_features=d_model, out_features=d_ff,
-                                          block_size=d_model // 8, butterfly_size=d_model // 64,
-                                          n_factors=2, lowrank_size=d_model // 128)
+        self.linear_type = linear_type
+        if linear_type == "dct":
+            self.linear = dctLinear(d_model)
         else:
-            self.linear1 = MonarchLinear(in_features=d_model, out_features=d_ff, nblocks=linear_blocks)
-        self.activation = activation
-        self.dropout = nn.Dropout(p=dropout)
-        if linear_type == "standard":
-            self.linear2 = nn.Linear(d_ff, d_model)
-        elif linear_type == "pixelfly":
-            self.linear2 = PixelflyLinear(in_features=d_ff, out_features=d_model,
-                                          block_size=d_model // 8, butterfly_size=d_model // 64,
-                                          n_factors=2, lowrank_size=d_model // 128)
-        else:
-            self.linear2 = MonarchLinear(in_features=d_ff, out_features=d_model, nblocks=linear_blocks)
+            if linear_type == "standard":
+                self.linear1 = nn.Linear(d_model, d_ff)
+            elif linear_type == "pixelfly":
+                self.linear1 = PixelflyLinear(in_features=d_model, out_features=d_ff,
+                                              block_size=d_model // 8, butterfly_size=d_model // 64,
+                                              n_factors=2, lowrank_size=d_model // 128)
+            else:
+                self.linear1 = MonarchLinear(in_features=d_model, out_features=d_ff, nblocks=linear_blocks)
+            self.activation = activation
+            self.dropout = nn.Dropout(p=dropout)
+            if linear_type == "standard":
+                self.linear2 = nn.Linear(d_ff, d_model)
+            elif linear_type == "pixelfly":
+                self.linear2 = PixelflyLinear(in_features=d_ff, out_features=d_model,
+                                              block_size=d_model // 8, butterfly_size=d_model // 64,
+                                              n_factors=2, lowrank_size=d_model // 128)
+            else:
+                self.linear2 = MonarchLinear(in_features=d_ff, out_features=d_model, nblocks=linear_blocks)
 
     def forward(self, x):
-        x = self.linear1(x)
-        x = self.activation(x)
-        x = self.dropout(x)
-        x = self.linear2(x)
+        if self.linear_type == "dct":
+            x = self.linear(x)
+            x = self.activation(x)
+            x = self.dropout(x)
+        else:
+            x = self.linear1(x)
+            x = self.activation(x)
+            x = self.dropout(x)
+            x = self.linear2(x)
         return x

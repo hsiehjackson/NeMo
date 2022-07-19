@@ -11,7 +11,8 @@ from torch.nn import init
 import functools
 from typing import Optional
 
-#import einops
+
+# import einops
 
 
 class BlockdiagButterflyMultiply(torch.autograd.Function):
@@ -174,14 +175,15 @@ class MonarchLinear(StructuredLinear):
         output = blockdiag_butterfly_multiply(self.preprocess(x), self.blkdiag1, self.blkdiag2)
         return self.postprocess(output)
 
+
 @functools.lru_cache()
 def get_butterfly_indices(
-    out_features: int,
-    in_features: int,
-    block_size: int = 256,
-    butterfly_size: int = 64,
-    n_factors: Optional[int] = None,
-    stretch: bool = False,
+        out_features: int,
+        in_features: int,
+        block_size: int = 256,
+        butterfly_size: int = 64,
+        n_factors: Optional[int] = None,
+        stretch: bool = False,
 ) -> torch.IntTensor:
     """
     Get a matrix [num_output_blocks, num_active_input_blocks] with int32 indices for additive butterfly
@@ -191,7 +193,7 @@ def get_butterfly_indices(
       otherwise the square pattern will be repeated a given number of times
     """
     assert (
-        out_features % in_features == 0 or in_features % out_features == 0
+            out_features % in_features == 0 or in_features % out_features == 0
     ), "if matrix is not square, the longer dimension must be a multiple of the shorter dimension"
     assert out_features % block_size == 0 and in_features % block_size == 0
     log_n = int(math.log2(butterfly_size))
@@ -233,15 +235,15 @@ def get_butterfly_indices(
             ratio = out_blocks // in_blocks
             layout = (
                 layout.view(out_blocks // ratio, ratio, in_blocks)
-                .permute(1, 0, 2)
-                .reshape_as(layout)
+                    .permute(1, 0, 2)
+                    .reshape_as(layout)
             )
         elif out_blocks < in_blocks:
             ratio = in_blocks // out_blocks
             layout = (
                 layout.view(out_blocks, in_blocks // ratio, ratio)
-                .permute(0, 2, 1)
-                .reshape_as(layout)
+                    .permute(0, 2, 1)
+                    .reshape_as(layout)
             )
 
     # convert boolean layout to indices for F.embedding_bag
@@ -249,13 +251,13 @@ def get_butterfly_indices(
     num_input_blocks = in_features // block_size
     active_blocks_per_output = layout.sum(1).unique()
     assert (
-        len(active_blocks_per_output) == 1
+            len(active_blocks_per_output) == 1
     ), "butterfly layout must have the same number of blocks per row"
     active_blocks_per_output = active_blocks_per_output.item()
 
     active_blocks_per_input = layout.sum(0).unique()
     assert (
-        len(active_blocks_per_input) == 1
+            len(active_blocks_per_input) == 1
     ), "butterfly layout must have the same number of blocks per row"
     active_blocks_per_input = active_blocks_per_input.item()
 
@@ -280,7 +282,7 @@ def get_butterfly_indices(
 
 
 def butterfly_factor_to_matrix(
-    twiddle: torch.Tensor, factor_index: int
+        twiddle: torch.Tensor, factor_index: int
 ) -> torch.Tensor:
     """
     Let b be the base (most commonly 2).
@@ -309,7 +311,7 @@ def butterfly_factor_to_matrix(
 
 
 def butterfly_matmul(
-    input: torch.Tensor, weight: torch.Tensor, butterfly_flat_indices: torch.Tensor
+        input: torch.Tensor, weight: torch.Tensor, butterfly_flat_indices: torch.Tensor
 ):
     """
     :param input: tensor [*batch_dims, in_features]
@@ -366,4 +368,31 @@ class PixelflyLinear(nn.Module):
     def forward(self, input):
         output = self.lowrank_second(self.lowrank_first(input))
         output += butterfly_matmul(input, self.weight, self.butterfly_flat_indices)
+        return output
+
+
+def dct1(x):
+    """
+    Discrete Cosine Transform, Type I
+    :param x: the input signal
+    :return: the DCT-I of the signal over the last dimension
+    """
+    x_shape = x.shape
+    x = x.float()
+    x = torch.fft.rfft(torch.cat([x, x.flip([-1])[..., 1:-1]], dim=-1), norm="ortho").real.view(*x_shape)
+    return x
+
+
+class dctLinear(nn.Module):
+    def __init__(
+            self, features: int,
+    ):
+        super().__init__()
+        self.weight = nn.Parameter(torch.empty(features // 2 + 1)).type(toch.complex64)
+        nn.init.xavier_normal_(self.weight)
+
+    def forward(self, input):
+        output = torch.fft.rfft(input)
+        output = output * self.weight
+        output = torch.fft.irfft(output).real
         return output
