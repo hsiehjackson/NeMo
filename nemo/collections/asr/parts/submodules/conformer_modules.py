@@ -220,6 +220,8 @@ class ConformerFeedForward(nn.Module):
     def __init__(self, d_model, d_ff, dropout, activation=Swish(), linear_type='standard', linear_blocks=4):
         super(ConformerFeedForward, self).__init__()
         self.linear_type = linear_type
+        self.activation = activation
+        self.dropout = nn.Dropout(p=dropout)
         if linear_type == "dct":
             self.linear = dctLinear(d_model)
         else:
@@ -231,8 +233,7 @@ class ConformerFeedForward(nn.Module):
                                               n_factors=2, lowrank_size=d_model // 128)
             else:
                 self.linear1 = MonarchLinear(in_features=d_model, out_features=d_ff, nblocks=linear_blocks)
-            self.activation = activation
-            self.dropout = nn.Dropout(p=dropout)
+
             if linear_type == "standard":
                 self.linear2 = nn.Linear(d_ff, d_model)
             elif linear_type == "pixelfly":
