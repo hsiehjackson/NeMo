@@ -388,7 +388,7 @@ class dctLinear(nn.Module):
             self, features: int,
     ):
         super().__init__()
-        self.weight = nn.Parameter(torch.empty(features // 2 + 1)).type(toch.complex64)
+        self.weight = nn.Parameter(torch.empty(features // 2 + 1)).type(torch.complex64)
         nn.init.xavier_normal_(self.weight)
 
     def forward(self, input):
