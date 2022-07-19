@@ -388,7 +388,7 @@ class dctLinear(nn.Module):
             self, features: int,
     ):
         super().__init__()
-        self.weight = nn.Parameter(torch.zeros(features // 2 + 1, dtype=torch.cfloat))
+        self.weight = nn.Parameter(torch.zeros(features // 2 + 1, dtype=torch.float))
 
     def forward(self, input):
         output = torch.fft.rfft(input)
