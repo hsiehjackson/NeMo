@@ -389,7 +389,6 @@ class dctLinear(nn.Module):
     ):
         super().__init__()
         self.weight = nn.Parameter(torch.empty(features // 2 + 1)).type(torch.complex64)
-        nn.init.xavier_normal_(self.weight)
 
     def forward(self, input):
         output = torch.fft.rfft(input)
