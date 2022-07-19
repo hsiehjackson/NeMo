@@ -37,7 +37,7 @@ import math
 import torch
 import torch.nn as nn
 
-from nemo.collections.asr.parts.submodules.structured_linear import MonarchLinear
+from nemo.collections.asr.parts.submodules.structured_linear import *
 
 __all__ = [
     'RelPositionMultiHeadAttention',
@@ -72,6 +72,11 @@ class MultiHeadAttention(nn.Module):
             self.linear_k = MonarchLinear(in_features=n_feat, out_features=n_feat, nblocks=linear_blocks)
             self.linear_v = MonarchLinear(in_features=n_feat, out_features=n_feat, nblocks=linear_blocks)
             self.linear_out = MonarchLinear(in_features=n_feat, out_features=n_feat, nblocks=linear_blocks)
+        elif linear_type == 'dct':
+            self.linear_q = dctLinear(n_feat)
+            self.linear_k = dctLinear(n_feat)
+            self.linear_v = dctLinear(n_feat)
+            self.linear_out = dctLinear(n_feat)
         self.dropout = nn.Dropout(p=dropout_rate)
 
     def forward_qkv(self, query, key, value):
@@ -150,6 +155,8 @@ class RelPositionMultiHeadAttention(MultiHeadAttention):
             self.linear_pos = nn.Linear(n_feat, n_feat, bias=False)
         elif linear_type == 'monarch':
             self.linear_pos = MonarchLinear(in_features=n_feat, out_features=n_feat, nblocks=linear_blocks)
+        elif linear_type == 'dct':
+            self.linear_pos = dctLinear(n_feat)
         # these two learnable biases are used in matrix c and matrix d
         # as described in https://arxiv.org/abs/1901.02860 Section 3.3
         if pos_bias_u is None or pos_bias_v is None:
