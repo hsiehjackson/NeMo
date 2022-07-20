@@ -81,10 +81,12 @@ class FeatClusteringConfig:
     stride: int = 4
     combine: int = 1
 
-    pad_to: int = 16
+    pad_to: int = 4
 
 
 def produce_labels(datalayer, in_manifest, out_manifest, asr_model, device):
+    #token_data = []
+
     label_dict = {}
 
     for batch in tqdm(datalayer, desc="Getting cluster labels"):
@@ -96,13 +98,19 @@ def produce_labels(datalayer, in_manifest, out_manifest, asr_model, device):
             input_signal=input_signal, input_signal_length=input_signal_length,
         )
 
-        print(quantized_length[0])
-        print(quantized_ids[0])
-        print(quantized_ids[0, :quantized_length[0]])
-        input()
+        #print(quantized_length[0])
+        #print(quantized_ids[0])
+        #print(quantized_ids[0, :quantized_length[0]])
 
         for j in range(quantized_ids.shape[0]):
             label_dict[int(batch[-1][j])] = quantized_ids[j, : quantized_length[j]]
+
+        #token_data.append(list(map(str, quantized_ids[j, : quantized_length[j]])))
+
+        #print(token_data[-1])
+        #print(len(token_data[-1]))
+
+        #input()
 
         del batch
 
