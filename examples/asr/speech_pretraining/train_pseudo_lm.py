@@ -18,7 +18,7 @@ from nemo.core.config import hydra_runner
 from nemo.utils import logging, model_utils
 
 
-from nltk import MLE
+from nltk.lm import MLE
 from nltk.lm.preprocessing import padded_everygram_pipeline
 
 import dill as pickle
