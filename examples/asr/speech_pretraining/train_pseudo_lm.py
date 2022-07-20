@@ -44,9 +44,9 @@ def main(cfg: ReduceLabelsConfig) -> ReduceLabelsConfig:
     train_data, padded_sents = padded_everygram_pipeline(cfg.n, train_data)
     model = MLE(cfg.n)
     model.fit(train_data, padded_sents)
-    print(model.vocab)
+    print(list(model.vocab))
 
-    with open(out_model, 'wb') as fout:
+    with open(cfg.out_model, 'wb') as fout:
         pickle.dump(model, fout)
 
 if __name__ == '__main__':
