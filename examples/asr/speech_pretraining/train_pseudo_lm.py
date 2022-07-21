@@ -42,16 +42,20 @@ def main(cfg: PseudoLMConfig) -> PseudoLMConfig:
         for idx, line in enumerate(fr):
             item = json.loads(line)
 
-            reduced_list = []
-            prev_tok = -1
-            for tok in item['token_labels']:
-                if tok != prev_tok:
-                    prev_tok = tok
-                    reduced_list.append(tok)
+            if cfg.reduce_ids:
+                token_list = []
+                prev_tok = -1
+                for tok in item['token_labels']:
+                    if tok != prev_tok:
+                        prev_tok = tok
+                        token_list.append(tok)
+            else:
+                token_list = item['token_labels']
 
-            train_data.append(list(map(str, reduced_list)))
+            train_data.append(list(map(str, token_list)))
 
     print(train_data[:10])
+    print(len(i) for i in train_data[:30])
 
     train_data, padded_sents = padded_everygram_pipeline(cfg.n, train_data)
     vocab = Vocabulary(padded_sents, unk_cutoff=cfg.unk_cutoff)
