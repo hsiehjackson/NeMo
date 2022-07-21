@@ -45,7 +45,7 @@ def main(cfg: PseudoLMConfig) -> PseudoLMConfig:
     vocab = Vocabulary(padded_sents, unk_cutoff=100)
     print(list(vocab.items))
     input()
-    model = MLE(cfg.n)
+    model = MLE(cfg.n, vocabulary=vocab)
     model.fit(train_data, padded_sents)
 
     with open(cfg.out_model, 'wb') as fout:
