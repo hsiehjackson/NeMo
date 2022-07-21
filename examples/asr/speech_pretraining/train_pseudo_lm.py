@@ -17,11 +17,11 @@ from nemo.core.classes.mixins import AccessMixin, set_access_cfg
 from nemo.core.config import hydra_runner
 from nemo.utils import logging, model_utils
 
-
 from nltk.lm import MLE, Vocabulary
 from nltk.lm.preprocessing import padded_everygram_pipeline
 
 import dill as pickle
+
 
 @dataclass
 class PseudoLMConfig:
@@ -29,6 +29,7 @@ class PseudoLMConfig:
     out_model: str
     n: int = 5
     unk_cutoff: int = 100
+    reduce_ids: bool = True
 
 
 @hydra_runner(config_name="PseudoLMConfig", schema=PseudoLMConfig)
@@ -40,11 +41,21 @@ def main(cfg: PseudoLMConfig) -> PseudoLMConfig:
     with open(cfg.in_manifest, 'r') as fr:
         for idx, line in enumerate(fr):
             item = json.loads(line)
-            train_data.append(list(map(str, item['token_labels'])))
+
+            reduced_list = []
+            prev_tok = -1
+            for tok in item['token_labels']:
+                if tok != prev_tok:
+                    prev_tok = tok
+                    reduced_list.append(tok)
+
+            train_data.append(list(map(str, reduced_list)))
+
+    print(train_data[:10])
 
     train_data, padded_sents = padded_everygram_pipeline(cfg.n, train_data)
     vocab = Vocabulary(padded_sents, unk_cutoff=cfg.unk_cutoff)
-    sorted_counts = sorted(list((item, vocab[item]) for item in list(vocab)), key = lambda x : -x[1])
+    sorted_counts = sorted(list((item, vocab[item]) for item in list(vocab)), key=lambda x: -x[1])
     print(sorted_counts)
     print(len(sorted_counts))
     model = MLE(cfg.n)
@@ -52,6 +63,7 @@ def main(cfg: PseudoLMConfig) -> PseudoLMConfig:
 
     with open(cfg.out_model, 'wb') as fout:
         pickle.dump(model, fout)
+
 
 if __name__ == '__main__':
     main()  # noqa pylint: disable=no-value-for-parameter
