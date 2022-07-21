@@ -28,6 +28,7 @@ class PseudoLMConfig:
     in_manifest: str
     out_model: str
     n: int = 5
+    unk_cutoff: int = 100
 
 
 @hydra_runner(config_name="PseudoLMConfig", schema=PseudoLMConfig)
@@ -42,7 +43,7 @@ def main(cfg: PseudoLMConfig) -> PseudoLMConfig:
             train_data.append(list(map(str, item['token_labels'])))
 
     train_data, padded_sents = padded_everygram_pipeline(cfg.n, train_data)
-    vocab = Vocabulary(padded_sents, unk_cutoff=100)
+    vocab = Vocabulary(padded_sents, unk_cutoff=cfg.unk_cutoff)
     print(len(vocab.counts))
     model = MLE(cfg.n, vocabulary=vocab)
     model.fit(train_data, padded_sents)
