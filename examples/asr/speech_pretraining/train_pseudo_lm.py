@@ -18,20 +18,20 @@ from nemo.core.config import hydra_runner
 from nemo.utils import logging, model_utils
 
 
-from nltk.lm import MLE
+from nltk.lm import MLE, Vocabulary
 from nltk.lm.preprocessing import padded_everygram_pipeline
 
 import dill as pickle
 
 @dataclass
-class ReduceLabelsConfig:
+class PseudoLMConfig:
     in_manifest: str
     out_model: str
     n: int = 5
 
 
-@hydra_runner(config_name="ReduceLabelsConfig", schema=ReduceLabelsConfig)
-def main(cfg: ReduceLabelsConfig) -> ReduceLabelsConfig:
+@hydra_runner(config_name="PseudoLMConfig", schema=PseudoLMConfig)
+def main(cfg: PseudoLMConfig) -> PseudoLMConfig:
     logging.info(f'Hydra config: {OmegaConf.to_yaml(cfg)}')
 
     train_data = []
@@ -42,9 +42,11 @@ def main(cfg: ReduceLabelsConfig) -> ReduceLabelsConfig:
             train_data.append(list(map(str, item['token_labels'])))
 
     train_data, padded_sents = padded_everygram_pipeline(cfg.n, train_data)
+    vocab = Vocabulary(padded_sents, unk_cutoff=100)
+    print(list(vocab.items))
+    input()
     model = MLE(cfg.n)
     model.fit(train_data, padded_sents)
-    print(list(model.vocab))
 
     with open(cfg.out_model, 'wb') as fout:
         pickle.dump(model, fout)
