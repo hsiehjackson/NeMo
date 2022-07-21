@@ -43,8 +43,7 @@ def main(cfg: PseudoLMConfig) -> PseudoLMConfig:
 
     train_data, padded_sents = padded_everygram_pipeline(cfg.n, train_data)
     vocab = Vocabulary(padded_sents, unk_cutoff=100)
-    print(list(vocab.items))
-    input()
+    print(list(vocab.counts))
     model = MLE(cfg.n, vocabulary=vocab)
     model.fit(train_data, padded_sents)
 
