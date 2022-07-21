@@ -30,6 +30,7 @@ class PseudoLMConfig:
     n: int = 5
     unk_cutoff: int = 100
     reduce_ids: bool = True
+    max_lines: int = 50000
 
 
 @hydra_runner(config_name="PseudoLMConfig", schema=PseudoLMConfig)
@@ -53,6 +54,9 @@ def main(cfg: PseudoLMConfig) -> PseudoLMConfig:
                 token_list = item['token_labels']
 
             train_data.append(list(map(str, token_list)))
+
+            if idx + 1 >= cfg.max_lines:
+                break
 
     #print(train_data[:10])
     print(list(len(i) for i in train_data[:30]))
