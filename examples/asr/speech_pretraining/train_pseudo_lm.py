@@ -44,9 +44,11 @@ def main(cfg: PseudoLMConfig) -> PseudoLMConfig:
 
     train_data, padded_sents = padded_everygram_pipeline(cfg.n, train_data)
     vocab = Vocabulary(padded_sents, unk_cutoff=cfg.unk_cutoff)
-    print(len(vocab.counts))
-    model = MLE(cfg.n, vocabulary=vocab)
-    model.fit(train_data, padded_sents)
+    sorted_counts = sorted(list((item, vocab[item]) for item in list(vocab)), key = lambda x : -x[1])
+    print(sorted_counts)
+    print(len(sorted_counts))
+    model = MLE(cfg.n)
+    model.fit(train_data, vocab)
 
     with open(cfg.out_model, 'wb') as fout:
         pickle.dump(model, fout)
