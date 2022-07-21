@@ -55,7 +55,7 @@ def main(cfg: PseudoLMConfig) -> PseudoLMConfig:
             train_data.append(list(map(str, token_list)))
 
     #print(train_data[:10])
-    print(len(i) for i in train_data[:30])
+    print(list(len(i) for i in train_data[:30]))
 
     train_data, padded_sents = padded_everygram_pipeline(cfg.n, train_data)
     vocab = Vocabulary(padded_sents, unk_cutoff=cfg.unk_cutoff)
