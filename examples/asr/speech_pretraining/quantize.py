@@ -83,9 +83,11 @@ class FeatClusteringConfig:
 
     pad_to: int = 4
 
+    num_samples: int = 50000
 
-def produce_labels(datalayer, in_manifest, out_manifest, asr_model, device):
-    #token_data = []
+
+def produce_labels(datalayer, in_manifest, out_manifest, asr_model, device, num_samples=None):
+    # token_data = []
 
     label_dict = {}
 
@@ -98,21 +100,13 @@ def produce_labels(datalayer, in_manifest, out_manifest, asr_model, device):
             input_signal=input_signal, input_signal_length=input_signal_length,
         )
 
-        #print(quantized_length[0])
-        #print(quantized_ids[0])
-        #print(quantized_ids[0, :quantized_length[0]])
-
         for j in range(quantized_ids.shape[0]):
             label_dict[int(batch[-1][j])] = quantized_ids[j, : quantized_length[j]]
 
-        #token_data.append(list(map(str, quantized_ids[j, : quantized_length[j]])))
-
-        #print(token_data[-1])
-        #print(len(token_data[-1]))
-
-        #input()
-
         del batch
+
+        if num_samples is not None and len(label_dict) >= num_samples:
+            break
 
     ###################
 
@@ -209,7 +203,7 @@ def main(cfg: FeatClusteringConfig) -> FeatClusteringConfig:
         'sample_rate': cfg.sample_rate,
         'batch_size': cfg.batch_size,
         'trim_silence': False,
-        'shuffle': False,
+        'shuffle': True,
         'num_workers': 16,
         'pin_memory': True,
     }
@@ -223,7 +217,7 @@ def main(cfg: FeatClusteringConfig) -> FeatClusteringConfig:
     ds_cfg.return_sample_id = True
     ds_cfg.min_duration = None
     ds_cfg.max_duration = None
-    ds_cfg.shuffle = False
+    ds_cfg.shuffle = True
 
     datalayer = asr_model._setup_dataloader_from_config(ds_cfg)
 
@@ -232,11 +226,10 @@ def main(cfg: FeatClusteringConfig) -> FeatClusteringConfig:
     asr_model.eval()
     asr_model.to(device)
 
-
     if cfg.apply_to_fit:
         print("Producing labels for dataset:", cfg.fit_manifest)
         produce_labels(
-            datalayer, cfg.fit_manifest, cfg.out_manifests[0], asr_model, device
+            datalayer, cfg.fit_manifest, cfg.out_manifests[0], asr_model, device, num_samples=cfg.num_samples
         )
     # produce labels
 
@@ -259,7 +252,7 @@ def main(cfg: FeatClusteringConfig) -> FeatClusteringConfig:
         datalayer = asr_model._setup_dataloader_from_config(ds_cfg)
 
         print("Producing labels for dataset:", data_manifest)
-        produce_labels(datalayer, data_manifest, out_manifest, asr_model, device)
+        produce_labels(datalayer, data_manifest, out_manifest, asr_model, device, num_samples=cfg.num_samples)
 
     return cfg
 
