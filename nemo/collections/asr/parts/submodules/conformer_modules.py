@@ -257,7 +257,7 @@ class ConformerFeedForward(nn.Module):
             x = self.activation(x)
             x = self.dropout(x)
         elif self.linear_type == "dct2":
-            x = torch.fft.rfft(input).real
+            x = torch.fft.rfft(x).real
             x = self.activation(x)
             x = self.dropout(x)
             x = self.linear(x)
