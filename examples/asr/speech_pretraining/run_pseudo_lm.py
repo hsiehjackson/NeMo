@@ -29,6 +29,7 @@ class PseudoLMConfig:
     in_manifest: str
     reduce_ids: bool = True
     max_lines: int = 50000
+    n: int = 4
 
 
 @hydra_runner(config_name="PseudoLMConfig", schema=PseudoLMConfig)
@@ -58,11 +59,13 @@ def main(cfg: PseudoLMConfig) -> PseudoLMConfig:
 
             token_list = [list(map(str, token_list))]
 
+            test_data, _ = padded_everygram_pipeline(cfg.n, token_list)
+
             print(item["audio_filepath"])
-            print(token_list)
+            print(test_data)
 
             for idx, pseudo_lm in enumerate(pseudo_lms):
-                pp = pseudo_lm.perplexity(token_list)
+                pp = pseudo_lm.perplexity(test_data)
                 print(cfg.pseudo_lms[idx], round(pp, 2))
 
             print()
