@@ -56,9 +56,10 @@ def main(cfg: PseudoLMConfig) -> PseudoLMConfig:
             else:
                 token_list = item['token_labels']
 
-            token_list = list(map(str, token_list))
+            token_list = [list(map(str, token_list))]
 
             print(item["audio_filepath"])
+            print(token_list)
 
             for idx, pseudo_lm in enumerate(pseudo_lms):
                 pp = pseudo_lm.perplexity(token_list)
