@@ -59,8 +59,8 @@ def main(cfg: PseudoLMConfig) -> PseudoLMConfig:
 
             token_list = [list(map(str, token_list))]
 
-            test_data, _ = padded_everygram_pipeline(cfg.n, token_list)
-            test_data = next(test_data)
+            test_data, _ = list(padded_everygram_pipeline(cfg.n, token_list))
+            test_data = test_data[0]
 
             print(item["audio_filepath"])
             print(test_data)
