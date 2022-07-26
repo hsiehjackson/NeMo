@@ -385,13 +385,17 @@ def dct1(x):
 
 class dctLinear(nn.Module):
     def __init__(
-            self, features: int,
+            self, features: int, type: int = 1,
     ):
         super().__init__()
+        self.type = type
         self.weight = nn.Parameter(torch.zeros(features // 2 + 1, dtype=torch.float))
 
     def forward(self, input):
         output = torch.fft.rfft(input)
         output = output * self.weight
         output = torch.fft.irfft(output).real
+
+        x = self.activation(x)
+        x = self.dropout(x)
         return output

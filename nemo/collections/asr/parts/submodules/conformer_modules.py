@@ -223,7 +223,15 @@ class ConformerFeedForward(nn.Module):
         self.activation = activation
         self.dropout = nn.Dropout(p=dropout)
         if linear_type == "dct":
-            self.linear = dctLinear(d_model)
+            self.linear = dctLinear(d_model, type=1)
+        elif linear_type == "dct2":
+            self.linear = nn.Linear(d_model // 2 + 1, d_model)
+        elif linear_type == "dct3": #with elemwise mult
+            self.linear = nn.Linear(d_model // 2 + 1, d_model)
+            self.weight = nn.Parameter(torch.zeros(d_model // 2 + 1, dtype=torch.float))
+        elif linear_type == "dct4": #with linear??
+            self.linear2 = nn.Linear(d_model // 2 + 1, d_model)
+            self.linear1 = nn.Linear(d_model // 2 + 1, d_model // 2 + 1)
         else:
             if linear_type == "standard":
                 self.linear1 = nn.Linear(d_model, d_ff)
@@ -248,6 +256,17 @@ class ConformerFeedForward(nn.Module):
             x = self.linear(x)
             x = self.activation(x)
             x = self.dropout(x)
+        elif self.linear_type == "dct2":
+            x = torch.fft.rfft(input).real
+            x = self.activation(x)
+            x = self.dropout(x)
+            x = self.linear(x)
+        elif self.linear_type == "dct3":
+            x = x * self.weight
+            x = torch.fft.rfft(x).real
+            x = self.activation(x)
+            x = self.dropout(x)
+            x = self.linear(x)
         else:
             x = self.linear1(x)
             x = self.activation(x)
