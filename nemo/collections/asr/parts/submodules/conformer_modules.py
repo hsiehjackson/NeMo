@@ -228,7 +228,7 @@ class ConformerFeedForward(nn.Module):
             self.linear = nn.Linear(d_model // 2 + 1, d_model)
         elif linear_type == "dct3": #with elemwise mult
             self.linear = nn.Linear(d_model // 2 + 1, d_model)
-            self.weight = nn.Parameter(torch.zeros(d_model // 2 + 1, dtype=torch.float))
+            self.weight = nn.Parameter(torch.zeros(d_model, dtype=torch.float))
         elif linear_type == "dct4": #with linear??
             self.linear2 = nn.Linear(d_model // 2 + 1, d_model)
             self.linear1 = nn.Linear(d_model // 2 + 1, d_model // 2 + 1)
