@@ -63,8 +63,9 @@ def main(cfg: PseudoLMConfig) -> PseudoLMConfig:
 
             print(item["audio_filepath"])
 
-            for idx, pseudo_lm in enumerate(pseudo_lms):
-                for test in test_data:
+            for test in test_data:
+                print(test)
+                for idx, pseudo_lm in enumerate(pseudo_lms):
                     pp = pseudo_lm.perplexity(test)
                     print(cfg.pseudo_lms[idx], round(pp, 2))
 
