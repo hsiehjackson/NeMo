@@ -62,10 +62,10 @@ def main(cfg: PseudoLMConfig) -> PseudoLMConfig:
             test_data, _ = padded_everygram_pipeline(cfg.n, token_list)
 
             print(item["audio_filepath"])
-            print(test_data)
+            print(test_data[0])
 
             for idx, pseudo_lm in enumerate(pseudo_lms):
-                pp = pseudo_lm.perplexity(test_data)
+                pp = pseudo_lm.perplexity(test_data[0])
                 print(cfg.pseudo_lms[idx], round(pp, 2))
 
             print()
