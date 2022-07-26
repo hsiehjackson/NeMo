@@ -17,7 +17,7 @@ from nemo.core.classes.mixins import AccessMixin, set_access_cfg
 from nemo.core.config import hydra_runner
 from nemo.utils import logging, model_utils
 
-from nltk.lm import MLE, Vocabulary
+from nltk.lm import Laplace, Vocabulary
 from nltk.lm.preprocessing import padded_everygram_pipeline
 
 import dill as pickle
@@ -66,7 +66,7 @@ def main(cfg: PseudoLMConfig) -> PseudoLMConfig:
     sorted_counts = sorted(list((item, vocab[item]) for item in list(vocab)), key=lambda x: -x[1])
     print(sorted_counts)
     print(len(sorted_counts))
-    model = MLE(cfg.n)
+    model = Laplace(cfg.n)
     model.fit(train_data, vocab)
 
     with open(cfg.out_model, 'wb') as fout:
