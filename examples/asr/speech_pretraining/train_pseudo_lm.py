@@ -28,7 +28,7 @@ class PseudoLMConfig:
     in_manifest: str
     out_model: str
     n: int = 4
-    unk_cutoff: int = 1000
+    unk_cutoff: int = 300
     reduce_ids: bool = True
     max_lines: int = 50000
 
