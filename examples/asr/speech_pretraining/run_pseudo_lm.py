@@ -59,13 +59,12 @@ def main(cfg: PseudoLMConfig) -> PseudoLMConfig:
 
             token_list = [list(map(str, token_list))]
 
-            test_data, _ = padded_everygram_pipeline(cfg.n, token_list)
 
             print(item["audio_filepath"])
 
-            for test in test_data:
-                print(test)
-                for idx, pseudo_lm in enumerate(pseudo_lms):
+            for idx, pseudo_lm in enumerate(pseudo_lms):
+                test_data, _ = padded_everygram_pipeline(cfg.n, token_list)
+                for test in test_data:
                     try:
                         pp = pseudo_lm.perplexity(test)
                     except ZeroDivisionError:
