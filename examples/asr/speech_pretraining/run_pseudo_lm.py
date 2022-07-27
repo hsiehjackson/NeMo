@@ -68,7 +68,7 @@ def main(cfg: PseudoLMConfig) -> PseudoLMConfig:
                 for idx, pseudo_lm in enumerate(pseudo_lms):
                     try:
                         pp = pseudo_lm.perplexity(test)
-                    except ZeroDivisonError:
+                    except ZeroDivisionError:
                         pp = 0
                     print(cfg.pseudo_lms[idx], round(pp, 2))
 
