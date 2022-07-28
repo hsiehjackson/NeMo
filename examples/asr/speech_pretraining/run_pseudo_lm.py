@@ -43,6 +43,9 @@ def main(cfg: PseudoLMConfig) -> PseudoLMConfig:
             lm = pickle.load(fin)
             pseudo_lms.append(lm)
 
+    lan_lm_pp = dict()
+    lan_count = dict()
+
     with open(cfg.in_manifest, 'r') as fr:
         for idx, line in enumerate(fr):
             item = json.loads(line)
@@ -62,6 +65,15 @@ def main(cfg: PseudoLMConfig) -> PseudoLMConfig:
 
             print(item["audio_filepath"])
 
+            pref_str = "_mnt_disk8b_Data_vox_populi_segmented_"
+            lan = item["audio_filepath"][len(pref_str):len(pref_str)+2]
+
+            if lan not in lan_lm_pp:
+                lan_lm_pp[lan] = dict()
+                lan_count[lan] = 0
+
+            lan_count[lan] += 1
+
             for idx, pseudo_lm in enumerate(pseudo_lms):
                 test_data, _ = padded_everygram_pipeline(cfg.n, token_list)
                 for test in test_data:
@@ -71,11 +83,21 @@ def main(cfg: PseudoLMConfig) -> PseudoLMConfig:
                         pp = 0
                     print(cfg.pseudo_lms[idx], round(pp, 2))
 
-            print()
-            input()
+                    if pseudo_lm not in lan_lm_pp[lan]:
+                        lan_lm_pp[lan][pseudo_lm] = 0.
+                    lan_lm_pp[lan][pseudo_lm] += pp
+
+            #print()
+            #input()
 
             if idx + 1 >= cfg.max_lines:
                 break
+
+        for lan, lm_dict in lan_lm_pp.items():
+            print(lan)
+            for lm, pp in lm_dict.items():
+                print(lm, round(pp / lan_count[lan], 2))
+            print()
 
 
 if __name__ == '__main__':
