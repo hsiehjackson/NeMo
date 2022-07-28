@@ -63,7 +63,7 @@ def main(cfg: PseudoLMConfig) -> PseudoLMConfig:
             token_list = [list(map(str, token_list))]
 
 
-            print(item["audio_filepath"])
+            #print(item["audio_filepath"])
 
             pref_str = "_mnt_disk8b_Data_vox_populi_segmented_"
             lan = item["audio_filepath"][len(pref_str):len(pref_str)+2]
@@ -74,18 +74,18 @@ def main(cfg: PseudoLMConfig) -> PseudoLMConfig:
 
             lan_count[lan] += 1
 
-            for idx, pseudo_lm in enumerate(pseudo_lms):
+            for idx2, pseudo_lm in enumerate(pseudo_lms):
                 test_data, _ = padded_everygram_pipeline(cfg.n, token_list)
                 for test in test_data:
                     try:
                         pp = pseudo_lm.perplexity(test)
                     except ZeroDivisionError:
                         pp = 0
-                    print(cfg.pseudo_lms[idx], round(pp, 2))
+                    #print(cfg.pseudo_lms[idx], round(pp, 2))
 
-                    if pseudo_lm not in lan_lm_pp[lan]:
-                        lan_lm_pp[lan][pseudo_lm] = 0.
-                    lan_lm_pp[lan][pseudo_lm] += pp
+                    if idx2 not in lan_lm_pp[lan]:
+                        lan_lm_pp[lan][idx2] = 0.
+                    lan_lm_pp[lan][idx2] += pp
 
             #print()
             #input()
@@ -95,9 +95,18 @@ def main(cfg: PseudoLMConfig) -> PseudoLMConfig:
 
         for lan, lm_dict in lan_lm_pp.items():
             print(lan)
-            for lm, pp in lm_dict.items():
-                print(lm, round(pp / lan_count[lan], 2))
+            for lm_id, pp in lm_dict.items():
+                print(cfg.pseudo_lms[lm_id], round(pp / lan_count[lan], 2))
             print()
+
+        print()
+
+        for lm_id, lm in enumerate(cfg.pseudo_lms):
+            print(lm)
+            for lan in lan_count.keys():
+                print(lan, lan_lm_pp[lan][lm_id] / lan_count[lan])
+            print()
+
 
 
 if __name__ == '__main__':
