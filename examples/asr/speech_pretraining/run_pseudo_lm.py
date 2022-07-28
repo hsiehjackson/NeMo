@@ -104,7 +104,7 @@ def main(cfg: PseudoLMConfig) -> PseudoLMConfig:
         for lm_id, lm in enumerate(cfg.pseudo_lms):
             print(lm)
             for lan in lan_count.keys():
-                print(lan, lan_lm_pp[lan][lm_id] / lan_count[lan])
+                print(lan, lan_count[lan], lan_lm_pp[lan][lm_id] / lan_count[lan])
             print()
 
 
