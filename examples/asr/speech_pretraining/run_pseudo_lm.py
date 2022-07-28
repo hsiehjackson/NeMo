@@ -74,6 +74,8 @@ def main(cfg: PseudoLMConfig) -> PseudoLMConfig:
 
             lan_count[lan] += 1
 
+            pp_bg = 0
+
             for idx2, pseudo_lm in enumerate(pseudo_lms):
                 test_data, _ = padded_everygram_pipeline(cfg.n, token_list)
                 for test in test_data:
@@ -83,9 +85,12 @@ def main(cfg: PseudoLMConfig) -> PseudoLMConfig:
                         pp = 0
                     #print(cfg.pseudo_lms[idx], round(pp, 2))
 
+                    if idx2 == 0:
+                        pp_bg = pp
+
                     if idx2 not in lan_lm_pp[lan]:
                         lan_lm_pp[lan][idx2] = 0.
-                    lan_lm_pp[lan][idx2] += pp
+                    lan_lm_pp[lan][idx2] += pp_bg - pp
 
             #print()
             #input()
