@@ -62,11 +62,10 @@ def main(cfg: PseudoLMConfig) -> PseudoLMConfig:
 
             token_list = [list(map(str, token_list))]
 
-
-            #print(item["audio_filepath"])
+            # print(item["audio_filepath"])
 
             pref_str = "_mnt_disk8b_Data_vox_populi_segmented_"
-            lan = item["audio_filepath"][len(pref_str):len(pref_str)+2]
+            lan = item["audio_filepath"][len(pref_str):len(pref_str) + 2]
 
             if lan not in lan_lm_pp:
                 lan_lm_pp[lan] = dict()
@@ -83,7 +82,7 @@ def main(cfg: PseudoLMConfig) -> PseudoLMConfig:
                         pp = pseudo_lm.perplexity(test)
                     except ZeroDivisionError:
                         pp = 0
-                    #print(cfg.pseudo_lms[idx], round(pp, 2))
+                    # print(cfg.pseudo_lms[idx], round(pp, 2))
 
                     if idx2 == 0:
                         pp_bg = pp
@@ -92,8 +91,8 @@ def main(cfg: PseudoLMConfig) -> PseudoLMConfig:
                         lan_lm_pp[lan][idx2] = 0.
                     lan_lm_pp[lan][idx2] += pp_bg - pp
 
-            #print()
-            #input()
+            # print()
+            # input()
 
             if idx + 1 >= cfg.max_lines:
                 break
@@ -108,10 +107,14 @@ def main(cfg: PseudoLMConfig) -> PseudoLMConfig:
 
         for lm_id, lm in enumerate(cfg.pseudo_lms):
             print(lm)
+            scores = dict()
             for lan in lan_count.keys():
-                print(lan, lan_count[lan], lan_lm_pp[lan][lm_id] / lan_count[lan])
+                scores[lan] = lan_lm_pp[lan][lm_id] / lan_count[lan]
+                # print(lan, lan_count[lan], lan_lm_pp[lan][lm_id] / lan_count[lan])
+            scores_sorted = sorted(list(scores.items()), key=lambda x: -x[1])
+            for s in scores_sorted:
+                print(s)
             print()
-
 
 
 if __name__ == '__main__':

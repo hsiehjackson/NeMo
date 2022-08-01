@@ -37,6 +37,9 @@ from nemo.core.neural_types import (
 from nemo.utils import logging
 from nemo.collections.asr.losses import ContrastiveLoss
 
+import pickle
+from nltk.lm.preprocessing import padded_everygram_pipeline
+
 __all__ = ['SpeechEncDecSelfSupervisedModel']
 
 
@@ -142,6 +145,13 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
             set_access_cfg(self._cfg.access)
 
         self.apply_masking = True
+
+        self.use_lms = self._cfg.get("use_lms", False)
+        if self.use_lms:
+            self.bg_lm = pickle.load(open(self._cfg.get("bg_lm"), 'rb'))
+            self.target_lm = pickle.load(open(self._cfg.get("target_lm"), 'rb'))
+
+
 
     def _setup_dataloader_from_config(self, config: Optional[Dict]):
         if 'augmentor' in config:
