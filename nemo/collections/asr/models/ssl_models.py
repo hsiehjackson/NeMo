@@ -499,6 +499,26 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
     # PTL-specific methods
     def training_step(self, batch, batch_nb):
         signal, signal_len, targets, target_lengths = batch
+
+        if self.use_lms:
+            quantized_x, quantized_ids, quantized_length = asr_model.quantize(
+                input_signal=input_signal, input_signal_length=input_signal_length,
+            )
+
+            _, indices = torch.unique_consecutive(quantized_ids, return_inverse=True)
+            indices -= indices.min(dim=1, keepdims=True)[0]
+            reduced_ids = torch.zeros_like(quantized_ids)
+            reduced_ids = reduced_ids.scatter_(1, indices, quantized_ids)
+            reduced_lens = indices.max(dim=-1)[0] + 1
+
+            quantized_ids = reduced_ids.narrow(1, 0, reduced_lens.max())
+            quantized_length = reduced_lens
+
+            print(quantized_ids[:5])
+            print(quantized_length[:5])
+            print(quantized_ids.shape, quantized_length.shape)
+            print()
+
         spectrograms, spec_masks, encoded, encoded_len = self.forward(
             input_signal=signal, input_signal_length=signal_len,
         )

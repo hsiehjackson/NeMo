@@ -85,8 +85,10 @@ class FeatClusteringConfig:
 
     num_samples: int = 50000
 
+    sep_groups: bool = False
 
-def produce_labels(datalayer, in_manifest, out_manifest, asr_model, device, num_samples=None):
+
+def produce_labels(datalayer, in_manifest, out_manifest, asr_model, device, num_samples=None, sep_groups=False):
     # token_data = []
 
     label_dict = {}
@@ -118,7 +120,15 @@ def produce_labels(datalayer, in_manifest, out_manifest, asr_model, device, num_
             for idx, line in enumerate(fr):
                 item = json.loads(line)
                 if idx in label_dict:
-                    item['token_labels'] = list(map(int, label_dict[idx]))
+                    if sep_groups == False:
+                        item['token_labels'] = list(map(int, label_dict[idx]))
+                    else:
+                        token_labels = []
+                        for label in list(map(int, label_dict[idx])):
+                            token_labels.append("a_" + str(label // 300))
+                            token_labels.append("b_" + str(label % 300))
+                        item['token_labels'] = token_labels
+
                     f.write(json.dumps(item) + "\n")
                 else:
                     print(idx, "not found in label_dict")
@@ -229,8 +239,9 @@ def main(cfg: FeatClusteringConfig) -> FeatClusteringConfig:
     if cfg.apply_to_fit:
         print("Producing labels for dataset:", cfg.fit_manifest)
         produce_labels(
-            datalayer, cfg.fit_manifest, cfg.out_manifests[0], asr_model, device, num_samples=cfg.num_samples
-        )
+            datalayer, cfg.fit_manifest, cfg.out_manifests[0], asr_model, device, num_samples=cfg.num_samples,
+            sep_groups=cfg.sep_groups)
+
     # produce labels
 
     for idx in range(len(cfg.apply_manifests)):
@@ -252,7 +263,8 @@ def main(cfg: FeatClusteringConfig) -> FeatClusteringConfig:
         datalayer = asr_model._setup_dataloader_from_config(ds_cfg)
 
         print("Producing labels for dataset:", data_manifest)
-        produce_labels(datalayer, data_manifest, out_manifest, asr_model, device, num_samples=cfg.num_samples)
+        produce_labels(datalayer, data_manifest, out_manifest, asr_model, device, num_samples=cfg.num_samples,
+                       sep_groups=cfg.sep_groups)
 
     return cfg
 
