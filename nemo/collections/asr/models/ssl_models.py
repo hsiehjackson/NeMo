@@ -147,11 +147,14 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
         self.apply_masking = True
 
         self.use_lms = self._cfg.get("use_lms", False)
+        self.freeze_quantizer = self._cfg.get("freeze_quantizer")
+
         if self.use_lms:
             self.bg_lm = pickle.load(open(self._cfg.get("bg_lm"), 'rb'))
             self.target_lm = pickle.load(open(self._cfg.get("target_lm"), 'rb'))
 
-
+        if self.freeze_quantizer:
+            self.quantizer.freeze()
 
     def _setup_dataloader_from_config(self, config: Optional[Dict]):
         if 'augmentor' in config:
@@ -167,7 +170,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
         # Instantiate tarred dataset loader or normal dataset loader
         if config.get('is_tarred', False):
             if ('tarred_audio_filepaths' in config and config['tarred_audio_filepaths'] is None) or (
-                'manifest_filepath' in config and config['manifest_filepath'] is None
+                    'manifest_filepath' in config and config['manifest_filepath'] is None
             ):
                 logging.warning(
                     "Could not load dataset as `manifest_filepath` was None or "
@@ -304,7 +307,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
 
     @typecheck()
     def forward(
-        self, input_signal=None, input_signal_length=None, processed_signal=None, processed_signal_length=None,
+            self, input_signal=None, input_signal_length=None, processed_signal=None, processed_signal_length=None,
     ):
         """
         Forward pass of the model.
@@ -339,10 +342,10 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
 
         # reset module registry from AccessMixin
         if (
-            (self.training or in_validation_step)
-            and self.decoder_losses is not None
-            and self.output_from_layer is not None
-            and len(self.output_from_layer) > 0
+                (self.training or in_validation_step)
+                and self.decoder_losses is not None
+                and self.output_from_layer is not None
+                and len(self.output_from_layer) > 0
         ):
             layer_names = list(self.output_from_layer.values())
             register_layer = any([name is not None for name in layer_names])
@@ -409,10 +412,10 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
             else:
                 outputs = self.decoder_ssl(encoder_output=encoded)
             if (
-                self.training
-                and hasattr(self.loss, "set_num_updates")
-                and hasattr(self, "trainer")
-                and self.trainer is not None
+                    self.training
+                    and hasattr(self.loss, "set_num_updates")
+                    and hasattr(self, "trainer")
+                    and self.trainer is not None
             ):
                 # this is necessary for things such as temperature decay for quantizer in contrastive loss
                 self.loss.set_num_updates(self.trainer.global_step)
@@ -435,9 +438,9 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
             for dec_loss_name, dec_loss in self.decoder_losses.items():
                 # loop through decoders and corresponding losses
                 if (
-                    hasattr(self, "trainer")
-                    and self.trainer is not None
-                    and self.start_step[dec_loss_name] > self.trainer.global_step
+                        hasattr(self, "trainer")
+                        and self.trainer is not None
+                        and self.start_step[dec_loss_name] > self.trainer.global_step
                 ):
                     # if trainer is defined and global_step is below specified start_step for this decoder-loss, skip
                     continue
@@ -468,10 +471,10 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
 
                 current_loss = dec_loss['loss']
                 if (
-                    self.training
-                    and hasattr(current_loss, "set_num_updates")
-                    and hasattr(self, "trainer")
-                    and self.trainer is not None
+                        self.training
+                        and hasattr(current_loss, "set_num_updates")
+                        and hasattr(self, "trainer")
+                        and self.trainer is not None
                 ):
                     # this is necessary for things such as temperature decay for quantizer in contrastive loss
                     current_loss.set_num_updates(self.trainer.global_step)
