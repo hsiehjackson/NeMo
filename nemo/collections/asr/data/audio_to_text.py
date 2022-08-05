@@ -638,9 +638,13 @@ class _TarredAudioToTextDataset(IterableDataset):
             world_size=world_size,
             global_rank=global_rank,
         )
+        
+        print(audio_tar_filepaths)
 
         # Put together WebDataset
         self._dataset = wd.WebDataset(urls=audio_tar_filepaths, nodesplitter=None)
+        
+        print(self._dataset.urls)
 
         if shuffle_n > 0:
             self._dataset = self._dataset.shuffle(shuffle_n)

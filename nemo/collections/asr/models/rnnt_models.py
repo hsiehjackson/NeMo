@@ -665,10 +665,6 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
     # PTL-specific methods
     def training_step(self, batch, batch_nb):
 
-        print(batch)
-        print(batch_nb)
-        print()
-
         # Reset access registry
         if AccessMixin.is_access_enabled():
             AccessMixin.reset_registry(self)
