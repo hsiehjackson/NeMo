@@ -115,6 +115,9 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         # Setup encoder adapters (from ASRAdapterModelMixin)
         self.setup_adapters()
 
+        self.track_shard_loss = True
+
+
     def setup_optim_normalization(self):
         """
         Helper method to setup normalization of certain parts of the model prior to the optimization step.
@@ -661,6 +664,11 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
 
     # PTL-specific methods
     def training_step(self, batch, batch_nb):
+
+        print(batch)
+        print(batch_nb)
+        print()
+
         # Reset access registry
         if AccessMixin.is_access_enabled():
             AccessMixin.reset_registry(self)
