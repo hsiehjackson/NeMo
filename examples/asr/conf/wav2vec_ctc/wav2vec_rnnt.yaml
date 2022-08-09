@@ -45,6 +45,7 @@ model:
     type: bpe # Can be either bpe or wpe
 
   model_defaults:
+    enc_hidden: *emb_dim
     pred_hidden: 640
     joint_hidden: 640
 
