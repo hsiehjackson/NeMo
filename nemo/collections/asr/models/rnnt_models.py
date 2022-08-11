@@ -670,6 +670,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             AccessMixin.reset_registry(self)
 
         print(batch[-1])
+        print(len(batch))
 
         signal, signal_len, transcript, transcript_len = batch
 

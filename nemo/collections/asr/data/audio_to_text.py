@@ -759,7 +759,7 @@ class _TarredAudioToTextDataset(IterableDataset):
 
         if self.return_sample_id:
             return f, fl, torch.tensor(t).long(), torch.tensor(tl).long(), manifest_idx
-        elif self.return_shard_ids:
+        elif self.return_shard_id:
             return f, fl, torch.tensor(t).long(), torch.tensor(tl).long(), shard_idx
         else:
             return f, fl, torch.tensor(t).long(), torch.tensor(tl).long()
