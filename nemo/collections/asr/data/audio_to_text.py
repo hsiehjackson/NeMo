@@ -612,6 +612,7 @@ class _TarredAudioToTextDataset(IterableDataset):
         global_rank: int = 0,
         world_size: int = 0,
         return_sample_id: bool = False,
+        return_shard_id: bool = False,
     ):
         self.manifest_processor = ASRManifestProcessor(
             manifest_filepath=manifest_filepath,
@@ -631,6 +632,7 @@ class _TarredAudioToTextDataset(IterableDataset):
         self.bos_id = bos_id
         self.pad_id = pad_id
         self.return_sample_id = return_sample_id
+        self.return_shard_id = return_shard_id
 
         audio_tar_filepaths = expand_audio_filepaths(
             audio_tar_filepaths=audio_tar_filepaths,
@@ -727,6 +729,7 @@ class _TarredAudioToTextDataset(IterableDataset):
         file_id, _ = os.path.splitext(os.path.basename(audio_filename))
         manifest_idx = self.manifest_processor.collection.mapping[file_id][offset_id]
         manifest_entry = self.manifest_processor.collection[manifest_idx]
+        shard_idx = manifest_entry.shard_id
 
         offset = manifest_entry.offset
         if offset is None:
@@ -760,6 +763,8 @@ class _TarredAudioToTextDataset(IterableDataset):
 
         if self.return_sample_id:
             return f, fl, torch.tensor(t).long(), torch.tensor(tl).long(), manifest_idx
+        elif self.return_shard_ids:
+            return f, fl, torch.tensor(t).long(), torch.tensor(tl).long(), shard_idx
         else:
             return f, fl, torch.tensor(t).long(), torch.tensor(tl).long()
 
@@ -1009,6 +1014,7 @@ class TarredAudioToBPEDataset(_TarredAudioToTextDataset):
         global_rank: int = 0,
         world_size: int = 0,
         return_sample_id: bool = False,
+        return_shard_id: bool = False,
     ):
         if use_start_end_token and hasattr(tokenizer, 'bos_token'):
             bos_id = tokenizer.bos_id
@@ -1056,6 +1062,7 @@ class TarredAudioToBPEDataset(_TarredAudioToTextDataset):
             global_rank=global_rank,
             world_size=world_size,
             return_sample_id=return_sample_id,
+            return_shard_id=return_shard_id,
         )
 
 

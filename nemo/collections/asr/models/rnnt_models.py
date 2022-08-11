@@ -669,6 +669,8 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         if AccessMixin.is_access_enabled():
             AccessMixin.reset_registry(self)
 
+        print(batch[-1])
+
         signal, signal_len, transcript, transcript_len = batch
 
         # forward() only performs encoder forward

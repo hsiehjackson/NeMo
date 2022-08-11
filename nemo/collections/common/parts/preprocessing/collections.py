@@ -94,7 +94,7 @@ class AudioText(_Collection):
 
     OUTPUT_TYPE = collections.namedtuple(
         typename='AudioTextEntity',
-        field_names='id audio_file duration text_tokens offset text_raw speaker orig_sr lang',
+        field_names='id audio_file duration text_tokens offset text_raw speaker orig_sr lang shard_id',
     )
 
     def __init__(
@@ -108,6 +108,7 @@ class AudioText(_Collection):
         orig_sampling_rates: List[Optional[int]],
         token_labels: List[Optional[int]],
         langs: List[Optional[str]],
+        shard_ids: List[Optional[int]],
         parser: parsers.CharParser,
         min_duration: Optional[float] = None,
         max_duration: Optional[float] = None,
@@ -139,8 +140,8 @@ class AudioText(_Collection):
         if index_by_file_id:
             self.mapping = {}
 
-        for id_, audio_file, duration, offset, text, speaker, orig_sr, token_labels, lang in zip(
-            ids, audio_files, durations, offsets, texts, speakers, orig_sampling_rates, token_labels, langs
+        for id_, audio_file, duration, offset, text, speaker, orig_sr, token_labels, lang, shard_id in zip(
+            ids, audio_files, durations, offsets, texts, speakers, orig_sampling_rates, token_labels, langs, shard_ids
         ):
             # Duration filters.
             if min_duration is not None and duration < min_duration:
@@ -174,7 +175,8 @@ class AudioText(_Collection):
 
             total_duration += duration
 
-            data.append(output_type(id_, audio_file, duration, text_tokens, offset, text, speaker, orig_sr, lang))
+            data.append(output_type(id_, audio_file, duration, text_tokens, offset,
+                                    text, speaker, orig_sr, lang, shard_id))
             if index_by_file_id:
                 file_id, _ = os.path.splitext(os.path.basename(audio_file))
                 if file_id not in self.mapping:
@@ -217,7 +219,7 @@ class ASRAudioText(AudioText):
             [],
             [],
         )
-        speakers, orig_srs, token_labels, langs = [], [], [], []
+        speakers, orig_srs, token_labels, langs, shard_ids = [], [], [], [], []
         for item in manifest.item_iter(manifests_files):
             ids.append(item['id'])
             audio_files.append(item['audio_file'])
@@ -228,8 +230,10 @@ class ASRAudioText(AudioText):
             orig_srs.append(item['orig_sr'])
             token_labels.append(item['token_labels'])
             langs.append(item['lang'])
+            shard_ids.append(item['shard_id'])
         super().__init__(
-            ids, audio_files, durations, texts, offsets, speakers, orig_srs, token_labels, langs, *args, **kwargs
+            ids, audio_files, durations, texts, offsets, speakers, orig_srs, token_labels, langs, shard_ids,
+            *args, **kwargs
         )
 
 
