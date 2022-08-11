@@ -725,7 +725,6 @@ class _TarredAudioToTextDataset(IterableDataset):
         file_id, _ = os.path.splitext(os.path.basename(audio_filename))
         manifest_idx = self.manifest_processor.collection.mapping[file_id][offset_id]
         manifest_entry = self.manifest_processor.collection[manifest_idx]
-        shard_idx = manifest_entry.shard_id
 
         offset = manifest_entry.offset
         if offset is None:
@@ -760,6 +759,7 @@ class _TarredAudioToTextDataset(IterableDataset):
         if self.return_sample_id:
             return f, fl, torch.tensor(t).long(), torch.tensor(tl).long(), manifest_idx
         elif self.return_shard_id:
+            shard_idx = manifest_entry.shard_id
             return f, fl, torch.tensor(t).long(), torch.tensor(tl).long(), shard_idx
         else:
             return f, fl, torch.tensor(t).long(), torch.tensor(tl).long()

@@ -672,7 +672,10 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         print(batch[-1])
         print(len(batch))
 
-        signal, signal_len, transcript, transcript_len = batch
+        if len(batch) == 5:
+            signal, signal_len, transcript, transcript_len, shard_ids = batch
+        else:
+            signal, signal_len, transcript, transcript_len = batch
 
         # forward() only performs encoder forward
         if isinstance(batch, DALIOutputs) and batch.has_processed_signal:
