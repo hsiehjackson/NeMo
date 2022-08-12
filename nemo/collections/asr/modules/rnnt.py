@@ -749,6 +749,7 @@ class RNNTJoint(rnnt_abstract.AbstractRNNTJoint, Exportable, AdapterModuleMixin)
         fuse_loss_wer: bool = False,
         fused_batch_size: Optional[int] = None,
         experimental_fuse_loss_wer: Any = None,
+        reduce_mean: bool = True,
     ):
         super().__init__()
 
@@ -756,6 +757,7 @@ class RNNTJoint(rnnt_abstract.AbstractRNNTJoint, Exportable, AdapterModuleMixin)
 
         self._vocab_size = num_classes
         self._num_classes = num_classes + 1  # add 1 for blank symbol
+        self.reduce_mean = reduce_mean
 
         if experimental_fuse_loss_wer is not None:
             # Override fuse_loss_wer from deprecated argument
@@ -926,7 +928,8 @@ class RNNTJoint(rnnt_abstract.AbstractRNNTJoint, Exportable, AdapterModuleMixin)
             # Collect sub batch loss results
             if losses is not None:
                 losses = torch.cat(losses, 0)
-                losses = losses.mean()  # global batch size average
+                if self.reduce_mean:
+                    losses = losses.mean()  # global batch size average
             else:
                 losses = None
 

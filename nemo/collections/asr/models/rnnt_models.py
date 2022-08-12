@@ -738,6 +738,14 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                 compute_wer=compute_wer,
             )
 
+            print(loss_value)
+
+            loss_value = loss_value.mean()
+
+            print(loss_value)
+
+            print()
+
             # Add auxiliary losses, if registered
             loss_value = self.add_auxiliary_losses(loss_value)
 
