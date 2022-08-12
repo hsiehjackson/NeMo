@@ -117,6 +117,9 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
 
         self.track_shard_loss = True
 
+        self.shard_mean = {}
+        self.shard_count = {}
+
 
     def setup_optim_normalization(self):
         """
@@ -740,6 +743,10 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
 
             print(loss_value)
 
+            for i in range(loss_value.shape[0]):
+                self.shard_mean[shard_ids[i]] += loss_value[i]
+                self.shard_count[shard_ids[i]] += 1
+
             loss_value = loss_value.mean()
 
             print(loss_value)
@@ -770,6 +777,10 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             self._optim_normalize_txu = [encoded_len.max(), transcript_len.max()]
 
         return {'loss': loss_value}
+
+    def on_train_epoch_end(self):
+        print(self.shard_count)
+        print(self.shard_mean)
 
     def predict_step(self, batch, batch_idx, dataloader_idx=0):
         signal, signal_len, transcript, transcript_len, sample_id = batch
