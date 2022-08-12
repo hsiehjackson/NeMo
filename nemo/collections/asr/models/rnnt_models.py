@@ -672,9 +672,6 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         if AccessMixin.is_access_enabled():
             AccessMixin.reset_registry(self)
 
-        print(batch[-1])
-        print(len(batch))
-
         if len(batch) == 5:
             signal, signal_len, transcript, transcript_len, shard_ids = batch
         else:
@@ -741,11 +738,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                 compute_wer=compute_wer,
             )
 
-            print(loss_value)
-            print(shard_ids)
-
             for i in range(loss_value.shape[0]):
-                print(i, shard_ids[i])
                 s_id = int(shard_ids[i])
                 if s_id not in self.shard_count:
                     self.shard_count[s_id] = 0
@@ -754,10 +747,6 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                 self.shard_count[s_id] += 1
 
             loss_value = loss_value.mean()
-
-            print(loss_value)
-
-            print()
 
             # Add auxiliary losses, if registered
             loss_value = self.add_auxiliary_losses(loss_value)
