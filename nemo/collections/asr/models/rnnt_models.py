@@ -744,6 +744,9 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             print(loss_value)
 
             for i in range(loss_value.shape[0]):
+                if shard_ids[i] not in self.shard_count:
+                    self.shard_count[shard_ids[i]] = 0
+                    self.shard_mean[shard_ids[i]] = 0
                 self.shard_mean[shard_ids[i]] += loss_value[i]
                 self.shard_count[shard_ids[i]] += 1
 
