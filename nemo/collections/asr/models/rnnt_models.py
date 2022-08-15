@@ -122,8 +122,8 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         if self.track_shard_loss:
             #self.shard_mean = {}
             #self.shard_count = {}
-            self.shard_mean = torch.zeros(4096)
-            self.shard_count = torch.zeros(4096, dtype=torch.int)
+            self.shard_mean = torch.zeros(4096).to(self.device)
+            self.shard_count = torch.zeros(4096, dtype=torch.int).to(self.device)
 
 
     def setup_optim_normalization(self):
@@ -781,6 +781,11 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
 
         print(self.shard_mean[:100])
         print(self.shard_count[:100])
+
+        self.shard_mean /= self.shard_count
+
+        print(self.shard_mean[:100])
+        print()
 
     def predict_step(self, batch, batch_idx, dataloader_idx=0):
         signal, signal_len, transcript, transcript_len, sample_id = batch
