@@ -39,6 +39,8 @@ from nemo.core.neural_types import AcousticEncodedRepresentation, AudioSignal, L
 from nemo.utils import logging
 
 
+
+
 class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
     """Base class for encoder decoder RNNT-based models."""
 
@@ -117,8 +119,11 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
 
         self.track_shard_loss = True
 
-        self.shard_mean = {}
-        self.shard_count = {}
+        if self.track_shard_loss:
+            #self.shard_mean = {}
+            #self.shard_count = {}
+            self.shard_mean = torch.zeros(4096)
+            self.shard_count = torch.zeros(4096, dtype=torch.int)
 
 
     def setup_optim_normalization(self):
@@ -740,10 +745,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
 
             for i in range(loss_value.shape[0]):
                 s_id = int(shard_ids[i])
-                if s_id not in self.shard_count:
-                    self.shard_count[s_id] = 0
-                    self.shard_mean[s_id] = 0
-                self.shard_mean[s_id] += float(loss_value[i])
+                self.shard_mean[s_id] += loss_value[i]
                 self.shard_count[s_id] += 1
 
             loss_value = loss_value.mean()
@@ -774,8 +776,11 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         return {'loss': loss_value}
 
     def on_train_epoch_end(self):
-        print(self.shard_count)
-        print(self.shard_mean)
+        torch.distributed.all_reduce(self.shard_mean)
+        torch.distributed.all_reduce(self.shard_count)
+
+        print(self.shard_mean[:100])
+        print(self.shard_count[:100])
 
     def predict_step(self, batch, batch_idx, dataloader_idx=0):
         signal, signal_len, transcript, transcript_len, sample_id = batch
