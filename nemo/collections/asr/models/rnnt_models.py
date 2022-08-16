@@ -743,10 +743,11 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                 compute_wer=compute_wer,
             )
 
-            for i in range(loss_value.shape[0]):
-                s_id = int(shard_ids[i])
-                self.shard_mean[s_id] += loss_value[i]
-                self.shard_count[s_id] += 1
+            with torch.no_grad():
+                for i in range(loss_value.shape[0]):
+                    s_id = int(shard_ids[i])
+                    self.shard_mean[s_id] += loss_value[i]
+                    self.shard_count[s_id] += 1
 
             loss_value = loss_value.mean()
 
