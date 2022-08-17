@@ -139,6 +139,8 @@ def get_tarred_dataset(
     world_size: int,
     tokenizer: Optional['TokenizerSpec'] = None,
     augmentor: Optional['AudioAugmentor'] = None,
+    tarred_filepaths: Optional[List[str]] = None,
+    manifest_filepaths: Optional[List[str]] = None,
 ) -> Union[audio_to_text.TarredAudioToBPEDataset, audio_to_text.TarredAudioToCharDataset]:
     """
     Instantiates a Word Piece/BPE Encoding based TarredAudioToBPEDataset or a char based TarredAudioToCharDataset.

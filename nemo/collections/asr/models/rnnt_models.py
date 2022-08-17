@@ -125,6 +125,10 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             self.shard_mean = torch.nn.Parameter(torch.zeros(4096), requires_grad=False)
             self.shard_count = torch.nn.Parameter(torch.zeros(4096, dtype=torch.int), requires_grad=False)
 
+        self.start_full_eps = 5
+        self.full_ep_every = 10
+        self.active_tars = 0.1
+
 
     def setup_optim_normalization(self):
         """
@@ -780,13 +784,65 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         torch.distributed.all_reduce(self.shard_mean)
         torch.distributed.all_reduce(self.shard_count)
 
-        print(self.shard_mean[:100])
-        print(self.shard_count[:100])
-
         self.shard_mean /= self.shard_count
 
-        print(self.shard_mean[:100])
+        sorted, ind = torch.sort(self.shard_mean, descending=True)
+
         print()
+        print(self.trainer.current_epoch)
+        print()
+        print(sorted[:128])
+        print()
+        print(ind[:128])
+        print()
+
+
+        if self.trainer.current_epoch == self.start_full_eps:
+
+            train_tars = self._train_dl.dataset.audio_tar_filepaths
+
+            inds = list(map(ind[:128], int))
+
+            remaining_tar_paths = train_tars[inds]
+
+            print(remaining_tar_paths)
+            print()
+
+            config = self._cfg.train_ds
+
+            if 'augmentor' in config:
+                augmentor = process_augmentations(config['augmentor'])
+            else:
+                augmentor = None
+
+            shuffle_n = config.get('shuffle_n', 4 * config['batch_size'])
+            new_dataset = audio_to_text_dataset.get_tarred_dataset(
+                config=config,
+                shuffle_n=shuffle_n,
+                global_rank=self.global_rank,
+                world_size=self.world_size,
+                augmentor=augmentor,
+                tarred_filepaths=remaining_tar_paths
+            )
+
+            if hasattr(new_dataset, 'collate_fn'):
+                collate_fn = new_dataset.collate_fn
+            else:
+                collate_fn = new_dataset.datasets[0].collate_fn
+
+            self._train_dl = torch.utils.data.DataLoader(
+                dataset=new_dataset,
+                batch_size=config['batch_size'],
+                collate_fn=collate_fn,
+                drop_last=config.get('drop_last', False),
+                shuffle=False,
+                num_workers=config.get('num_workers', 0),
+                pin_memory=config.get('pin_memory', False),
+            )
+
+
+        self.shard_mean[:] = 0
+        self.shard_count[:] = 0
 
     def predict_step(self, batch, batch_idx, dataloader_idx=0):
         signal, signal_len, transcript, transcript_len, sample_id = batch

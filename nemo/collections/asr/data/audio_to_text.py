@@ -641,6 +641,8 @@ class _TarredAudioToTextDataset(IterableDataset):
             global_rank=global_rank,
         )
 
+        self.audio_tar_filepaths = audio_tar_filepaths
+
         # Put together WebDataset
         self._dataset = wd.WebDataset(urls=audio_tar_filepaths, nodesplitter=None)
 
