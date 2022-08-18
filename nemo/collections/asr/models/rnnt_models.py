@@ -552,6 +552,8 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                     "training batches will be used. Please set the trainer and rebuild the dataset."
                 )
 
+            self.all_train_tars = self._train_dl.dataset.audio_tar_filepaths
+
     def setup_validation_data(self, val_data_config: Optional[Union[DictConfig, Dict]]):
         """
         Sets up the validation data loader via a Dict-like object.
@@ -781,7 +783,6 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         torch.distributed.all_reduce(self.shard_mean)
         torch.distributed.all_reduce(self.shard_count)
 
-
         print()
         print(self.trainer.current_epoch)
 
@@ -797,13 +798,11 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         print(ind[:128])
         print()
 
-        if self.trainer.current_epoch == self.start_full_eps:
-
-            train_tars = self._train_dl.dataset.audio_tar_filepaths
+        if self.trainer.current_epoch >= self.start_full_eps - 1:
 
             inds = list(map(int, ind[:128]))
 
-            remaining_tar_paths = train_tars[inds]
+            remaining_tar_paths = self.all_train_tars[inds]
 
             print(remaining_tar_paths)
             print()
