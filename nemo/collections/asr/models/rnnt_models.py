@@ -39,8 +39,6 @@ from nemo.core.neural_types import AcousticEncodedRepresentation, AudioSignal, L
 from nemo.utils import logging
 
 
-
-
 class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
     """Base class for encoder decoder RNNT-based models."""
 
@@ -103,7 +101,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
 
         # Setup fused Joint step if flag is set
         if self.joint.fuse_loss_wer or (
-            self.decoding.joint_fused_batch_size is not None and self.decoding.joint_fused_batch_size > 0
+                self.decoding.joint_fused_batch_size is not None and self.decoding.joint_fused_batch_size > 0
         ):
             self.joint.set_loss(self.loss)
             self.joint.set_wer(self.wer)
@@ -120,15 +118,14 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         self.track_shard_loss = True
 
         if self.track_shard_loss:
-            #self.shard_mean = {}
-            #self.shard_count = {}
+            # self.shard_mean = {}
+            # self.shard_count = {}
             self.shard_mean = torch.nn.Parameter(torch.zeros(4096), requires_grad=False)
             self.shard_count = torch.nn.Parameter(torch.zeros(4096, dtype=torch.int), requires_grad=False)
 
         self.start_full_eps = 1
         self.full_ep_every = 10
         self.active_tars = 0.1
-
 
     def setup_optim_normalization(self):
         """
@@ -221,12 +218,12 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
 
     @torch.no_grad()
     def transcribe(
-        self,
-        paths2audio_files: List[str],
-        batch_size: int = 4,
-        return_hypotheses: bool = False,
-        partial_hypothesis: Optional[List['Hypothesis']] = None,
-        num_workers: int = 0,
+            self,
+            paths2audio_files: List[str],
+            batch_size: int = 4,
+            return_hypotheses: bool = False,
+            partial_hypothesis: Optional[List['Hypothesis']] = None,
+            num_workers: int = 0,
     ) -> (List[str], Optional[List['Hypothesis']]):
         """
         Uses greedy decoding to transcribe audio files. Use this method for debugging and prototyping.
@@ -382,7 +379,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
 
             # Setup fused Joint step
             if self.joint.fuse_loss_wer or (
-                self.decoding.joint_fused_batch_size is not None and self.decoding.joint_fused_batch_size > 0
+                    self.decoding.joint_fused_batch_size is not None and self.decoding.joint_fused_batch_size > 0
             ):
                 self.joint.set_loss(self.loss)
                 self.joint.set_wer(self.wer)
@@ -437,7 +434,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
 
         # Setup fused Joint step
         if self.joint.fuse_loss_wer or (
-            self.decoding.joint_fused_batch_size is not None and self.decoding.joint_fused_batch_size > 0
+                self.decoding.joint_fused_batch_size is not None and self.decoding.joint_fused_batch_size > 0
         ):
             self.joint.set_loss(self.loss)
             self.joint.set_wer(self.wer)
@@ -475,7 +472,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         # Instantiate tarred dataset loader or normal dataset loader
         if config.get('is_tarred', False):
             if ('tarred_audio_filepaths' in config and config['tarred_audio_filepaths'] is None) or (
-                'manifest_filepath' in config and config['manifest_filepath'] is None
+                    'manifest_filepath' in config and config['manifest_filepath'] is None
             ):
                 logging.warning(
                     "Could not load dataset as `manifest_filepath` was None or "
@@ -624,7 +621,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
 
     @typecheck()
     def forward(
-        self, input_signal=None, input_signal_length=None, processed_signal=None, processed_signal_length=None
+            self, input_signal=None, input_signal_length=None, processed_signal=None, processed_signal_length=None
     ):
         """
         Forward pass of the model. Note that for RNNT Models, the forward pass of the model is a 3 step process,
@@ -785,7 +782,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         torch.distributed.all_reduce(self.shard_count)
 
         with torch.no_grad():
-            all_means = self.shard_mean / self.shard_count
+            all_means = self.shard_mean / (self.shard_count + 1)
             sorted, ind = torch.sort(all_means, descending=True)
 
         print()
@@ -797,7 +794,6 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         print()
         print(ind[:128])
         print()
-
 
         if self.trainer.current_epoch == self.start_full_eps:
 
@@ -841,7 +837,6 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                 num_workers=config.get('num_workers', 0),
                 pin_memory=config.get('pin_memory', False),
             )
-
 
         self.shard_mean[:] = 0
         self.shard_count[:] = 0
