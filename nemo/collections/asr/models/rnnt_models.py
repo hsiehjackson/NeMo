@@ -802,6 +802,10 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
 
             inds = list(map(int, ind[:128]))
 
+            print(len(self.all_train_tars))
+            print(self.all_train_tars[:10])
+            print(inds)
+
             remaining_tar_paths = [self.all_train_tars[i] for i in inds]
 
             print(remaining_tar_paths)
