@@ -125,7 +125,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             self.shard_mean = torch.nn.Parameter(torch.zeros(4096), requires_grad=False)
             self.shard_count = torch.nn.Parameter(torch.zeros(4096, dtype=torch.int), requires_grad=False)
 
-        self.start_full_eps = 5
+        self.start_full_eps = 1
         self.full_ep_every = 10
         self.active_tars = 0.1
 
@@ -784,12 +784,14 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         torch.distributed.all_reduce(self.shard_mean)
         torch.distributed.all_reduce(self.shard_count)
 
-        self.shard_mean /= self.shard_count
+        self.shard_mean = torch.div(self.shard_mean, self.shard_count)
 
         sorted, ind = torch.sort(self.shard_mean, descending=True)
 
         print()
         print(self.trainer.current_epoch)
+        print()
+        print(self.shard_mean[:128])
         print()
         print(sorted[:128])
         print()

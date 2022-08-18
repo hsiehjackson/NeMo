@@ -25,7 +25,7 @@ name: "Conformer-Transducer-BPE"
 model:
   sample_rate: 16000
   compute_eval_loss: false # eval samples can be very long and exhaust memory. Disable computation of transducer loss during validation/testing with this flag.
-  log_prediction: true # enables logging sample predictions in the output during training
+  log_prediction: false # enables logging sample predictions in the output during training
   skip_nan_grad: false
 
   model_defaults:
