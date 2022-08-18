@@ -194,17 +194,19 @@ def expand_audio_filepaths(audio_tar_filepaths, shard_strategy: str, world_size:
 
             begin_idx = (len(audio_tar_filepaths) // world_size) * global_rank
             end_idx = begin_idx + len(audio_tar_filepaths) // world_size
-            audio_tar_filepaths = audio_tar_filepaths[begin_idx:end_idx]
+            audio_tar_filepaths_part = audio_tar_filepaths[begin_idx:end_idx]
             logging.info(
                 "Partitioning tarred dataset: process (%d) taking shards [%d, %d)", global_rank, begin_idx, end_idx
             )
+            print(len(audio_tar_filepaths_part), len(audio_tar_filepaths))
+            return audio_tar_filepaths_part, audio_tar_filepaths
 
         elif shard_strategy == 'replicate':
             logging.info("All tarred dataset shards will be replicated across all nodes.")
         else:
             raise ValueError(f"Invalid shard strategy ! Allowed values are : {valid_shard_strategies}")
 
-    return audio_tar_filepaths
+    return audio_tar_filepaths, audio_tar_filepaths
 
 
 class _AudioTextDataset(Dataset):
@@ -634,14 +636,14 @@ class _TarredAudioToTextDataset(IterableDataset):
         self.return_sample_id = return_sample_id
         self.return_shard_id = return_shard_id
 
-        audio_tar_filepaths = expand_audio_filepaths(
+        audio_tar_filepaths, all_tar_paths = expand_audio_filepaths(
             audio_tar_filepaths=audio_tar_filepaths,
             shard_strategy=shard_strategy,
             world_size=world_size,
             global_rank=global_rank,
         )
 
-        self.audio_tar_filepaths = audio_tar_filepaths
+        self.all_tar_paths = all_tar_paths
 
         # Put together WebDataset
         self._dataset = wd.WebDataset(urls=audio_tar_filepaths, nodesplitter=None)
