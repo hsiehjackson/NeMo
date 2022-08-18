@@ -784,9 +784,9 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         torch.distributed.all_reduce(self.shard_mean)
         torch.distributed.all_reduce(self.shard_count)
 
-        self.shard_mean = self.shard_mean / self.shard_count
-
-        sorted, ind = torch.sort(self.shard_mean, descending=True)
+        with torch.no_grad():
+            all_means = self.shard_mean / self.shard_count
+            sorted, ind = torch.sort(all_means, descending=True)
 
         print()
         print(self.trainer.current_epoch)
