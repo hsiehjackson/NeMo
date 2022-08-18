@@ -158,7 +158,10 @@ def get_tarred_dataset(
     Returns:
         An instance of TarredAudioToBPEDataset or TarredAudioToCharDataset.
     """
-    tarred_audio_filepaths = config['tarred_audio_filepaths']
+    if tarred_filepaths is not None:
+        tarred_audio_filepaths = tarred_filepaths
+    else:
+        tarred_audio_filepaths = config['tarred_audio_filepaths']
     manifest_filepaths = config['manifest_filepath']
     datasets = []
     tarred_audio_filepaths = convert_to_config_list(tarred_audio_filepaths)
