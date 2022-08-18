@@ -781,16 +781,16 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         torch.distributed.all_reduce(self.shard_mean)
         torch.distributed.all_reduce(self.shard_count)
 
+
+        print()
+        print(self.trainer.current_epoch)
+
         with torch.no_grad():
             all_means = self.shard_mean / (self.shard_count + 1)
             sorted, ind = torch.sort(all_means, descending=True)
             print()
-            print(all_means)
+            print(all_means[:128])
 
-        print()
-        print(self.trainer.current_epoch)
-        print()
-        print(self.shard_mean[:128])
         print()
         print(sorted[:128])
         print()
@@ -801,7 +801,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
 
             train_tars = self._train_dl.dataset.audio_tar_filepaths
 
-            inds = list(map(ind[:128], int))
+            inds = list(map(int, ind[:128]))
 
             remaining_tar_paths = train_tars[inds]
 
