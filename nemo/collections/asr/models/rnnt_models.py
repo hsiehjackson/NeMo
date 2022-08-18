@@ -552,7 +552,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                     "training batches will be used. Please set the trainer and rebuild the dataset."
                 )
 
-            self.all_train_tars = self._train_dl.dataset.audio_tar_filepaths
+            self.all_train_tars = self._train_dl.dataset.all_tar_paths
 
     def setup_validation_data(self, val_data_config: Optional[Union[DictConfig, Dict]]):
         """
