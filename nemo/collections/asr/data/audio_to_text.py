@@ -636,6 +636,9 @@ class _TarredAudioToTextDataset(IterableDataset):
         self.return_sample_id = return_sample_id
         self.return_shard_id = return_shard_id
 
+        print("!!!")
+        print(audio_tar_filepaths)
+
         audio_tar_filepaths, all_tar_paths = expand_audio_filepaths(
             audio_tar_filepaths=audio_tar_filepaths,
             shard_strategy=shard_strategy,
