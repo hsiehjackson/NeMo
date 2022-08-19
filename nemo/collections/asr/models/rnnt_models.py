@@ -115,6 +115,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         # Setup encoder adapters (from ASRAdapterModelMixin)
         self.setup_adapters()
 
+
         self.track_shard_loss = True
 
         if self.track_shard_loss:
@@ -125,7 +126,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
 
         self.start_full_eps = 1
         self.full_ep_every = 10
-        self.active_tars = 0.1
+        self.active_tars = self._cfg.get('active_tars', 1.0)
 
     def setup_optim_normalization(self):
         """
@@ -786,62 +787,66 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         print()
         print(self.trainer.current_epoch)
 
-        with torch.no_grad():
-            all_means = self.shard_mean / (self.shard_count + 1)
-            sorted, ind = torch.sort(all_means, descending=True)
+        if self.active_tars < 1.0:
+
+            total_tars = int(len(self.all_train_tars) * self.active_tars)
+
+            with torch.no_grad():
+                all_means = self.shard_mean / (self.shard_count + 1)
+                sorted, ind = torch.sort(all_means, descending=True)
+                print()
+                print(all_means[:total_tars])
+
             print()
-            print(all_means[:128])
-
-        print()
-        print(sorted[:128])
-        print()
-        print(ind[:128])
-        print()
-
-        if self.trainer.current_epoch >= self.start_full_eps - 1:
-
-            inds = list(map(int, ind[:128]))
-
-            print(len(self.all_train_tars))
-            print(self.all_train_tars[:10])
-            print(inds)
-
-            remaining_tar_paths = [self.all_train_tars[i] for i in inds]
-
-            print(remaining_tar_paths)
+            print(sorted[:total_tars])
+            print()
+            print(ind[:total_tars])
             print()
 
-            config = self._cfg.train_ds
+            if self.trainer.current_epoch >= self.start_full_eps - 1:
 
-            if 'augmentor' in config:
-                augmentor = process_augmentations(config['augmentor'])
-            else:
-                augmentor = None
+                inds = list(map(int, ind[:total_tars]))
 
-            shuffle_n = config.get('shuffle_n', 4 * config['batch_size'])
-            new_dataset = audio_to_text_dataset.get_tarred_dataset(
-                config=config,
-                shuffle_n=shuffle_n,
-                global_rank=self.global_rank,
-                world_size=self.world_size,
-                augmentor=augmentor,
-                tarred_filepaths=remaining_tar_paths
-            )
+                print(len(self.all_train_tars))
+                print(self.all_train_tars[:10])
+                print(inds)
 
-            if hasattr(new_dataset, 'collate_fn'):
-                collate_fn = new_dataset.collate_fn
-            else:
-                collate_fn = new_dataset.datasets[0].collate_fn
+                remaining_tar_paths = [self.all_train_tars[i] for i in inds]
 
-            self._train_dl = torch.utils.data.DataLoader(
-                dataset=new_dataset,
-                batch_size=config['batch_size'],
-                collate_fn=collate_fn,
-                drop_last=config.get('drop_last', False),
-                shuffle=False,
-                num_workers=config.get('num_workers', 0),
-                pin_memory=config.get('pin_memory', False),
-            )
+                print(remaining_tar_paths)
+                print()
+
+                config = self._cfg.train_ds
+
+                if 'augmentor' in config:
+                    augmentor = process_augmentations(config['augmentor'])
+                else:
+                    augmentor = None
+
+                shuffle_n = config.get('shuffle_n', 4 * config['batch_size'])
+                new_dataset = audio_to_text_dataset.get_tarred_dataset(
+                    config=config,
+                    shuffle_n=shuffle_n,
+                    global_rank=self.global_rank,
+                    world_size=self.world_size,
+                    augmentor=augmentor,
+                    tarred_filepaths=remaining_tar_paths
+                )
+
+                if hasattr(new_dataset, 'collate_fn'):
+                    collate_fn = new_dataset.collate_fn
+                else:
+                    collate_fn = new_dataset.datasets[0].collate_fn
+
+                self._train_dl = torch.utils.data.DataLoader(
+                    dataset=new_dataset,
+                    batch_size=config['batch_size'],
+                    collate_fn=collate_fn,
+                    drop_last=config.get('drop_last', False),
+                    shuffle=False,
+                    num_workers=config.get('num_workers', 0),
+                    pin_memory=config.get('pin_memory', False),
+                )
 
         self.shard_mean[:] = 0
         self.shard_count[:] = 0
