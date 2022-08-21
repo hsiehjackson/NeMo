@@ -826,6 +826,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                 shuffle_n = config.get('shuffle_n', 4 * config['batch_size'])
                 new_dataset = audio_to_text_dataset.get_tarred_dataset(
                     config=config,
+                    tokenizer=self.tokenizer,
                     shuffle_n=shuffle_n,
                     global_rank=self.global_rank,
                     world_size=self.world_size,
