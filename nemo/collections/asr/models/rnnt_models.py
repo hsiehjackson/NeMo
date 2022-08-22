@@ -121,8 +121,8 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         if self.track_shard_loss:
             # self.shard_mean = {}
             # self.shard_count = {}
-            self.shard_mean = torch.nn.Parameter(torch.zeros((4096, 16), requires_grad=False)
-            self.shard_count = torch.nn.Parameter(torch.zeros((4096, 16), dtype=torch.int), requires_grad=False)
+            self.shard_mean = torch.nn.Parameter(torch.zeros((4096,)), requires_grad=False)
+            self.shard_count = torch.nn.Parameter(torch.zeros((4096,), dtype=torch.int), requires_grad=False)
 
         self.start_full_eps = 5
         self.full_ep_every = 10
