@@ -121,12 +121,13 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         if self.track_shard_loss:
             # self.shard_mean = {}
             # self.shard_count = {}
-            self.shard_mean = torch.nn.Parameter(torch.zeros(4096), requires_grad=False)
-            self.shard_count = torch.nn.Parameter(torch.zeros(4096, dtype=torch.int), requires_grad=False)
+            self.shard_mean = torch.nn.Parameter(torch.zeros((4096, 16), requires_grad=False)
+            self.shard_count = torch.nn.Parameter(torch.zeros((4096, 16), dtype=torch.int), requires_grad=False)
 
-        self.start_full_eps = 1
+        self.start_full_eps = 5
         self.full_ep_every = 10
         self.active_tars = self._cfg.get('active_tars', 1.0)
+        self.current_epoch_full = True
 
     def setup_optim_normalization(self):
         """
@@ -781,13 +782,15 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         return {'loss': loss_value}
 
     def on_train_epoch_end(self):
-        torch.distributed.all_reduce(self.shard_mean)
-        torch.distributed.all_reduce(self.shard_count)
-
         print()
         print(self.trainer.current_epoch)
 
-        if self.active_tars < 1.0:
+        if self.active_tars < 1.0 and self.trainer.current_epoch >= self.start_full_eps - 1 and self.current_epoch_full:
+
+            self.current_epoch_full = False
+
+            torch.distributed.all_reduce(self.shard_mean)
+            torch.distributed.all_reduce(self.shard_count)
 
             total_tars = int(len(self.all_train_tars) * self.active_tars)
 
@@ -803,7 +806,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             print(ind[:total_tars])
             print()
 
-            if self.trainer.current_epoch >= self.start_full_eps - 1:
+            if 1:
 
                 inds = list(map(int, ind[:total_tars]))
 
