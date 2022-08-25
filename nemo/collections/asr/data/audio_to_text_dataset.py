@@ -410,6 +410,8 @@ def get_chain_dataset(datasets, ds_config):
         return audio_to_text.RandomizedChainDataset(datasets=datasets, rnd_seed=0)
     elif bucketing_strategy == 'fully_randomized':
         return audio_to_text.RandomizedChainDataset(datasets=datasets, rnd_seed=random.randint(0, 30000))
+    elif bucketing_strategy == 'progressive':
+        return audio_to_text.ProgressiveChainDataset(datasets=datasets, rnd_seed=0, schedule=ds_config.get('schedule', None))
     else:
         raise ValueError(
             f'bucketing_strategy={bucketing_strategy} is not supported! Supported strategies are [fixed_order, fully_randomized, synced_randomized].'
