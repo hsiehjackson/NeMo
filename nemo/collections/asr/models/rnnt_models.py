@@ -554,7 +554,8 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                     "training batches will be used. Please set the trainer and rebuild the dataset."
                 )
 
-            self.all_train_tars = self._train_dl.dataset.all_tar_paths
+            if hasattr(self._train_dl.dataset, "all_tar_paths"):
+                self.all_train_tars = self._train_dl.dataset.all_tar_paths
 
     def setup_validation_data(self, val_data_config: Optional[Union[DictConfig, Dict]]):
         """
@@ -782,8 +783,6 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         return {'loss': loss_value}
 
     def on_train_epoch_end(self):
-        print()
-        print(self.trainer.current_epoch)
 
         if self.active_tars < 1.0 and self.trainer.current_epoch >= self.start_full_eps - 1 and self.current_epoch_full:
 
@@ -797,8 +796,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             with torch.no_grad():
                 all_means = self.shard_mean / (self.shard_count + 1)
                 sorted, ind = torch.sort(all_means, descending=True)
-                print()
-                print(all_means[:total_tars])
+
 
             print()
             print(sorted[:total_tars])
@@ -806,51 +804,46 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             print(ind[:total_tars])
             print()
 
-            if 1:
+            inds = list(map(int, ind[:total_tars]))
 
-                inds = list(map(int, ind[:total_tars]))
 
-                print(len(self.all_train_tars))
-                print(self.all_train_tars[:10])
-                print(inds)
+            remaining_tar_paths = [self.all_train_tars[i] for i in inds]
 
-                remaining_tar_paths = [self.all_train_tars[i] for i in inds]
+            print(remaining_tar_paths)
+            print()
 
-                print(remaining_tar_paths)
-                print()
+            config = self._cfg.train_ds
 
-                config = self._cfg.train_ds
+            if 'augmentor' in config:
+                augmentor = process_augmentations(config['augmentor'])
+            else:
+                augmentor = None
 
-                if 'augmentor' in config:
-                    augmentor = process_augmentations(config['augmentor'])
-                else:
-                    augmentor = None
+            shuffle_n = config.get('shuffle_n', 4 * config['batch_size'])
+            new_dataset = audio_to_text_dataset.get_tarred_dataset(
+                config=config,
+                tokenizer=self.tokenizer,
+                shuffle_n=shuffle_n,
+                global_rank=self.global_rank,
+                world_size=self.world_size,
+                augmentor=augmentor,
+                tarred_filepaths=remaining_tar_paths
+            )
 
-                shuffle_n = config.get('shuffle_n', 4 * config['batch_size'])
-                new_dataset = audio_to_text_dataset.get_tarred_dataset(
-                    config=config,
-                    tokenizer=self.tokenizer,
-                    shuffle_n=shuffle_n,
-                    global_rank=self.global_rank,
-                    world_size=self.world_size,
-                    augmentor=augmentor,
-                    tarred_filepaths=remaining_tar_paths
-                )
+            if hasattr(new_dataset, 'collate_fn'):
+                collate_fn = new_dataset.collate_fn
+            else:
+                collate_fn = new_dataset.datasets[0].collate_fn
 
-                if hasattr(new_dataset, 'collate_fn'):
-                    collate_fn = new_dataset.collate_fn
-                else:
-                    collate_fn = new_dataset.datasets[0].collate_fn
-
-                self._train_dl = torch.utils.data.DataLoader(
-                    dataset=new_dataset,
-                    batch_size=config['batch_size'],
-                    collate_fn=collate_fn,
-                    drop_last=config.get('drop_last', False),
-                    shuffle=False,
-                    num_workers=config.get('num_workers', 0),
-                    pin_memory=config.get('pin_memory', False),
-                )
+            self._train_dl = torch.utils.data.DataLoader(
+                dataset=new_dataset,
+                batch_size=config['batch_size'],
+                collate_fn=collate_fn,
+                drop_last=config.get('drop_last', False),
+                shuffle=False,
+                num_workers=config.get('num_workers', 0),
+                pin_memory=config.get('pin_memory', False),
+            )
 
         self.shard_mean[:] = 0
         self.shard_count[:] = 0
