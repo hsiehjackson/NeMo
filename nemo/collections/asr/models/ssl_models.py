@@ -136,6 +136,19 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
 
         self.apply_masking = True
 
+        self.track_shard_loss = True
+
+        if self.track_shard_loss:
+            # self.shard_mean = {}
+            # self.shard_count = {}
+            self.shard_mean = torch.nn.Parameter(torch.zeros((4096,)), requires_grad=False)
+            self.shard_count = torch.nn.Parameter(torch.zeros((4096,), dtype=torch.int), requires_grad=False)
+
+        self.start_full_eps = self._cfg.get('start_full_eps', 5)
+        self.full_ep_every = 10
+        self.active_tars = self._cfg.get('active_tars', 1.0)
+        self.current_epoch_full = True
+
     def _setup_dataloader_from_config(self, config: Optional[Dict]):
         if 'augmentor' in config:
             augmentor = process_augmentations(config['augmentor'])
@@ -162,7 +175,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
         # Instantiate tarred dataset loader or normal dataset loader
         if config.get('is_tarred', False):
             if ('tarred_audio_filepaths' in config and config['tarred_audio_filepaths'] is None) or (
-                'manifest_filepath' in config and config['manifest_filepath'] is None
+                    'manifest_filepath' in config and config['manifest_filepath'] is None
             ):
                 logging.warning(
                     "Could not load dataset as `manifest_filepath` was None or "
@@ -237,6 +250,9 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
                     * ceil((len(self._train_dl.dataset) / self.world_size) / train_data_config['batch_size'])
                 )
 
+            if hasattr(self._train_dl.dataset, "all_tar_paths"):
+                self.all_train_tars = self._train_dl.dataset.all_tar_paths
+
     def setup_validation_data(self, val_data_config: Optional[Union[DictConfig, Dict]]):
         """
         Sets up the validation data loader via a Dict-like object.
@@ -299,7 +315,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
 
     @typecheck()
     def forward(
-        self, input_signal=None, input_signal_length=None, processed_signal=None, processed_signal_length=None,
+            self, input_signal=None, input_signal_length=None, processed_signal=None, processed_signal_length=None,
     ):
         """
         Forward pass of the model.
@@ -334,10 +350,10 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
 
         # reset module registry from AccessMixin
         if (
-            (self.training or in_validation_step)
-            and self.decoder_losses is not None
-            and self.output_from_layer is not None
-            and len(self.output_from_layer) > 0
+                (self.training or in_validation_step)
+                and self.decoder_losses is not None
+                and self.output_from_layer is not None
+                and len(self.output_from_layer) > 0
         ):
             layer_names = list(self.output_from_layer.values())
             register_layer = any([name is not None for name in layer_names])
@@ -472,7 +488,10 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
 
     # PTL-specific methods
     def training_step(self, batch, batch_nb):
-        signal, signal_len, targets, target_lengths = batch
+        if len(batch) == 5:
+            signal, signal_len, targets, target_lengths, shard_ids = batch
+        else:
+            signal, signal_len, targets, target_lengths = batch
         if isinstance(batch, DALIOutputs) and batch.has_processed_signal:
             spectrograms, spec_masks, encoded, encoded_len = self.forward(
                 processed_signal=signal, processed_signal_length=signal_len,
@@ -495,6 +514,14 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
         loss_value, loss_val_dict = self.decoder_loss_step(
             spectrograms, spec_masks, encoded, encoded_len, targets, target_lengths
         )
+
+        with torch.no_grad():
+            for i in range(loss_value.shape[0]):
+                s_id = int(shard_ids[i])
+                self.shard_mean[s_id] += loss_value[i]
+                self.shard_count[s_id] += 1
+
+        loss_value = loss_value.mean()
 
         tensorboard_logs = {
             'learning_rate': self._optimizer.param_groups[0]['lr'],
@@ -547,3 +574,67 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
         val_loss_mean = torch.stack([x['val_loss'] for x in outputs]).mean()
         tensorboard_logs = {'val_loss': val_loss_mean}
         return {'val_loss': val_loss_mean, 'log': tensorboard_logs}
+
+    def on_train_epoch_end(self):
+
+        if self.active_tars < 1.0 and self.trainer.current_epoch >= self.start_full_eps - 1 and self.current_epoch_full:
+
+            self.current_epoch_full = False
+
+            torch.distributed.all_reduce(self.shard_mean)
+            torch.distributed.all_reduce(self.shard_count)
+
+            total_tars = int(len(self.all_train_tars) * self.active_tars)
+
+            with torch.no_grad():
+                all_means = self.shard_mean / (self.shard_count + 1)
+                sorted, ind = torch.sort(all_means, descending=True)
+
+            print()
+            print(sorted[:total_tars])
+            print()
+            print(ind[:total_tars])
+            print()
+
+            inds = list(map(int, ind[:total_tars]))
+
+            remaining_tar_paths = [self.all_train_tars[i] for i in inds]
+
+            print(remaining_tar_paths)
+            print()
+
+            config = self._cfg.train_ds
+
+            if 'augmentor' in config:
+                augmentor = process_augmentations(config['augmentor'])
+            else:
+                augmentor = None
+
+            shuffle_n = config.get('shuffle_n', 4 * config['batch_size'])
+            new_dataset = audio_to_text_dataset.get_tarred_dataset(
+                config=config,
+                tokenizer=self.tokenizer,
+                shuffle_n=shuffle_n,
+                global_rank=self.global_rank,
+                world_size=self.world_size,
+                augmentor=augmentor,
+                tarred_filepaths=remaining_tar_paths
+            )
+
+            if hasattr(new_dataset, 'collate_fn'):
+                collate_fn = new_dataset.collate_fn
+            else:
+                collate_fn = new_dataset.datasets[0].collate_fn
+
+            self._train_dl = torch.utils.data.DataLoader(
+                dataset=new_dataset,
+                batch_size=config['batch_size'],
+                collate_fn=collate_fn,
+                drop_last=config.get('drop_last', False),
+                shuffle=False,
+                num_workers=config.get('num_workers', 0),
+                pin_memory=config.get('pin_memory', False),
+            )
+
+        self.shard_mean[:] = 0
+        self.shard_count[:] = 0
