@@ -140,8 +140,8 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
         self.apply_masking = True
 
         self.track_shard_loss = True
-        self.track_metric = 'loss'
-        self.track_loss_name = 'contrastive'
+        self.track_metric = self._cfg.get('track_metric', 'sim_scores_highest_true')
+        self.track_loss_name = self._cfg.get('track_loss_name', 'contrastive')
 
         if self.track_shard_loss:
             # self.shard_mean = {}
