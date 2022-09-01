@@ -521,7 +521,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
         )
 
         if "sim_scores" in self.track_metric:
-            sim_scores = self.decoder_losses[self.track_loss_name]['decoder'].sim_scores
+            sim_scores = self.decoder_losses[self.track_loss_name]['loss'].sim_scores
 
             print(sim_scores.shape)
 
