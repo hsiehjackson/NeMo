@@ -264,7 +264,7 @@ class ContrastiveLoss(Loss):
         # T'x(1+N)
 
         if self.store_sim_scores:
-            self.sim_scores = similarity_scores.detach().reshape(bs, -1, similarity_scores.reshape[-1])
+            self.sim_scores = similarity_scores.detach().reshape(bs, -1, similarity_scores.shape[-1])
             #Bx(T'/B)x(1+N)
 
         loss = F.cross_entropy(similarity_scores, similarity_targets, reduction=self.reduce)
