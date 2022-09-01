@@ -129,6 +129,9 @@ class ContrastiveLoss(Loss):
         self.store_ids = store_ids
         self.reduce_ids = reduce_ids
 
+        self.store_sim_scores = True
+        self.sim_scores = None
+
         if not self.quantized_targets:
             self.target_proj = nn.Linear(in_dim * combine_time_steps, proj_dim)
 
@@ -150,6 +153,7 @@ class ContrastiveLoss(Loss):
         spec_in = spectrograms.transpose(-2, -1)
         masks = spec_masks.transpose(-2, -1)
         targets = spec_in
+        bs = decoder_outputs.shape[0]
         # BxTxC
 
         targets = targets.reshape(targets.shape[0], targets.shape[1] // self.combine_time_steps, -1)
@@ -180,7 +184,6 @@ class ContrastiveLoss(Loss):
             targets = self.target_proj(targets)
 
         if self.sample_from_same_utterance_only:
-            bs = decoder_outputs.shape[0]
             masks = masks.mean(-1) > self.mask_threshold
             out_masked_only = decoder_outputs[masks]
             targets_masked_only = targets[masks]
@@ -259,6 +262,10 @@ class ContrastiveLoss(Loss):
         # Transpose similarity scores to TxF for loss
         similarity_scores = similarity_scores.transpose(0, 1)
         # T'x(1+N)
+
+        if self.store_sim_scores:
+            self.sim_scores = similarity_scores.detach().reshape(bs, -1, similarity_scores.reshape[-1])
+            #Bx(T'/B)x(1+N)
 
         loss = F.cross_entropy(similarity_scores, similarity_targets, reduction=self.reduce)
 

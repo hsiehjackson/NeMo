@@ -82,6 +82,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
 
         self.decoder_losses = None
 
+
         if "loss_list" in self._cfg:
 
             self.decoder_losses = {}
@@ -106,6 +107,8 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
                 self.start_step[decoder_loss_name] = decoder_loss_cfg.get("start_step", 0)
                 self.transpose_encoded[decoder_loss_name] = decoder_loss_cfg.get("transpose_encoded", False)
                 self.decoder_losses_active[decoder_loss_name] = True
+
+
 
             self.decoder_losses = nn.ModuleDict(self.decoder_losses)
 
@@ -137,6 +140,8 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
         self.apply_masking = True
 
         self.track_shard_loss = True
+        self.track_metric = 'loss'
+        self.track_loss_name = 'contrastive'
 
         if self.track_shard_loss:
             # self.shard_mean = {}
@@ -515,10 +520,25 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
             spectrograms, spec_masks, encoded, encoded_len, targets, target_lengths
         )
 
+        if "sim_scores" in self.track_metric:
+            sim_scores = self.decoder_losses[self.track_loss_name].sim_scores
+
+            print(sim_scores.shape)
+
+            if self.track_metric == "sim_scores_highest_true":
+                sim_scores = sim_scores[:, :, 0].mean(dim=-1)
+            elif self.track_metric == "sim_scores_highest_max":
+                sim_scores = torch.max(sim_scores, dim=-1).mean(dim=-1)
+            elif self.track_metric == "sim_scores_lowest_max":
+                sim_scores = torch.min(sim_scores, dim=-1).mean(dim=-1)
+
+            print(sim_scores.shape)
+            print()
+
         with torch.no_grad():
             for i in range(loss_value.shape[0]):
                 s_id = int(shard_ids[i])
-                self.shard_mean[s_id] += loss_value[i]
+                self.shard_mean[s_id] += sim_scores[i]
                 self.shard_count[s_id] += 1
 
         loss_value = loss_value.mean()
