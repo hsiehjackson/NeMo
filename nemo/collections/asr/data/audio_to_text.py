@@ -892,7 +892,7 @@ class TarredAudioToCharDataset(_TarredAudioToTextDataset):
             shard_strategy: str = "scatter",
             global_rank: int = 0,
             world_size: int = 0,
-            return_sample_id: bool = False,,
+            return_sample_id: bool = False,
             return_shard_id: bool = False,
     ):
         self.labels = labels
