@@ -533,10 +533,12 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
                 print(sim_scores.shape)
                 print()
 
-            for i in range(loss_value.shape[0]):
-                s_id = int(shard_ids[i])
-                self.shard_mean[s_id] += sim_scores[i]
-                self.shard_count[s_id] += 1
+                for i in range(loss_value.shape[0]):
+                    s_id = int(shard_ids[i])
+                    self.shard_mean[s_id] += float(sim_scores[i])
+                    self.shard_count[s_id] += 1
+
+                del sim_scores
 
         loss_value = loss_value.mean()
 
@@ -609,6 +611,8 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
 
             print()
             print(sorted[:total_tars])
+            print()
+            print(sorted[total_tars:total_tars+50])
             print()
             print(ind[:total_tars])
             print()
