@@ -128,6 +128,8 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         self.active_tars = self._cfg.get('active_tars', 1.0)
         self.current_epoch_full = True
 
+        self.spec_augment_warmup_eps = self._cfg.get('spec_augment_warmup_eps', 0)
+
     def setup_optim_normalization(self):
         """
         Helper method to setup normalization of certain parts of the model prior to the optimization step.
@@ -785,7 +787,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
 
         print("starting epoch", self.trainer.current_epoch)
 
-        if self.encoder.hasattr("block_dropout"):
+        if hasattr(self.encoder, "block_dropout"):
             if self.encoder.block_dropout_warmup_eps > 0:
                 self.encoder.block_dropout = (self.trainer.current_epoch / self.encoder.block_dropout_warmup_eps) * \
                                              (self.encoder.block_dropout_end - self.encoder.block_dropout_start) + \
