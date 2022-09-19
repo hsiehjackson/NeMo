@@ -521,8 +521,6 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
             if "sim_scores" in self.track_metric:
                 sim_scores = self.decoder_losses[self.track_loss_name]['loss'].sim_scores
 
-                print(sim_scores.shape)
-
                 if self.track_metric == "sim_scores_highest_true":
                     sim_scores = sim_scores[:, :, 0].mean(dim=-1)
                 elif self.track_metric == "sim_scores_highest_max":
@@ -530,8 +528,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
                 elif self.track_metric == "sim_scores_lowest_max":
                     sim_scores = torch.min(sim_scores, dim=-1)[0].mean(dim=-1)
 
-                print(sim_scores.shape)
-                print()
+                print(sim_scores)
 
                 for i in range(loss_value.shape[0]):
                     s_id = int(shard_ids[i])
@@ -655,6 +652,8 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
                 num_workers=config.get('num_workers', 0),
                 pin_memory=config.get('pin_memory', False),
             )
+
+        print("end")
 
         self.shard_mean[:] = 0
         self.shard_count[:] = 0
