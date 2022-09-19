@@ -38,6 +38,8 @@ from nemo.core.classes.mixins import adapter_mixins
 from nemo.core.classes.module import NeuralModule
 from nemo.core.neural_types import AcousticEncodedRepresentation, ChannelType, LengthsType, NeuralType, SpectrogramType
 
+import random
+
 __all__ = ['ConformerEncoder']
 
 
@@ -167,6 +169,9 @@ class ConformerEncoder(NeuralModule, StreamingEncoder, Exportable):
         dropout=0.1,
         dropout_emb=0.1,
         dropout_att=0.0,
+        block_dropout_start=0.0,
+        block_dropout_end=0.0,
+        block_dropout_warmup_eps=0,
     ):
         super().__init__()
         d_ff = d_model * ff_expansion_factor
@@ -308,6 +313,10 @@ class ConformerEncoder(NeuralModule, StreamingEncoder, Exportable):
             self._feat_out = d_model
         self.set_max_audio_length(self.pos_emb_max_len)
         self.use_pad_mask = True
+        self.block_dropout_start = block_dropout_start
+        self.block_dropout_end = block_dropout_end
+        self.block_dropout_warmup_eps = block_dropout_warmup_eps
+        self.block_dropout = self.block_dropout_start
 
         self.setup_streaming_params()
         self.export_cache_support = False
@@ -411,6 +420,9 @@ class ConformerEncoder(NeuralModule, StreamingEncoder, Exportable):
         att_mask = ~att_mask
 
         for lth, layer in enumerate(self.layers):
+            if self.training and self.block_dropout > 0.:
+                if random.random() <= self.block_dropout:
+                    continue
             audio_signal = layer(
                 x=audio_signal,
                 att_mask=att_mask,

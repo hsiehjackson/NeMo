@@ -115,7 +115,6 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         # Setup encoder adapters (from ASRAdapterModelMixin)
         self.setup_adapters()
 
-
         self.track_shard_loss = True
 
         if self.track_shard_loss:
@@ -782,6 +781,25 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
 
         return {'loss': loss_value}
 
+    def on_train_epoch_start(self):
+
+        print("starting epoch", self.trainer.current_epoch)
+
+        if self.encoder.hasattr("block_dropout"):
+            if self.encoder.block_dropout_warmup_eps > 0:
+                self.encoder.block_dropout = (self.trainer.current_epoch / self.encoder.block_dropout_warmup_eps) * \
+                                             (self.encoder.block_dropout_end - self.encoder.block_dropout_start) + \
+                                             self.encoder.block_dropout_start
+                print("new block dropout:", self.encoder.block_dropout)
+
+        if self.spec_augment_warmup_eps > 0:
+            self.spec_augmentation.time_masks = int((self.trainer.current_epoch / self.spec_augment_warmup_eps) * \
+                                                    self._cfg.spec_augment.get("time_masks", 0))
+            self.spec_augmentation.freq_width = int((self.trainer.current_epoch / self.spec_augment_warmup_eps) * \
+                                                    self._cfg.spec_augment.get("freq_width", 0))
+            print("new spec aug tm:", self.spec_augmentation.time_masks)
+            print("new spec aug fw:", self.spec_augmentation.freq_width)
+
     def on_train_epoch_end(self):
 
         if self.active_tars < 1.0 and self.trainer.current_epoch >= self.start_full_eps - 1 and self.current_epoch_full:
@@ -797,7 +815,6 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                 all_means = self.shard_mean / (self.shard_count + 1)
                 sorted, ind = torch.sort(all_means, descending=True)
 
-
             print()
             print(sorted[:total_tars])
             print()
@@ -805,7 +822,6 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             print()
 
             inds = list(map(int, ind[:total_tars]))
-
 
             remaining_tar_paths = [self.all_train_tars[i] for i in inds]
 
