@@ -115,18 +115,15 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         # Setup encoder adapters (from ASRAdapterModelMixin)
         self.setup_adapters()
 
-        self.track_shard_loss = True
+        self.track_shard_metric = self._cfg.get('track_shard_metric', False)
 
-        if self.track_shard_loss:
-            # self.shard_mean = {}
-            # self.shard_count = {}
+        if self.track_shard_metric:
             self.shard_mean = torch.nn.Parameter(torch.zeros((4096,)), requires_grad=False)
             self.shard_count = torch.nn.Parameter(torch.zeros((4096,), dtype=torch.int), requires_grad=False)
-
-        self.start_full_eps = self._cfg.get('start_full_eps', 5)
-        self.full_ep_every = 10
-        self.active_tars = self._cfg.get('active_tars', 1.0)
-        self.current_epoch_full = True
+            self.start_full_eps = self._cfg.get('start_full_eps', 5)
+            self.full_ep_every = 10
+            self.active_tars = self._cfg.get('active_tars', 1.0)
+            self.current_epoch_full = True
 
         self.spec_augment_warmup_eps = self._cfg.get('spec_augment_warmup_eps', 0)
 
@@ -749,12 +746,12 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                 transcript_lengths=transcript_len,
                 compute_wer=compute_wer,
             )
-
-            with torch.no_grad():
-                for i in range(loss_value.shape[0]):
-                    s_id = int(shard_ids[i])
-                    self.shard_mean[s_id] += loss_value[i]
-                    self.shard_count[s_id] += 1
+            if self.track_shard_metric:
+                with torch.no_grad():
+                    for i in range(loss_value.shape[0]):
+                        s_id = int(shard_ids[i])
+                        self.shard_mean[s_id] += loss_value[i]
+                        self.shard_count[s_id] += 1
 
             loss_value = loss_value.mean()
 
@@ -804,7 +801,8 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
 
     def on_train_epoch_end(self):
 
-        if self.active_tars < 1.0 and self.trainer.current_epoch >= self.start_full_eps - 1 and self.current_epoch_full:
+        if self.track_shard_metric and self.active_tars < 1.0 and \
+                self.trainer.current_epoch >= self.start_full_eps - 1 and self.current_epoch_full:
 
             self.current_epoch_full = False
 
@@ -863,8 +861,9 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                 pin_memory=config.get('pin_memory', False),
             )
 
-        self.shard_mean[:] = 0
-        self.shard_count[:] = 0
+        if self.track_shard_metric:
+            self.shard_mean[:] = 0
+            self.shard_count[:] = 0
 
     def predict_step(self, batch, batch_idx, dataloader_idx=0):
         signal, signal_len, transcript, transcript_len, sample_id = batch
