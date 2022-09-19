@@ -420,14 +420,10 @@ class ConformerEncoder(NeuralModule, StreamingEncoder, Exportable):
         att_mask = ~att_mask
 
         for lth, layer in enumerate(self.layers):
-            print(lth)
             if self.training and self.block_dropout > 0.:
                 r = random.random()
-                print(r)
                 if r <= self.block_dropout:
-                    print("skipped")
                     continue
-            print("not skipped")
             audio_signal = layer(
                 x=audio_signal,
                 att_mask=att_mask,
