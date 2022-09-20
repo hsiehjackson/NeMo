@@ -597,8 +597,9 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
 
             self.current_epoch_full = False
 
-            torch.distributed.all_reduce(self.shard_mean)
-            torch.distributed.all_reduce(self.shard_count)
+            if torch.distributed.is_initialized():
+                torch.distributed.all_reduce(self.shard_mean)
+                torch.distributed.all_reduce(self.shard_count)
 
             total_tars = int(len(self.all_train_tars) * self.active_tars)
 
