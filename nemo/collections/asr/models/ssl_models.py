@@ -528,8 +528,6 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
                 elif self.track_metric == "sim_scores_lowest_max":
                     sim_scores = torch.min(sim_scores, dim=-1)[0].mean(dim=-1)
 
-                print(sim_scores)
-
                 for i in range(loss_value.shape[0]):
                     s_id = int(shard_ids[i])
                     self.shard_mean[s_id] += float(sim_scores[i])
