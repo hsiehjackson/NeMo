@@ -783,16 +783,18 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
     def on_train_epoch_start(self):
 
         print("starting epoch", self.trainer.current_epoch)
-        x = min(self.trainer.current_epoch / self.spec_augment_warmup_eps, 1.0)
-        print(x)
 
         if hasattr(self.encoder, "block_dropout"):
             if self.encoder.block_dropout_warmup_eps > 0:
-                self.encoder.block_dropout = x * (self.encoder.block_dropout_end - self.encoder.block_dropout_start) + \
-                                             self.encoder.block_dropout_start
+                x = min(self.trainer.current_epoch / self.block_dropout_warmup_eps, 1.0)
+                print(x)
+                self.encoder.block_dropout = x * (self.encoder.block_dropout_end - self.encoder.block_dropout_start) \
+                                             + self.encoder.block_dropout_start
                 print("new block dropout:", self.encoder.block_dropout)
 
         if self.spec_augment_warmup_eps > 0:
+            x = min(self.trainer.current_epoch / self.spec_augment_warmup_eps, 1.0)
+            print(x)
             self.spec_augmentation.time_masks = int(x * self._cfg.spec_augment.get("time_masks", 0))
             self.spec_augmentation.freq_width = int(x * self._cfg.spec_augment.get("freq_width", 0))
             print("new spec aug tm:", self.spec_augmentation.time_masks)
