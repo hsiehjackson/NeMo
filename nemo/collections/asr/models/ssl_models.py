@@ -145,8 +145,8 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
             # self.shard_count = {}
             #self.shard_mean = torch.nn.Parameter(torch.zeros((4096,)), requires_grad=False)
             #self.shard_count = torch.nn.Parameter(torch.zeros((4096,), dtype=torch.int), requires_grad=False)
-            self.shard_mean = torch.zeros((4096,))
-            self.shard_count = torch.zeros((4096,), dtype=torch.int)
+            self.shard_mean = torch.zeros((4096,)).to(device=self.device)
+            self.shard_count = torch.zeros((4096,), dtype=torch.int).to(device=self.device)
 
         self.start_full_eps = self._cfg.get('start_full_eps', 5)
         self.full_ep_every = 10
