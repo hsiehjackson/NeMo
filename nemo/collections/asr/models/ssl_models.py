@@ -614,11 +614,12 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
 
                 print(self.shard_count)
 
-            total_tars = int(len(self.all_train_tars) * self.active_tars)
+            dataset_tars = len(self.all_train_tars)
+            total_tars = int(dataset_tars * self.active_tars)
 
             with torch.no_grad():
                 all_means = self.shard_mean / (self.shard_count + 1)
-                sorted, ind = torch.sort(all_means, descending=True)
+                sorted, ind = torch.sort(all_means[:dataset_tars], descending=True)
 
             print()
             print(sorted[:total_tars])
