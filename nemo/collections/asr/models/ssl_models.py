@@ -627,6 +627,9 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
 
             inds = list(map(int, ind[:total_tars]))
 
+            print(len(self.all_train_tars))
+            print(self.all_train_tars[:50])
+
             remaining_tar_paths = [self.all_train_tars[i] for i in inds]
 
             print(remaining_tar_paths)
