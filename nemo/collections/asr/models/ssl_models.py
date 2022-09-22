@@ -622,6 +622,8 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
             print()
             print(sorted[total_tars:total_tars+50])
             print()
+            print(sorted[-50:])
+            print()
             print(ind[:total_tars])
             print()
 
