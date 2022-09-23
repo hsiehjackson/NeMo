@@ -152,6 +152,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
         self.full_ep_every = 10
         self.active_tars = self._cfg.get('active_tars', 1.0)
         self.current_start_eps = 0
+        self.current_epoch_full = True
 
     def _setup_dataloader_from_config(self, config: Optional[Dict]):
         if 'augmentor' in config:
@@ -597,8 +598,9 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
         self.current_start_eps += 1
         print(self.current_start_eps)
 
-        if self.active_tars < 1.0 and self.trainer.current_epoch >= self.start_full_eps - 1 and \
-                self.current_start_eps >= 2:
+        if self.track_shard_metric and self.active_tars < 1.0 and \
+                self.trainer.current_epoch >= self.start_full_eps - 1 and \
+                self.current_start_eps >= 2 and self.current_epoch_full:
 
             self.current_epoch_full = False
 
