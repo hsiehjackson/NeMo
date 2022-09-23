@@ -136,11 +136,11 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
 
         self.apply_masking = True
 
-        self.track_shard_loss = True
+        self.track_shard_metric = self._cfg.get('track_shard_metric', False)
         self.track_metric = self._cfg.get('track_metric', 'sim_scores_highest_true')
         self.track_loss_name = self._cfg.get('track_loss_name', 'contrastive')
 
-        if self.track_shard_loss:
+        if self.track_shard_metric:
             # self.shard_mean = {}
             # self.shard_count = {}
             #self.shard_mean = torch.nn.Parameter(torch.zeros((4096,)), requires_grad=False)
@@ -519,23 +519,24 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
             spectrograms, spec_masks, encoded, encoded_len, targets, target_lengths
         )
 
-        with torch.no_grad():
-            if "sim_scores" in self.track_metric:
-                sim_scores = self.decoder_losses[self.track_loss_name]['loss'].sim_scores
+        if self.track_shard_metric:
+            with torch.no_grad():
+                if "sim_scores" in self.track_metric:
+                    sim_scores = self.decoder_losses[self.track_loss_name]['loss'].sim_scores
 
-                if self.track_metric == "sim_scores_highest_true":
-                    sim_scores = sim_scores[:, :, 0].mean(dim=-1)
-                elif self.track_metric == "sim_scores_highest_max":
-                    sim_scores = torch.max(sim_scores, dim=-1)[0].mean(dim=-1)
-                elif self.track_metric == "sim_scores_lowest_max":
-                    sim_scores = torch.min(sim_scores, dim=-1)[0].mean(dim=-1)
+                    if self.track_metric == "sim_scores_highest_true":
+                        sim_scores = sim_scores[:, :, 0].mean(dim=-1)
+                    elif self.track_metric == "sim_scores_highest_max":
+                        sim_scores = torch.max(sim_scores, dim=-1)[0].mean(dim=-1)
+                    elif self.track_metric == "sim_scores_lowest_max":
+                        sim_scores = torch.min(sim_scores, dim=-1)[0].mean(dim=-1)
 
-                for i in range(loss_value.shape[0]):
-                    s_id = int(shard_ids[i])
-                    self.shard_mean[s_id] += float(sim_scores[i])
-                    self.shard_count[s_id] += 1
+                    for i in range(loss_value.shape[0]):
+                        s_id = int(shard_ids[i])
+                        self.shard_mean[s_id] += float(sim_scores[i])
+                        self.shard_count[s_id] += 1
 
-                del sim_scores
+                    del sim_scores
 
         loss_value = loss_value.mean()
 
