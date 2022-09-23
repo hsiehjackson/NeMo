@@ -676,7 +676,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
                 pin_memory=config.get('pin_memory', False),
             )
 
-        print("end")
+            print("end")
 
-        self.shard_mean[:] = 0
-        self.shard_count[:] = 0
+            self.shard_mean[:] = 0
+            self.shard_count[:] = 0
