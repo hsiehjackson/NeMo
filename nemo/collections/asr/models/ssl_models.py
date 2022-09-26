@@ -497,6 +497,9 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
             signal, signal_len, targets, target_lengths, shard_ids = batch
         else:
             signal, signal_len, targets, target_lengths = batch
+
+        print(shard_ids)
+
         if isinstance(batch, DALIOutputs) and batch.has_processed_signal:
             spectrograms, spec_masks, encoded, encoded_len = self.forward(
                 processed_signal=signal, processed_signal_length=signal_len,
@@ -604,13 +607,13 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
 
             self.current_epoch_full = False
 
-            print(self.shard_mean.device, self.shard_count.device)
+            #print(self.shard_mean.device, self.shard_count.device)
             print(self.shard_count)
 
             if torch.distributed.is_initialized():
                 self.shard_mean = self.shard_mean.to(device=self.device)
                 self.shard_count = self.shard_count.to(device=self.device)
-                print(self.shard_mean.device, self.shard_count.device)
+                #print(self.shard_mean.device, self.shard_count.device)
 
                 torch.distributed.all_reduce(self.shard_mean)
                 torch.distributed.all_reduce(self.shard_count)
