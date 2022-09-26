@@ -191,9 +191,9 @@ def expand_audio_filepaths(audio_tar_filepaths, shard_strategy: str, world_size:
                     f"Number of shards in tarred dataset ({len(audio_tar_filepaths)}) is not divisible "
                     f"by number of distributed workers ({world_size})."
                 )
-
             begin_idx = (len(audio_tar_filepaths) // world_size) * global_rank
             end_idx = begin_idx + len(audio_tar_filepaths) // world_size
+            print("rank:", global_rank, "/", world_size, "|", begin_idx, end_idx)
             audio_tar_filepaths_part = audio_tar_filepaths[begin_idx:end_idx]
             logging.info(
                 "Partitioning tarred dataset: process (%d) taking shards [%d, %d)", global_rank, begin_idx, end_idx
