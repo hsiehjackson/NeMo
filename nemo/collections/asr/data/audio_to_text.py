@@ -728,6 +728,8 @@ class _TarredAudioToTextDataset(IterableDataset):
         """
         audio_bytes, audio_filename, offset_id = tup
 
+        print(audio_filename)
+
         # Grab manifest entry from self.manifest_preprocessor.collection
         file_id, _ = os.path.splitext(os.path.basename(audio_filename))
         manifest_idx = self.manifest_processor.collection.mapping[file_id][offset_id]
