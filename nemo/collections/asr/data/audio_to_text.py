@@ -898,6 +898,7 @@ class TarredAudioToCharDataset(_TarredAudioToTextDataset):
             world_size: int = 0,
             return_sample_id: bool = False,
             return_shard_id: bool = False,
+            shard_list: List[int] = None
     ):
         self.labels = labels
 
@@ -925,6 +926,7 @@ class TarredAudioToCharDataset(_TarredAudioToTextDataset):
             world_size=world_size,
             return_sample_id=return_sample_id,
             return_shard_id=return_shard_id,
+            shard_list=shard_list
         )
 
 
