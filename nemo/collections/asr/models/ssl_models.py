@@ -498,11 +498,11 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
         else:
             signal, signal_len, targets, target_lengths = batch
 
-        print()
+        """print()
         print(self.global_rank)
         print(signal.shape, targets.shape)
         print(shard_ids)
-        print()
+        print()"""
 
         if isinstance(batch, DALIOutputs) and batch.has_processed_signal:
             spectrograms, spec_masks, encoded, encoded_len = self.forward(
