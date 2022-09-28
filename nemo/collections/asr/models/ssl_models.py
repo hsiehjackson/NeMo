@@ -606,6 +606,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
         #print(self.current_start_eps)
         #and self.active_tars < 1.0
         print("epoch end:", self.trainer.current_epoch)
+        print(self.track_shard_metric, self.start_full_eps, self.current_epoch_full)
         if self.track_shard_metric and \
                 self.trainer.current_epoch >= self.start_full_eps - 1 and \
                 self.current_epoch_full:
