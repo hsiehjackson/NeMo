@@ -121,6 +121,7 @@ class ASRManifestProcessor:
             eos_id: Optional[int] = None,
             pad_id: int = 0,
             index_by_file_id: bool = False,
+            shard_list: Optional[List[int]] = None
     ):
         self.parser = parser
 
@@ -131,6 +132,7 @@ class ASRManifestProcessor:
             max_duration=max_duration,
             max_number=max_utts,
             index_by_file_id=index_by_file_id,
+            shard_list=shard_list
         )
 
         self.eos_id = eos_id
@@ -615,6 +617,7 @@ class _TarredAudioToTextDataset(IterableDataset):
             world_size: int = 0,
             return_sample_id: bool = False,
             return_shard_id: bool = False,
+            shard_list: Optional[List[int]] = None
     ):
         self.manifest_processor = ASRManifestProcessor(
             manifest_filepath=manifest_filepath,
@@ -626,6 +629,7 @@ class _TarredAudioToTextDataset(IterableDataset):
             eos_id=eos_id,
             pad_id=pad_id,
             index_by_file_id=True,  # Must set this so the manifest lines can be indexed by file ID
+            shard_list=shard_list
         )
 
         self.featurizer = WaveformFeaturizer(sample_rate=sample_rate, int_values=int_values, augmentor=augmentor)
@@ -1020,6 +1024,7 @@ class TarredAudioToBPEDataset(_TarredAudioToTextDataset):
             world_size: int = 0,
             return_sample_id: bool = False,
             return_shard_id: bool = False,
+            shard_list: List[int] = None
     ):
         if use_start_end_token and hasattr(tokenizer, 'bos_token'):
             bos_id = tokenizer.bos_id
@@ -1068,6 +1073,7 @@ class TarredAudioToBPEDataset(_TarredAudioToTextDataset):
             world_size=world_size,
             return_sample_id=return_sample_id,
             return_shard_id=return_shard_id,
+            shard_list=shard_list
         )
 
 

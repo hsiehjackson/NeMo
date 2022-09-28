@@ -202,7 +202,7 @@ class AudioText(_Collection):
 class ASRAudioText(AudioText):
     """`AudioText` collector from asr structured json files."""
 
-    def __init__(self, manifests_files: Union[str, List[str]], *args, **kwargs):
+    def __init__(self, manifests_files: Union[str, List[str]], shard_list=None, *args, **kwargs):
         """Parse lists of audio files, durations and transcripts texts.
 
         Args:
@@ -221,6 +221,8 @@ class ASRAudioText(AudioText):
         )
         speakers, orig_srs, token_labels, langs, shard_ids = [], [], [], [], []
         for item in manifest.item_iter(manifests_files):
+            if shard_list is not None and item['shard_id'] not in shard_list:
+                continue
             ids.append(item['id'])
             audio_files.append(item['audio_file'])
             durations.append(item['duration'])

@@ -654,6 +654,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
 
             remaining_tar_paths = [self.all_train_tars[i] for i in inds]
 
+            print(inds)
             print(remaining_tar_paths)
             print()
 
@@ -671,7 +672,8 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
                 global_rank=self.global_rank,
                 world_size=self.world_size,
                 augmentor=augmentor,
-                tarred_filepaths=remaining_tar_paths
+                tarred_filepaths=remaining_tar_paths,
+                shard_list=inds
             )
 
             if hasattr(new_dataset, 'collate_fn'):
