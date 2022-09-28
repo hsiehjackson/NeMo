@@ -530,7 +530,11 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
         if self.track_shard_metric:
             with torch.no_grad():
                 if "sim_scores" in self.track_metric:
-                    sim_scores = self.decoder_losses[self.track_loss_name]['loss'].sim_scores
+
+                    if self.decoder_losses is not None:
+                        sim_scores = self.decoder_losses[self.track_loss_name]['loss'].sim_scores
+                    else:
+                        sim_scores = self.loss.sim_scores
 
                     if self.track_metric == "sim_scores_highest_true":
                         sim_scores = sim_scores[:, :, 0].mean(dim=-1)
