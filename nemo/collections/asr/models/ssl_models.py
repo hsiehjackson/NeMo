@@ -599,9 +599,14 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
         }
 
     def multi_validation_epoch_end(self, outputs, dataloader_idx: int = 0):
+        print("val epoch end:", self.trainer.current_epoch)
         val_loss_mean = torch.stack([x['val_loss'] for x in outputs]).mean()
         tensorboard_logs = {'val_loss': val_loss_mean}
         return {'val_loss': val_loss_mean, 'log': tensorboard_logs}
+
+    def on_train_epoch_start(self):
+
+        print("train epoch start:", self.trainer.current_epoch)
 
     def on_train_epoch_end(self):
 
@@ -609,7 +614,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
             self.current_start_eps += 1
             print(self.current_start_eps)
             #and self.active_tars < 1.0
-            print("epoch end:", self.trainer.current_epoch)
+            print("train epoch end:", self.trainer.current_epoch)
             print(self.track_shard_metric, self.start_full_eps, self.current_epoch_full)
             if self.track_shard_metric and \
                     self.trainer.current_epoch >= self.start_full_eps - 1 and \
