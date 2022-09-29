@@ -621,6 +621,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
                     self.current_start_eps >= 2 and self.current_epoch_full:
 
                 self.current_epoch_full = False
+                self.track_shard_metric = False
 
                 #print(self.shard_mean.device, self.shard_count.device)
                 print(self.shard_count)
