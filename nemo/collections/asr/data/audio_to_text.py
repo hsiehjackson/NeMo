@@ -650,6 +650,8 @@ class _TarredAudioToTextDataset(IterableDataset):
             global_rank=global_rank,
         )
 
+        print("??", audio_tar_filepaths)
+
         self.all_tar_paths = all_tar_paths
 
         # Put together WebDataset
