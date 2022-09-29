@@ -233,6 +233,8 @@ class ASRAudioText(AudioText):
             token_labels.append(item['token_labels'])
             langs.append(item['lang'])
             shard_ids.append(item['shard_id'])
+        print(shard_ids)
+        print(len(shard_ids))
         super().__init__(
             ids, audio_files, durations, texts, offsets, speakers, orig_srs, token_labels, langs, shard_ids,
             *args, **kwargs
