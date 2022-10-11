@@ -165,10 +165,10 @@ model:
       decoder:
         _target_: nemo.collections.asr.modules.ConvASRDecoder
         feat_in: ${model.encoder.d_model}
-        num_classes: 512
+        num_classes: 1024
       loss:
         _target_: nemo.collections.asr.losses.CTCLossForSSL
-        num_classes: 512
+        num_classes: 1024
       loss_alpha: 0.1
 
     rnnt:
@@ -179,7 +179,7 @@ model:
           normalization_mode: null # Currently only null is supported for export.
           random_state_sampling: false # Random state sampling: https://arxiv.org/pdf/1910.11455.pdf
           blank_as_pad: true # This flag must be set in order to support exporting of RNNT models + efficient inference.
-          vocab_size: 500
+          vocab_size: 1024
           prednet:
             pred_hidden: 640
             pred_rnn_layers: 1
@@ -196,11 +196,11 @@ model:
             joint_hidden: 640
             activation: "relu"
             dropout: 0.1
-          num_classes: 500
+          num_classes: 1024
       loss:
         _target_: nemo.collections.asr.losses.RNNTLossForSSL
-        num_classes: 500
-      loss_alpha: 0.1
+        num_classes: 1024
+      loss_alpha: 1.0
 
 
   optim:
