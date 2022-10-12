@@ -138,29 +138,6 @@ model:
         sample_from_non_masked: false # should negatives be sampled from non-masked steps
       loss_alpha: 0.1
 
-    mlm:
-      decoder:
-        _target_: nemo.collections.asr.modules.ConvASRDecoder
-        feat_in: ${model.encoder.d_model}
-        num_classes: 90000
-        # set this to be equal to codebook_size^groups in the contrastive loss
-      loss:
-        _target_: nemo.collections.asr.losses.MLMLoss
-        combine_time_steps: 4
-      targets_from_loss: "contrastive"
-      # since this loss requires targets, we can either get them from a manifest or from a quantized contrastive loss
-      loss_alpha: 100.
-      # multiplier applied to this loss relative to others
-      transpose_encoded: false
-      # transposing input may be necessary depending on which layer is used as input to decoder
-      start_step: 0
-      # determines what global step this loss starts being used at;
-      # this can be set to a higher number if your training is long enough,
-      # which may increase early training stability
-      output_from_layer: null
-      # if we wanted to use outputs from non-final encoder layer as input to this decoder,
-      # the layer name should be specified here
-
     ctc:
       decoder:
         _target_: nemo.collections.asr.modules.ConvASRDecoder
