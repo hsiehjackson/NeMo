@@ -18,7 +18,7 @@ import json
 import os
 from dataclasses import dataclass, is_dataclass
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List
 
 import pytorch_lightning as pl
 import torch
@@ -112,6 +112,16 @@ class TranscriptionConfig:
     # Decoding strategy for RNNT models
     rnnt_decoding: RNNTDecodingConfig = RNNTDecodingConfig(fused_batch_size=-1)
 
+    #change_attention: bool = False
+    #self_attention_model: str = "rel_pos"
+    #att_context_size: List[int] = (-1, -1)
+
+    override_config_path: str = None
+
+
+#++model.encoder.self_attention_model=longformer_overlap_rel_pos
+#++model.encoder.att_context_size=[64,64]
+
 
 @hydra_runner(config_name="TranscriptionConfig", schema=TranscriptionConfig)
 def main(cfg: TranscriptionConfig) -> TranscriptionConfig:
@@ -139,6 +149,7 @@ def main(cfg: TranscriptionConfig) -> TranscriptionConfig:
 
     map_location = torch.device('cuda:{}'.format(device[0]) if accelerator == 'gpu' else 'cpu')
 
+
     # setup model
     if cfg.model_path is not None:
         # restore model from .nemo file path
@@ -147,7 +158,7 @@ def main(cfg: TranscriptionConfig) -> TranscriptionConfig:
         imported_class = model_utils.import_class_by_path(classpath)  # type: ASRModel
         logging.info(f"Restoring model : {imported_class.__name__}")
         asr_model = imported_class.restore_from(
-            restore_path=cfg.model_path, map_location=map_location
+            restore_path=cfg.model_path, map_location=map_location, override_config_path=cfg.override_config_path
         )  # type: ASRModel
         model_name = os.path.splitext(os.path.basename(cfg.model_path))[0]
     else:
@@ -156,6 +167,8 @@ def main(cfg: TranscriptionConfig) -> TranscriptionConfig:
             model_name=cfg.pretrained_name, map_location=map_location
         )  # type: ASRModel
         model_name = cfg.pretrained_name
+
+
 
     trainer = pl.Trainer(devices=device, accelerator=accelerator)
     asr_model.set_trainer(trainer)
