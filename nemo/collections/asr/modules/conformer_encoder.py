@@ -659,6 +659,9 @@ class ConformerEncoder(NeuralModule, StreamingEncoder, Exportable):
 
         return cache_last_channel, cache_last_time
 
+    def set_attention(self, self_attention_mode):
+        return
+
 
 class ConformerEncoderAdapter(ConformerEncoder, adapter_mixins.AdapterModuleMixin):
 

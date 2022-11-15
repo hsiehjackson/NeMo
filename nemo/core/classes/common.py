@@ -560,6 +560,7 @@ class FileIO(ABC):
         return_config: bool = False,
         trainer: Optional['Trainer'] = None,
         save_restore_connector: SaveRestoreConnector = None,
+        merge_into_model_config: OmegaConf = None,
     ):
         """
         Restores model instance (weights and configuration) from a .nemo file
@@ -813,6 +814,7 @@ class Model(Typing, Serialization, FileIO):
         return_config: bool = False,
         trainer: Optional['Trainer'] = None,
         save_restore_connector: SaveRestoreConnector = None,
+        merge_into_model_config: OmegaConf = None,
     ):
         """
         Instantiates an instance of NeMo from NVIDIA NGC cloud
@@ -855,6 +857,7 @@ class Model(Typing, Serialization, FileIO):
             return_config=return_config,
             trainer=trainer,
             save_restore_connector=save_restore_connector,
+            merge_into_model_config=merge_into_model_config
         )
         return instance
 

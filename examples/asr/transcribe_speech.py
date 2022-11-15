@@ -116,7 +116,7 @@ class TranscriptionConfig:
     #self_attention_model: str = "rel_pos"
     #att_context_size: List[int] = (-1, -1)
 
-    override_config_path: Optional[str] = None
+    merge_into_model_config: OmegaConf = None
 
 
 #++model.encoder.self_attention_model=longformer_overlap_rel_pos
@@ -158,13 +158,13 @@ def main(cfg: TranscriptionConfig) -> TranscriptionConfig:
         imported_class = model_utils.import_class_by_path(classpath)  # type: ASRModel
         logging.info(f"Restoring model : {imported_class.__name__}")
         asr_model = imported_class.restore_from(
-            restore_path=cfg.model_path, map_location=map_location, override_config_path=cfg.override_config_path
+            restore_path=cfg.model_path, map_location=map_location, merge_into_model_config=cfg.merge_into_model_config
         )  # type: ASRModel
         model_name = os.path.splitext(os.path.basename(cfg.model_path))[0]
     else:
         # restore model by name
         asr_model = ASRModel.from_pretrained(
-            model_name=cfg.pretrained_name, map_location=map_location
+            model_name=cfg.pretrained_name, map_location=map_location, merge_into_model_config=cfg.merge_into_model_config
         )  # type: ASRModel
         model_name = cfg.pretrained_name
 
