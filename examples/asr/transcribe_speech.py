@@ -22,7 +22,7 @@ from typing import Optional, List
 
 import pytorch_lightning as pl
 import torch
-from omegaconf import OmegaConf
+from omegaconf import OmegaConf, DictConfig
 
 from nemo.collections.asr.metrics.rnnt_wer import RNNTDecodingConfig
 from nemo.collections.asr.metrics.wer import CTCDecodingConfig
@@ -116,7 +116,7 @@ class TranscriptionConfig:
     #self_attention_model: str = "rel_pos"
     #att_context_size: List[int] = (-1, -1)
 
-    merge_into_model_config: OmegaConf = None
+    merge_into_model_config: DictConfig = None
 
 
 #++model.encoder.self_attention_model=longformer_overlap_rel_pos
