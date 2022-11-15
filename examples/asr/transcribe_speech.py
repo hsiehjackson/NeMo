@@ -116,7 +116,7 @@ class TranscriptionConfig:
     #self_attention_model: str = "rel_pos"
     #att_context_size: List[int] = (-1, -1)
 
-    merge_into_model_config: Optional[Dict[str, Any]] = None
+    merge_into_model_config: Optional[Any] = None
 
 
 #++model.encoder.self_attention_model=longformer_overlap_rel_pos
