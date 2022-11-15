@@ -18,7 +18,7 @@ import json
 import os
 from dataclasses import dataclass, is_dataclass
 from pathlib import Path
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Any
 
 import pytorch_lightning as pl
 import torch
@@ -116,7 +116,7 @@ class TranscriptionConfig:
     #self_attention_model: str = "rel_pos"
     #att_context_size: List[int] = (-1, -1)
 
-    merge_into_model_config: Dict = None
+    merge_into_model_config: Optional[Dict[str, Any]] = None
 
 
 #++model.encoder.self_attention_model=longformer_overlap_rel_pos
