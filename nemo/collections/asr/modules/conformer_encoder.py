@@ -497,8 +497,6 @@ class ConformerEncoder(NeuralModule, StreamingEncoder, Exportable):
             padding_length.size(0), -1
         ) < padding_length.unsqueeze(-1)
 
-        pad_mask = ~pad_mask
-
         if self.use_att_mask:
             # pad_mask_for_att_mask is the mask which helps to ignore paddings
             pad_mask_for_att_mask = pad_mask.unsqueeze(1).repeat([1, max_audio_length, 1])
@@ -511,6 +509,8 @@ class ConformerEncoder(NeuralModule, StreamingEncoder, Exportable):
             att_mask = ~att_mask
         else:
             att_mask = None
+
+        pad_mask = ~pad_mask
 
         return pad_mask, att_mask
 
@@ -632,6 +632,39 @@ class ConformerEncoder(NeuralModule, StreamingEncoder, Exportable):
         )
 
         return cache_last_channel, cache_last_time
+
+    def update_self_attention_model(self, self_attention_model: str, att_context_size: List[int] = None):
+
+        if att_context_size:
+            att_context_size = list(att_context_size)
+        else:
+            att_context_size = [-1, -1]
+
+        if self_attention_model == 'rel_pos_local_attn':
+            use_att_mask = False
+        else:
+            use_att_mask = True
+        new_pos_enc = ChunkedRelPositionalEncoding(
+            att_context_size=att_context_size,
+            d_model=model_cfg.encoder.d_model,
+            dropout_rate=model_cfg.encoder.dropout,
+            max_len=model_cfg.encoder.pos_emb_max_len,
+            xscale=model_cfg.encoder.xscale,
+            dropout_rate_emb=model_cfg.encoder.dropout_emb,
+        )
+        new_pos_enc.load_state_dict(state_dict=m.save_dict())
+        pos_enc = new_pos_enc
+
+        if not untie_biases and self_attention_model == "rel_pos":
+            d_head = self.d_model // self.n_heads
+            pos_bias_u = nn.Parameter(torch.Tensor(n_heads, d_head))
+            pos_bias_v = nn.Parameter(torch.Tensor(n_heads, d_head))
+            nn.init.zeros_(pos_bias_u)
+            nn.init.zeros_(pos_bias_v)
+        else:
+            pos_bias_u = None
+            pos_bias_v = None
+
 
 
 class ConformerEncoderAdapter(ConformerEncoder, adapter_mixins.AdapterModuleMixin):
