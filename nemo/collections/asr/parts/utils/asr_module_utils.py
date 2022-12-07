@@ -108,7 +108,7 @@ def change_conformer_attention_model(
         )
         return
 
-    if not isinstance(model.encoder, conv_asr.ConvASREncoder):
+    if not isinstance(model.encoder, conformer_encoder.ConformerEncoder):
         logging.info(
             f"Could not change the self_attention_model in Conformer Encoder "
             f"since the `encoder` module is not an instance of `ConformerEncoder`.\n"
