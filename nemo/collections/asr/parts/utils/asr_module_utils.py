@@ -101,52 +101,63 @@ def change_conformer_attention_model(
         update_config: Whether to update the config or not with the new attention model
     """
 
+    if update_config and not hasattr(model.cfg, 'encoder'):
+        logging.info(
+            "Could not change the self_attention_model in Conformer Encoder "
+            "since the model provided does not contain an `encoder` module in its config."
+        )
+        return
+
+    if not isinstance(model.encoder, conv_asr.ConvASREncoder):
+        logging.info(
+            f"Could not change the self_attention_model in Conformer Encoder "
+            f"since the `encoder` module is not an instance of `ConformerEncoder`.\n"
+            f"Provided encoder class = {model.encoder.__class__.__name__}"
+        )
+        return
+
     if att_context_size:
         att_context_size = list(att_context_size)
     else:
         att_context_size = [-1, -1]
 
-    # check that encoder is conformer
-    if hasattr(model, "encoder") and type(model.encoder) == conformer_encoder.ConformerEncoder:
-        if self_attention_model == 'rel_pos_local_attn':
-            model.encoder.att_mask = None
+    if self_attention_model == 'rel_pos_local_attn':
+        model.encoder.att_mask = None
 
-        if self_attention_model == "rel_pos":
-            new_pos_enc = multi_head_attention.RelPositionalEncoding(
-                d_model=model.cfg.encoder.d_model,
-                dropout_rate=model.cfg.encoder.dropout,
-                max_len=model.cfg.encoder.pos_emb_max_len,
-                xscale=model.encoder.xscale,
-                dropout_rate_emb=model.cfg.encoder.dropout_emb,
-            )
-        elif self_attention_model == 'rel_pos_local_attn':
-            new_pos_enc = multi_head_attention.ChunkedRelPositionalEncoding(
-                att_context_size=att_context_size,
-                d_model=model.cfg.encoder.d_model,
-                dropout_rate=model.cfg.encoder.dropout,
-                max_len=model.cfg.encoder.pos_emb_max_len,
-                xscale=model.encoder.xscale,
-                dropout_rate_emb=model.cfg.encoder.dropout_emb,
-            )
-        elif self_attention_model == "abs_pos":
-            new_pos_enc = multi_head_attention.PositionalEncoding(
-                d_model=model.cfg.encoder.d_model,
-                dropout_rate=model.cfg.encoder.dropout,
-                max_len=model.cfg.encoder.pos_emb_max_len,
-                xscale=model.encoder.xscale,
-            )
-        else:
-            raise ValueError(f"Not valid self_attention_model: '{self_attention_model}'!")
+    if self_attention_model == "rel_pos":
+        new_pos_enc = multi_head_attention.RelPositionalEncoding(
+            d_model=model.cfg.encoder.d_model,
+            dropout_rate=model.cfg.encoder.dropout,
+            max_len=model.cfg.encoder.pos_emb_max_len,
+            xscale=model.encoder.xscale,
+            dropout_rate_emb=model.cfg.encoder.dropout_emb,
+        )
+    elif self_attention_model == 'rel_pos_local_attn':
+        new_pos_enc = multi_head_attention.ChunkedRelPositionalEncoding(
+            att_context_size=att_context_size,
+            d_model=model.cfg.encoder.d_model,
+            dropout_rate=model.cfg.encoder.dropout,
+            max_len=model.cfg.encoder.pos_emb_max_len,
+            xscale=model.encoder.xscale,
+            dropout_rate_emb=model.cfg.encoder.dropout_emb,
+        )
+    elif self_attention_model == "abs_pos":
+        new_pos_enc = multi_head_attention.PositionalEncoding(
+            d_model=model.cfg.encoder.d_model,
+            dropout_rate=model.cfg.encoder.dropout,
+            max_len=model.cfg.encoder.pos_emb_max_len,
+            xscale=model.encoder.xscale,
+        )
+    else:
+        raise ValueError(f"Not valid self_attention_model: '{self_attention_model}'!")
 
-        new_pos_enc = new_pos_enc.to(device=model.device)
-        new_pos_enc.load_state_dict(state_dict=model.encoder.pos_enc.state_dict(), strict=False)
-        del model.encoder.pos_enc
-        model.encoder.pos_enc = new_pos_enc
+    new_pos_enc = new_pos_enc.to(device=model.device)
+    new_pos_enc.load_state_dict(state_dict=model.encoder.pos_enc.state_dict(), strict=False)
+    del model.encoder.pos_enc
+    model.encoder.pos_enc = new_pos_enc
 
-        model.encoder.self_attention_model = self_attention_model
-        model.encoder.set_max_audio_length(model.encoder.pos_emb_max_len)
-
-    # update encoder, remember pos_bias etc
+    model.encoder.self_attention_model = self_attention_model
+    model.encoder.set_max_audio_length(model.encoder.pos_emb_max_len)
 
     for name, m in model.named_modules():
         if type(m) == conformer_modules.ConformerLayer:
