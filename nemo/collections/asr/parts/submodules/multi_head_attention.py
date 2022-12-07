@@ -34,6 +34,7 @@ Part of this code is adopted from https://github.com/espnet/espnet
 
 import math
 from functools import lru_cache
+from typing import List
 
 import torch
 import torch.nn as nn
@@ -287,12 +288,12 @@ class RelPositionMultiHeadAttentionLongformer(RelPositionMultiHeadAttention):
 
     # Longformer implementation for overlap case adapted for arbitrary left and right chunk size
     # https://github.com/allenai/longformer/blob/master/longformer/sliding_chunks.py
-    def _skew(self, x: torch.Tensor, direction: tuple[int], padding_value: float) -> torch.Tensor:
+    def _skew(self, x: torch.Tensor, direction: List[int], padding_value: float) -> torch.Tensor:
         """Convert diagonals into columns (or columns into diagonals depending on `direction`
 
         Args:
             x (torch.Tensor): (batch x head, chunk_count, 2w, 2w)
-            direction (tuple[int]): padding directions
+            direction (List[int]): padding directions
             padding_value (float): value to pad with
 
         Returns:
@@ -303,7 +304,7 @@ class RelPositionMultiHeadAttentionLongformer(RelPositionMultiHeadAttention):
         x_padded = x_padded.view(*x_padded.size()[:-2], x_padded.size(-1), x_padded.size(-2))
         return x_padded
 
-    def _skew2(self, x: torch.Tensor, padding_value: tuple[int]) -> torch.Tensor:
+    def _skew2(self, x: torch.Tensor, padding_value: float) -> torch.Tensor:
         """Shift every row 1 step to right converting columns into diagonals
 
         Args:
