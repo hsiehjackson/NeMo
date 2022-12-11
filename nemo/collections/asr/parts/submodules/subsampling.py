@@ -73,7 +73,7 @@ class ConvSubsampling(torch.nn.Module):
     """
 
     def __init__(
-        self, subsampling, subsampling_factor, feat_in, feat_out, conv_channels, activation=nn.ReLU(), is_causal=False
+        self, subsampling, subsampling_factor, feat_in, feat_out, conv_channels, kernel_size=3, activation=nn.ReLU(), is_causal=False
     ):
         super(ConvSubsampling, self).__init__()
         self._subsampling = subsampling
@@ -92,7 +92,7 @@ class ConvSubsampling(torch.nn.Module):
 
         if subsampling == 'vggnet':
             self._stride = 2
-            self._kernel_size = 2
+            self._kernel_size = kernel_size
             self._ceil_mode = True
 
             self._left_padding = 0
@@ -123,7 +123,7 @@ class ConvSubsampling(torch.nn.Module):
 
         elif subsampling == 'dw_striding':
             self._stride = 2
-            self._kernel_size = 3
+            self._kernel_size = kernel_size
             self._ceil_mode = False
 
             self._left_padding = (self._kernel_size - 1) // 2
@@ -166,9 +166,41 @@ class ConvSubsampling(torch.nn.Module):
                 layers.append(activation)
                 in_channels = conv_channels
 
+        elif subsampling == 'dw_only_striding':
+            self._stride = 2
+            self._kernel_size = kernel_size
+            self._ceil_mode = False
+
+            self._left_padding = (self._kernel_size - 1) // 2
+            self._right_padding = (self._kernel_size - 1) // 2
+
+            for i in range(self._sampling_num):
+                layers.extend(
+                    [
+                        torch.nn.Conv2d(
+                            in_channels=in_channels,
+                            out_channels=in_channels,
+                            kernel_size=self._kernel_size,
+                            stride=self._stride,
+                            padding=self._left_padding,
+                            groups=in_channels,
+                        ),
+                        torch.nn.Conv2d(
+                            in_channels=in_channels,
+                            out_channels=conv_channels,
+                            kernel_size=1,
+                            stride=1,
+                            padding=0,
+                            groups=1,
+                        ),
+                    ]
+                )
+                layers.append(activation)
+                in_channels = conv_channels
+
         elif subsampling == 'striding':
             self._stride = 2
-            self._kernel_size = 3
+            self._kernel_size = kernel_size
             self._ceil_mode = False
 
             if self.is_causal:

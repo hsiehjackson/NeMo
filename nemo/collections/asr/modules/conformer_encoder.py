@@ -173,6 +173,7 @@ class ConformerEncoder(NeuralModule, StreamingEncoder, Exportable):
         subsampling='striding',
         subsampling_factor=4,
         subsampling_conv_channels=-1,
+        subsampling_kernel_size=3,
         reduction=None,
         reduction_position=None,
         reduction_factor=1,
@@ -274,6 +275,7 @@ class ConformerEncoder(NeuralModule, StreamingEncoder, Exportable):
                     conv_channels=subsampling_conv_channels,
                     activation=nn.ReLU(True),
                     is_causal=causal_downsampling,
+                    kernel_size=subsampling_kernel_size,
                 )
         else:
             self.pre_encode = nn.Linear(feat_in, d_model)
