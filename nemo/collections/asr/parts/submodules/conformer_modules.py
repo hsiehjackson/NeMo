@@ -49,6 +49,8 @@ class ConformerLayer(torch.nn.Module, AdapterModuleMixin, AccessMixin):
         d_model,
         d_ff,
         self_attention_model='rel_pos',
+        global_tokens=0,
+        global_tokens_placing="start",
         n_heads=4,
         conv_kernel_size=31,
         conv_norm_type='batch_norm',
@@ -100,6 +102,8 @@ class ConformerLayer(torch.nn.Module, AdapterModuleMixin, AccessMixin):
                 pos_bias_v=pos_bias_v,
                 max_cache_len=MHA_max_cache_len,
                 att_context_size=att_context_size,
+                global_tokens=global_tokens,
+                global_tokens_placing=global_tokens_placing
             )
         elif self_attention_model == 'abs_pos':
             self.self_attn = MultiHeadAttention(

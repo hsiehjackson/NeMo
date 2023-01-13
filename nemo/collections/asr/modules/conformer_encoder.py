@@ -192,6 +192,8 @@ class ConformerEncoder(NeuralModule, StreamingEncoder, Exportable):
         dropout_pre_encoder=0.1,
         dropout_emb=0.1,
         dropout_att=0.0,
+        global_tokens=0,
+        global_tokens_placing="start",
     ):
         super().__init__()
         d_ff = d_model * ff_expansion_factor
@@ -338,6 +340,8 @@ class ConformerEncoder(NeuralModule, StreamingEncoder, Exportable):
                 d_model=d_model,
                 d_ff=d_ff,
                 self_attention_model=self_attention_model,
+                global_tokens=global_tokens,
+                global_tokens_placing=global_tokens_placing,
                 n_heads=n_heads,
                 conv_kernel_size=conv_kernel_size,
                 conv_norm_type=conv_norm_type,
@@ -737,6 +741,8 @@ class ConformerEncoder(NeuralModule, StreamingEncoder, Exportable):
                         att_context_size=att_context_size,
                         pos_bias_u=None,
                         pos_bias_v=None,
+                        global_tokens=self._cfg.get("global_tokens", 0),
+                        global_tokens_placing=self._cfg.get("global_token_placing", "start")
                     )
                 elif self_attention_model == 'abs_pos':
                     new_attn = MultiHeadAttention(
