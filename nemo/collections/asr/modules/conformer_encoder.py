@@ -25,7 +25,7 @@ from omegaconf import DictConfig, ListConfig
 from nemo.collections.asr.models.configs import CacheAwareStreamingConfig
 from nemo.collections.asr.parts.mixins.streaming import StreamingEncoder
 from nemo.collections.asr.parts.submodules.causal_convs import CausalConv1D
-from nemo.collections.asr.parts.submodules.conformer_modules import ConformerLayer
+from nemo.collections.asr.parts.submodules.conformer_modules import ConformerLayer, ConformerConvolution
 from nemo.collections.asr.parts.submodules.multi_head_attention import (
     LocalAttRelPositionalEncoding,
     MultiHeadAttention,
@@ -165,33 +165,33 @@ class ConformerEncoder(NeuralModule, StreamingEncoder, Exportable):
             return set()
 
     def __init__(
-        self,
-        feat_in,
-        n_layers,
-        d_model,
-        feat_out=-1,
-        causal_downsampling=False,
-        subsampling='striding',
-        subsampling_factor=4,
-        subsampling_conv_channels=-1,
-        reduction=None,
-        reduction_position=None,
-        reduction_factor=1,
-        ff_expansion_factor=4,
-        self_attention_model='rel_pos',
-        n_heads=4,
-        att_context_size=None,
-        att_context_style='regular',
-        xscaling=True,
-        untie_biases=True,
-        pos_emb_max_len=5000,
-        conv_kernel_size=31,
-        conv_norm_type='batch_norm',
-        conv_context_size=None,
-        dropout=0.1,
-        dropout_pre_encoder=0.1,
-        dropout_emb=0.1,
-        dropout_att=0.0,
+            self,
+            feat_in,
+            n_layers,
+            d_model,
+            feat_out=-1,
+            causal_downsampling=False,
+            subsampling='striding',
+            subsampling_factor=4,
+            subsampling_conv_channels=-1,
+            reduction=None,
+            reduction_position=None,
+            reduction_factor=1,
+            ff_expansion_factor=4,
+            self_attention_model='rel_pos',
+            n_heads=4,
+            att_context_size=None,
+            att_context_style='regular',
+            xscaling=True,
+            untie_biases=True,
+            pos_emb_max_len=5000,
+            conv_kernel_size=31,
+            conv_norm_type='batch_norm',
+            conv_context_size=None,
+            dropout=0.1,
+            dropout_pre_encoder=0.1,
+            dropout_emb=0.1,
+            dropout_att=0.0,
         global_tokens=0,
         global_tokens_placing="start",
         global_attn_separate=False
@@ -204,6 +204,9 @@ class ConformerEncoder(NeuralModule, StreamingEncoder, Exportable):
         self.scale = math.sqrt(self.d_model)
         self.att_context_style = att_context_style
         self.subsampling_factor = subsampling_factor
+
+        #self_attention_model = "rel_pos"
+
         self.self_attention_model = self_attention_model
 
         if att_context_size:
@@ -216,9 +219,9 @@ class ConformerEncoder(NeuralModule, StreamingEncoder, Exportable):
 
         if conv_context_size is not None:
             if (
-                not isinstance(conv_context_size, list)
-                and not isinstance(conv_context_size, str)
-                and not isinstance(conv_context_size, ListConfig)
+                    not isinstance(conv_context_size, list)
+                    and not isinstance(conv_context_size, str)
+                    and not isinstance(conv_context_size, ListConfig)
             ):
                 raise ValueError(
                     f"Invalid conv_context_size! It should be the string 'causal' or a list of two integers."
@@ -435,7 +438,7 @@ class ConformerEncoder(NeuralModule, StreamingEncoder, Exportable):
             audio_signal, length = self.pre_encode(x=audio_signal, lengths=length)
             # self.streaming_cfg is set by setup_streaming_cfg(), called in the init
             if self.streaming_cfg.drop_extra_pre_encoded > 0 and cache_last_channel is not None:
-                audio_signal = audio_signal[:, self.streaming_cfg.drop_extra_pre_encoded :, :]
+                audio_signal = audio_signal[:, self.streaming_cfg.drop_extra_pre_encoded:, :]
                 # TODO: find a better solution
                 length = (length - self.streaming_cfg.drop_extra_pre_encoded).float()
                 length = torch.clip(length, min=0).int()
@@ -537,7 +540,7 @@ class ConformerEncoder(NeuralModule, StreamingEncoder, Exportable):
         return mask
 
     def setup_streaming_params(
-        self, chunk_size: int = None, shift_size: int = None, left_chunks: int = None, max_context: int = 10000
+            self, chunk_size: int = None, shift_size: int = None, left_chunks: int = None, max_context: int = 10000
     ):
         """
             This function sets the needed values and parameters to perform streaming. The configuration would be stored in self.streaming_cfg.
@@ -597,8 +600,8 @@ class ConformerEncoder(NeuralModule, StreamingEncoder, Exportable):
 
         if isinstance(streaming_cfg.shift_size, list):
             streaming_cfg.valid_out_len = (
-                streaming_cfg.shift_size[1] - sampling_frames[1]
-            ) // self.subsampling_factor + 1
+                                                  streaming_cfg.shift_size[1] - sampling_frames[1]
+                                          ) // self.subsampling_factor + 1
         else:
             streaming_cfg.valid_out_len = streaming_cfg.shift_size // self.subsampling_factor
 
@@ -610,7 +613,7 @@ class ConformerEncoder(NeuralModule, StreamingEncoder, Exportable):
         if isinstance(streaming_cfg.pre_encode_cache_size, list):
             if streaming_cfg.pre_encode_cache_size[1] >= 1:
                 streaming_cfg.drop_extra_pre_encoded = (
-                    1 + (streaming_cfg.pre_encode_cache_size[1] - 1) // self.subsampling_factor
+                        1 + (streaming_cfg.pre_encode_cache_size[1] - 1) // self.subsampling_factor
                 )
             else:
                 streaming_cfg.drop_extra_pre_encoded = 0
@@ -650,11 +653,11 @@ class ConformerEncoder(NeuralModule, StreamingEncoder, Exportable):
         return cache_last_channel, cache_last_time
 
     def change_attention_model(
-        self,
-        self_attention_model: str = None,
-        att_context_size: List[int] = None,
-        update_config: bool = True,
-        device: torch.device = None,
+            self,
+            self_attention_model: str = None,
+            att_context_size: List[int] = None,
+            update_config: bool = True,
+            device: torch.device = None,
     ):
 
         """
@@ -770,6 +773,66 @@ class ConformerEncoder(NeuralModule, StreamingEncoder, Exportable):
             self._cfg.self_attention_model = self_attention_model
             self._cfg.att_context_size = att_context_size
 
+    def change_conf_layers(self, new_kernel_size, new_ss_channels=None, new_subsampling_factor=None, update_config=True,
+                           device: torch.device = None):
+
+        # reduce by keeping first n of each (or center for kernel?)
+        # to make ft easier
+
+        if new_subsampling_factor is not None or new_ss_channels is not None:
+            if new_subsampling_factor is None:
+                new_subsampling_factor = self._cfg.subsampling_factor
+
+            if new_ss_channels is None:
+                new_ss_channels = self._cfg.d_model
+
+            new_pre_encode = ConvSubsampling(
+                subsampling=self._cfg.subsampling,
+                subsampling_factor=new_subsampling_factor,
+                feat_in=self._cfg.feat_in,
+                feat_out=self._cfg.d_model,
+                conv_channels=new_ss_channels,
+                activation=nn.ReLU(True),
+                is_causal=self._cfg.causal_downsampling,
+            )
+
+            if device is not None:
+                new_pre_encode = new_pre_encode.to(device=device)
+
+            state_dict = self.pre_encode.state_dict()
+
+            new_pre_encode.load_state_dict(state_dict)
+
+            del self.pre_encode
+            self.pre_encode = new_pre_encode
+
+        for name, m in self.named_modules():
+            if type(m) == ConformerLayer:
+                new_conv = ConformerConvolution(d_model=self._cfg.d_model, kernel_size=new_kernel_size,
+                                                norm_type=self._cfg.conv_norm_type,
+                                                pointwise_activation=m.conv.pointwise_activation)
+
+                if device is not None:
+                    new_conv = new_conv.to(device=device)
+
+                state_dict = m.conv.state_dict()
+                # state_dict['depthwise_conv.weight'] = torch.zeros(state_dict['depthwise_conv.weight'].shape[:2] + (new_kernel_size,))
+
+                # for now assume smaller
+                # ker_diff = m.conv.kernel_size - new_kernel_size
+                # ker_start_left =
+                start = 11
+                state_dict['depthwise_conv.weight'] = state_dict['depthwise_conv.weight'][:, :,
+                                                      start:start + new_kernel_size]
+
+                new_conv.load_state_dict(state_dict, strict=False)
+
+                del m.conv
+                m.conv = new_conv
+
+            if update_config:
+                self._cfg.conv_kernel_size = new_kernel_size
+
 
 class ConformerEncoderAdapter(ConformerEncoder, adapter_mixins.AdapterModuleMixin):
 
@@ -798,7 +861,7 @@ class ConformerEncoderAdapter(ConformerEncoder, adapter_mixins.AdapterModuleMixi
         cfg = adapter_utils.update_adapter_cfg_input_dim(self, cfg, module_dim=self.d_model)
         return cfg
 
-    def get_accepted_adapter_types(self,) -> Set[type]:
+    def get_accepted_adapter_types(self, ) -> Set[type]:
         types = super().get_accepted_adapter_types()
 
         if len(types) == 0:

@@ -80,6 +80,18 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
         self.preprocessor = SpeechEncDecSelfSupervisedModel.from_config_dict(self._cfg.preprocessor)
         self.encoder = SpeechEncDecSelfSupervisedModel.from_config_dict(self._cfg.encoder)
 
+        self.use_teacher_targets = self._cfg.get("use_ema_teacher", False)
+
+        if self.use_teacher_targets:
+            #check ema_teacher config is present
+            self.teacher_encoder = SpeechEncDecSelfSupervisedModel.from_config_dict(self._cfg.encoder)
+            self.ema_start = self._cfg.ema_teacher.get("ema_start", 0.99)
+            self.ema_end = self._cfg.ema_teacher.get("ema_end", 0.99999)
+            self.ema_steps = self._cfg.ema_teacher.get("ema_steps", 25000)
+            self.ema_avg_layers = self._cfg.ema_teacher.get("ema_avg_layers", None)  # None means final out?
+
+            self.teacher_inst_norm = nn.InstanceNorm1d(num_features=self._cfg.encoder.d_model)
+
         self.decoder_losses = None
 
         if "loss_list" in self._cfg:
@@ -162,7 +174,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
         # Instantiate tarred dataset loader or normal dataset loader
         if config.get('is_tarred', False):
             if ('tarred_audio_filepaths' in config and config['tarred_audio_filepaths'] is None) or (
-                'manifest_filepath' in config and config['manifest_filepath'] is None
+                    'manifest_filepath' in config and config['manifest_filepath'] is None
             ):
                 logging.warning(
                     "Could not load dataset as `manifest_filepath` was None or "
@@ -299,7 +311,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
 
     @typecheck()
     def forward(
-        self, input_signal=None, input_signal_length=None, processed_signal=None, processed_signal_length=None,
+            self, input_signal=None, input_signal_length=None, processed_signal=None, processed_signal_length=None,
     ):
         """
         Forward pass of the model.
@@ -334,15 +346,15 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
 
         # reset module registry from AccessMixin
         if (
-            (self.training or in_validation_step)
-            and self.decoder_losses is not None
-            and self.output_from_layer is not None
-            and len(self.output_from_layer) > 0
+                (self.training or in_validation_step)
+                and self.decoder_losses is not None
+                and self.output_from_layer is not None
+                and len(self.output_from_layer) > 0
         ):
             layer_names = list(self.output_from_layer.values())
             register_layer = any([name is not None for name in layer_names])
 
-            if register_layer:
+            if register_layer or self.use_teacher_targets:
                 self.access_cfg['save_encoder_tensors'] = True
                 self.set_access_enabled(access_enabled=True)
 
@@ -377,6 +389,36 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
             spec_masks[idx, :, proc_len:] = 0.0
 
         encoded, encoded_len = self.encoder(audio_signal=processed_signal, length=processed_signal_length)
+
+        if self.use_teacher_targets:
+            with torch.no_grad():
+
+                teacher_state = self.teacher_encoder.state_dict()
+                student_state = self.encoder.state_dict()
+
+                self.ema_current = self.ema_start + (self.ema_end - self.ema_start) * min(1, (
+                            self.trainer.global_step / self.ema_steps))
+
+                for param_tensor in student_state:
+                    if teacher_state[param_tensor].dtype != torch.int64:
+                        teacher_state[param_tensor][:] = teacher_state[param_tensor] * self.ema_current + student_state[
+                            param_tensor] * (1 - self.ema_current)
+
+                enc_teacher, _ = self.teacher_encoder(audio_signal=spectrograms, length=processed_signal_length)
+
+                teacher_reg = self.get_module_registry(self.teacher_encoder)
+
+                layers_to_avg = []
+                for layer_name in self.ema_avg_layers:
+                    layers_to_avg.append(teacher_reg[layer_name]["encoder"][-1].unsqueeze(1))
+
+                batched_teacher_layers = torch.cat(layers_to_avg, dim=1)
+                bs, l, t = batched_teacher_layers.shape[:3]
+                norm_teacher_layers = self.teacher_inst_norm(batched_teacher_layers.reshape(bs * l, t, -1))
+                teacher_targets = norm_teacher_layers.reshape(bs, l, t, -1).sum(dim=1).transpose(-2, -1)
+                spectrograms = teacher_targets
+
+                #TODO: rename spectrograms...
 
         return spectrograms, spec_masks, encoded, encoded_len
 

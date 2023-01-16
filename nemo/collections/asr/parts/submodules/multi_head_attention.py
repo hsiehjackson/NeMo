@@ -275,7 +275,7 @@ class RelPositionMultiHeadAttentionLongformer(RelPositionMultiHeadAttention):
     """
 
     def __init__(self, n_head, n_feat, dropout_rate, pos_bias_u, pos_bias_v, att_context_size, max_cache_len=0,
-                 global_tokens=4, global_tokens_placing="start", global_attn_separate=False):
+                 global_tokens=4, global_tokens_placing="every_n", global_attn_separate=False):
         """Construct an RelPositionMultiHeadedAttention object."""
         super().__init__(
             n_head=n_head,
@@ -306,18 +306,14 @@ class RelPositionMultiHeadAttentionLongformer(RelPositionMultiHeadAttention):
             k (torch.Tensor): (batch, head, time2, size)
             v (torch.Tensor): (batch, head, time2, size)
         """
-        n_batch = query.size(0)
         if self.global_attn_separate:
-            q = self.global_q(query).view(n_batch, -1, self.h, self.d_k)
-            k = self.global_k(key).view(n_batch, -1, self.h, self.d_k)
-            v = self.global_v(value).view(n_batch, -1, self.h, self.d_k)
+            q = self.global_q(query)
+            k = self.global_k(key)
+            v = self.global_v(value)
         else:
-            q = self.linear_q(query).view(n_batch, -1, self.h, self.d_k)
-            k = self.linear_k(key).view(n_batch, -1, self.h, self.d_k)
-            v = self.linear_v(value).view(n_batch, -1, self.h, self.d_k)
-        q = q.transpose(1, 2)
-        k = k.transpose(1, 2)
-        v = v.transpose(1, 2)
+            q = self.linear_q(query)
+            k = self.linear_k(key)
+            v = self.linear_v(value)
 
         return q, k, v
 
@@ -403,6 +399,8 @@ class RelPositionMultiHeadAttentionLongformer(RelPositionMultiHeadAttention):
 
                 if self.global_tokens_placing == "start":
                     is_index_global_attn[:, :self.global_tokens] = 1
+                elif self.global_tokens_placing == "every_n":
+                    is_index_global_attn[:, ::self.global_tokens] = 1
 
                 # compute global attn indices required through out forward fn
                 (
@@ -467,11 +465,8 @@ class RelPositionMultiHeadAttentionLongformer(RelPositionMultiHeadAttention):
                                              ]
 
                 # overwrite values with global attention
-                x[is_index_global_attn_nonzero[::-1]] = nonzero_global_attn_output
-                # The attention weights for tokens with global attention are
-                # just filler values, they were never used to compute the output.
-                # Fill with 0 now, the correct values are in 'global_attn_probs'.
-                x[is_index_global_attn_nonzero] = 0
+                x[is_index_global_attn_nonzero] = nonzero_global_attn_output
+
 
             # x = self.sliding_chunks_matmul_pv(p_attn, v, w).reshape(n_batch, -1, self.h * self.d_k)[:, :T]
             # (batch, time, size)
@@ -587,7 +582,8 @@ class RelPositionMultiHeadAttentionLongformer(RelPositionMultiHeadAttention):
             is_local_index_no_global_attn_nonzero,
             is_index_masked,
     ):
-        seq_len, batch_size, embed_dim = hidden_states.transpose(0, 1).shape
+        hidden_states = hidden_states.transpose(0, 1)
+        seq_len, batch_size, embed_dim = hidden_states.shape
 
         # prepare global hidden states
         global_attn_hidden_states = hidden_states.new_zeros(max_num_global_attn_indices, batch_size, embed_dim)
