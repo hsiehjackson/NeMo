@@ -80,9 +80,9 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
         self.preprocessor = SpeechEncDecSelfSupervisedModel.from_config_dict(self._cfg.preprocessor)
         self.encoder = SpeechEncDecSelfSupervisedModel.from_config_dict(self._cfg.encoder)
 
-        self.use_teacher_targets = True
+        self.use_teacher_targets = self._cfg.get("use_ema_teacher", False)
 
-        if self._cfg.get("use_ema_teacher", False):
+        if self.use_teacher_targets:
             #check ema_teacher config is present
             self.teacher_encoder = SpeechEncDecSelfSupervisedModel.from_config_dict(self._cfg.encoder)
             self.ema_start = self._cfg.ema_teacher.get("ema_start", 0.99)
