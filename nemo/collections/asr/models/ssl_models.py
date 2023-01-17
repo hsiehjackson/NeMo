@@ -92,7 +92,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
 
             self.teacher_inst_norm = nn.InstanceNorm1d(num_features=self._cfg.encoder.d_model)
 
-        self.multi_masks = self._cfg.get("multi_masks", 8)
+        self.multi_masks = self._cfg.get("multi_masks", 1)
 
         self.decoder_losses = None
 

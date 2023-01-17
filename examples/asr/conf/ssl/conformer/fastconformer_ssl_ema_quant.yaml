@@ -112,6 +112,8 @@ model:
 
   decoder_out: 12
 
+  multi_masks: 8
+
   use_ema_teacher: true
   ema_teacher:
     ema_start: 0.999
