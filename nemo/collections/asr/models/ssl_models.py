@@ -92,6 +92,8 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
 
             self.teacher_inst_norm = nn.InstanceNorm1d(num_features=self._cfg.encoder.d_model)
 
+        self.multi_masks = self._cfg.get("multi_masks", 8)
+
         self.decoder_losses = None
 
         if "loss_list" in self._cfg:
@@ -375,10 +377,15 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
             self.feat_pen = processed_signal.float().pow(2).mean() * self.pen_factor
         spectrograms = processed_signal.detach().clone()
 
+        if self.multi_masks > 1:
+            processed_signal = processed_signal.repeat(self.multi_masks, 1, 1)
+            processed_signal_length = processed_signal_length.repeat(self.multi_masks)
+
         if self.dropout_features:
             processed_signal = self.dropout_features(processed_signal)
         if self.dropout_features_q:
             spectrograms = self.dropout_features_q(spectrograms)
+
 
         if self.apply_masking:
             processed_signal = self.spec_augmentation(input_spec=processed_signal, length=processed_signal_length)
@@ -404,7 +411,8 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
                         teacher_state[param_tensor][:] = teacher_state[param_tensor] * self.ema_current + student_state[
                             param_tensor] * (1 - self.ema_current)
 
-                enc_teacher, _ = self.teacher_encoder(audio_signal=spectrograms, length=processed_signal_length)
+                enc_teacher, _ = self.teacher_encoder(audio_signal=spectrograms,
+                                                      length=processed_signal_length[:spectrograms.shape[0]])
 
                 teacher_reg = self.get_module_registry(self.teacher_encoder)
 
@@ -417,6 +425,8 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
                 norm_teacher_layers = self.teacher_inst_norm(batched_teacher_layers.reshape(bs * l, t, -1))
                 teacher_targets = norm_teacher_layers.reshape(bs, l, t, -1).sum(dim=1).transpose(-2, -1)
                 spectrograms = teacher_targets
+
+                spectrograms = spectrograms.repeat(self.multi_masks, 1, 1)
 
                 #TODO: rename spectrograms...
 
