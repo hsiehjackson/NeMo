@@ -36,7 +36,7 @@ def main(cfg: EvaluationConfig):
 
             a = AudioSegment.from_file(path)
 
-            correct_dur = a.duration_seconds
+            correct_dur = round(a.duration_seconds - 0.1, 2)
             cur_dur = item["duration"]
 
             if cur_dur > correct_dur + 0.01:
