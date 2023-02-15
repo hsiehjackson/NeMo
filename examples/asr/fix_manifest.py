@@ -26,6 +26,8 @@ def main(cfg: EvaluationConfig):
     if cfg.out_manifest == "":
         cfg.out_manifest = cfg.manifest[:-5] + "_fix.json"
 
+    durs = []
+
     with open(cfg.out_manifest, 'w', encoding='utf-8') as f:
         with open(cfg.manifest, 'r') as fr:
             for idx, line in enumerate(fr):
@@ -38,12 +40,16 @@ def main(cfg: EvaluationConfig):
                 correct_dur = a.duration_seconds
                 cur_dur = item["duration"]
 
+                durs.append(correct_dur)
+
                 if cur_dur > correct_dur + 0.01:
                     print("fixed", cur_dur, "to", correct_dur)
 
                 item["duration"] = correct_dur
 
                 f.write(json.dumps(item) + "\n")
+
+    print(sorted(durs))
 
 
 if __name__ == '__main__':
