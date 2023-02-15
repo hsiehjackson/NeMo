@@ -13,6 +13,7 @@ import json
 
 from pydub import AudioSegment
 
+
 @dataclass
 class EvaluationConfig():
     # Required configs
@@ -22,35 +23,37 @@ class EvaluationConfig():
 
 @hydra_runner(config_name="EvaluationConfig", schema=EvaluationConfig)
 def main(cfg: EvaluationConfig):
-
     if cfg.out_manifest == "":
         cfg.out_manifest = cfg.manifest[:-5] + "_fix.json"
 
     durs = []
 
+    with open(cfg.manifest, 'r') as fr:
+        for idx, line in enumerate(fr):
+            item = json.loads(line)
+
+            path = item["audio_filepath"]
+
+            a = AudioSegment.from_file(path)
+
+            correct_dur = a.duration_seconds
+            cur_dur = item["duration"]
+
+            if cur_dur > correct_dur + 0.01:
+                print("fixed", cur_dur, "to", correct_dur)
+
+            item["duration"] = correct_dur
+
+            durs.append((correct_dur, item))
+
+            # f.write(json.dumps(item) + "\n")
+
+    durs = sorted(durs, key=lambda x: x[0])
+
     with open(cfg.out_manifest, 'w', encoding='utf-8') as f:
-        with open(cfg.manifest, 'r') as fr:
-            for idx, line in enumerate(fr):
-                item = json.loads(line)
-
-                path = item["audio_filepath"]
-
-                a = AudioSegment.from_file(path)
-
-                correct_dur = a.duration_seconds
-                cur_dur = item["duration"]
-
-                durs.append(correct_dur)
-
-                if cur_dur > correct_dur + 0.01:
-                    print("fixed", cur_dur, "to", correct_dur)
-
-                item["duration"] = correct_dur
-
-                f.write(json.dumps(item) + "\n")
-
-    print(sorted(durs))
-
+        for dur, it in durs:
+            print(dur, it["audio_filepath"])
+            f.write(json.dumps(it) + "\n")
 
 if __name__ == '__main__':
     main()  # noqa pylint: disable=no-value-for-parameter
