@@ -89,6 +89,7 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
             self.ema_end = self._cfg.ema_teacher.get("ema_end", 0.99999)
             self.ema_steps = self._cfg.ema_teacher.get("ema_steps", 25000)
             self.ema_avg_layers = self._cfg.ema_teacher.get("ema_avg_layers", None)  # None means final out?
+            self.ema_targets_norm = self._cfg.ema_teacher.get("ema_targets_norm", "inst")
 
             self.teacher_inst_norm = nn.InstanceNorm1d(num_features=self._cfg.encoder.d_model)
 
@@ -422,8 +423,9 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
 
                 batched_teacher_layers = torch.cat(layers_to_avg, dim=1)
                 bs, l, t = batched_teacher_layers.shape[:3]
-                norm_teacher_layers = self.teacher_inst_norm(batched_teacher_layers.reshape(bs * l, t, -1))
-                teacher_targets = norm_teacher_layers.reshape(bs, l, t, -1).sum(dim=1).transpose(-2, -1)
+                if self.ema_targets_norm != "none":
+                    batched_teacher_layers = self.teacher_inst_norm(batched_teacher_layers.reshape(bs * l, t, -1))
+                teacher_targets = batched_teacher_layers.reshape(bs, l, t, -1).sum(dim=1).transpose(-2, -1)
                 spectrograms = teacher_targets
 
                 spectrograms = spectrograms.repeat(self.multi_masks, 1, 1)
@@ -599,3 +601,5 @@ class SpeechEncDecSelfSupervisedModel(ModelPT, ASRModuleMixin, AccessMixin):
         val_loss_mean = torch.stack([x['val_loss'] for x in outputs]).mean()
         tensorboard_logs = {'val_loss': val_loss_mean}
         return {'val_loss': val_loss_mean, 'log': tensorboard_logs}
+
+    #def extract_features(self, ):

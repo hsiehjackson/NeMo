@@ -27,6 +27,11 @@ from tqdm import tqdm
 
 from nemo.collections.asr.parts.preprocessing.features import WaveformFeaturizer
 from nemo.collections.asr.parts.preprocessing.segment import AudioSegment
+from nemo.collections.common.tokenizers.text_to_speech.tts_tokenizers import (
+    BaseTokenizer,
+    EnglishCharsTokenizer,
+    EnglishPhonemesTokenizer,
+)
 from nemo.collections.tts.torch.helpers import (
     BetaBinomialInterpolator,
     beta_binomial_prior_distribution,
@@ -48,7 +53,6 @@ from nemo.collections.tts.torch.tts_data_types import (
     Voiced_mask,
     WithLens,
 )
-from nemo.collections.tts.torch.tts_tokenizers import BaseTokenizer, EnglishCharsTokenizer, EnglishPhonemesTokenizer
 from nemo.core.classes import Dataset
 from nemo.utils import logging
 
@@ -149,7 +153,6 @@ class TTSDataset(Dataset):
             highfreq (Optional[int]): The highfreq input to the mel filter calculation. Defaults to None.
         Keyword Args:
             log_mel_folder (Optional[Union[Path, str]]): The folder that contains or will contain log mel spectrograms.
-            align_prior_matrix_folder (Optional[Union[Path, str]]): The folder that contains or will contain align prior matrices.
             pitch_folder (Optional[Union[Path, str]]): The folder that contains or will contain pitch.
             voiced_mask_folder (Optional[Union[Path, str]]): The folder that contains or will contain voiced mask of the pitch
             p_voiced_folder (Optional[Union[Path, str]]): The folder that contains or will contain p_voiced(probability) of the pitch
@@ -161,7 +164,9 @@ class TTSDataset(Dataset):
             pitch_fmax (Optional[float]): The fmax input to librosa.pyin. Defaults to librosa.note_to_hz('C7').
             pitch_mean (Optional[float]): The mean that we use to normalize the pitch.
             pitch_std (Optional[float]): The std that we use to normalize the pitch.
-            pitch_norm (Optional[bool]): Whether to normalize pitch (via pitch_mean and pitch_std) or not.
+            pitch_norm (Optional[bool]): Whether to normalize pitch or not. If True, requires providing either
+                pitch_stats_path or (pitch_mean and pitch_std).
+            pitch_stats_path (Optional[Path, str]): Path to file containing speaker level pitch statistics.
         """
         super().__init__()
 
@@ -184,11 +189,18 @@ class TTSDataset(Dataset):
             self.tokens = tokens
         self.cache_text = True if self.phoneme_probability is None else False
 
-        # Initialize text normalizer is specified
+        # Initialize text normalizer if specified
         self.text_normalizer = text_normalizer
-        self.text_normalizer_call = (
-            self.text_normalizer.normalize if isinstance(self.text_normalizer, Normalizer) else self.text_normalizer
-        )
+        if self.text_normalizer is None:
+            self.text_normalizer_call = None
+        elif not PYNINI_AVAILABLE:
+            raise ImportError("pynini is not installed, please install via nemo_text_processing/install_pynini.sh")
+        else:
+            self.text_normalizer_call = (
+                self.text_normalizer.normalize
+                if isinstance(self.text_normalizer, Normalizer)
+                else self.text_normalizer
+            )
         self.text_normalizer_call_kwargs = (
             text_normalizer_call_kwargs if text_normalizer_call_kwargs is not None else {}
         )
@@ -215,15 +227,15 @@ class TTSDataset(Dataset):
                         "is_phoneme": item["is_phoneme"] if "is_phoneme" in item else None,
                     }
 
-                    if ("text_normalized" not in item) or ("normalized_text" not in item):
+                    if "normalized_text" in item:
+                        file_info["normalized_text"] = item["normalized_text"]
+                    elif "text_normalized" in item:
+                        file_info["normalized_text"] = item["text_normalized"]
+                    else:
                         text = item["text"]
                         if self.text_normalizer is not None:
                             text = self.text_normalizer_call(text, **self.text_normalizer_call_kwargs)
                         file_info["normalized_text"] = text
-                    elif "normalized_text" in item:
-                        file_info["normalized_text"] = item["normalized_text"]
-                    else:
-                        file_info["normalized_text"] = item["text_normalized"]
 
                     if self.cache_text:
                         file_info["text_tokens"] = self.text_tokenizer(file_info["normalized_text"])
@@ -379,15 +391,6 @@ class TTSDataset(Dataset):
                 )
 
     def add_align_prior_matrix(self, **kwargs):
-        self.align_prior_matrix_folder = kwargs.pop('align_prior_matrix_folder', None)
-
-        if self.align_prior_matrix_folder is None:
-            self.align_prior_matrix_folder = Path(self.sup_data_path) / AlignPriorMatrix.name
-        elif isinstance(self.align_prior_matrix_folder, str):
-            self.align_prior_matrix_folder = Path(self.align_prior_matrix_folder)
-
-        self.align_prior_matrix_folder.mkdir(exist_ok=True, parents=True)
-
         self.use_beta_binomial_interpolator = kwargs.pop('use_beta_binomial_interpolator', False)
         if not self.cache_text:
             if 'use_beta_binomial_interpolator' in kwargs and not self.use_beta_binomial_interpolator:
@@ -415,6 +418,23 @@ class TTSDataset(Dataset):
         self.pitch_mean = kwargs.pop("pitch_mean", None)
         self.pitch_std = kwargs.pop("pitch_std", None)
         self.pitch_norm = kwargs.pop("pitch_norm", False)
+        pitch_stats_path = kwargs.pop("pitch_stats_path", None)
+
+        if self.pitch_norm:
+            # XOR to validate that both or neither pitch mean and std are provided
+            assert (self.pitch_mean is None) == (
+                self.pitch_std is None
+            ), f"Found only 1 of (pitch_mean, pitch_std): ({self.pitch_mean}, {self.pitch_std})"
+
+            # XOR to validate that exactly 1 of (pitch_mean, pitch_std) or pitch_stats_path is provided.
+            assert (self.pitch_mean is None) != (pitch_stats_path is None), (
+                f"pitch_norm requires exactly 1 of (pitch_mean, pitch_std) or pitch_stats_path. "
+                f"Provided: ({self.pitch_mean}, {self.pitch_std}) and {pitch_stats_path}"
+            )
+
+        if pitch_stats_path is not None:
+            with open(Path(pitch_stats_path), 'r', encoding="utf-8") as pitch_f:
+                self.pitch_stats = json.load(pitch_f)
 
     # saving voiced_mask and p_voiced with pitch
     def add_voiced_mask(self, **kwargs):
@@ -516,19 +536,11 @@ class TTSDataset(Dataset):
         # Load alignment prior matrix if needed
         align_prior_matrix = None
         if AlignPriorMatrix in self.sup_data_types_set:
+            mel_len = self.get_log_mel(audio).shape[2]
             if self.use_beta_binomial_interpolator:
-                mel_len = self.get_log_mel(audio).shape[2]
                 align_prior_matrix = torch.from_numpy(self.beta_binomial_interpolator(mel_len, text_length.item()))
             else:
-                prior_path = self.align_prior_matrix_folder / f"{rel_audio_path_as_text_id}.pt"
-
-                if prior_path.exists():
-                    align_prior_matrix = torch.load(prior_path)
-                else:
-                    mel_len = self.get_log_mel(audio).shape[2]
-                    align_prior_matrix = beta_binomial_prior_distribution(text_length, mel_len)
-                    align_prior_matrix = torch.from_numpy(align_prior_matrix)
-                    torch.save(align_prior_matrix, prior_path)
+                align_prior_matrix = torch.from_numpy(beta_binomial_prior_distribution(text_length, mel_len))
 
         non_exist_voiced_index = []
         my_var = locals()
@@ -561,12 +573,26 @@ class TTSDataset(Dataset):
 
         # normalize pitch if requested.
         if pitch is not None:
-            if self.pitch_mean is not None and self.pitch_std is not None and self.pitch_norm:
-                pitch -= self.pitch_mean
-                pitch[pitch == -self.pitch_mean] = 0.0  # Zero out values that were previously zero
-                pitch /= self.pitch_std
-
             pitch_length = torch.tensor(len(pitch)).long()
+            if self.pitch_norm:
+                if self.pitch_mean is not None and self.pitch_std is not None:
+                    sample_pitch_mean = self.pitch_mean
+                    sample_pitch_std = self.pitch_std
+                elif self.pitch_stats:
+                    if "speaker_id" in sample and str(sample["speaker_id"]) in self.pitch_stats:
+                        pitch_stats = self.pitch_stats[str(sample["speaker_id"])]
+                    elif "default" in self.pitch_stats:
+                        pitch_stats = self.pitch_stats["default"]
+                    else:
+                        raise ValueError(f"Could not find pitch stats for {sample}.")
+                    sample_pitch_mean = pitch_stats["pitch_mean"]
+                    sample_pitch_std = pitch_stats["pitch_std"]
+                else:
+                    raise ValueError(f"Missing statistics for pitch normalization.")
+
+                pitch -= sample_pitch_mean
+                pitch[pitch == -sample_pitch_mean] = 0.0  # Zero out values that were previously zero
+                pitch /= sample_pitch_std
 
         # Load energy if needed
         energy, energy_length = None, None
@@ -805,6 +831,7 @@ class MixerTTSXDataset(TTSDataset):
         if LMTokens in self.sup_data_types_set:
             lm_tokens = torch.tensor(self.id2lm_tokens[index]).long()
 
+        # Note: Please change the indices in _collate_fn if any items are added/removed.
         return (
             audio,
             audio_length,
@@ -826,8 +853,8 @@ class MixerTTSXDataset(TTSDataset):
 
     def _collate_fn(self, batch):
         batch = list(zip(*batch))
-        data_dict = self.general_collate_fn(list(zip(*batch[:13])))
-        lm_tokens_list = batch[13]
+        data_dict = self.general_collate_fn(list(zip(*batch[:15])))
+        lm_tokens_list = batch[15]
 
         if LMTokens in self.sup_data_types_set:
             lm_tokens = torch.full(
@@ -957,6 +984,7 @@ class VocoderDataset(Dataset):
         if not self.load_precomputed_mel:
             features = AudioSegment.segment_from_file(
                 sample["audio_filepath"],
+                target_sr=self.sample_rate,
                 n_segments=self.n_segments if self.n_segments is not None else -1,
                 trim=self.trim,
             )
