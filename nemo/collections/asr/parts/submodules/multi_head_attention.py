@@ -426,50 +426,49 @@ class RelPositionMultiHeadAttentionLongformer(RelPositionMultiHeadAttention):
             # free memory
             del global_key_attn_scores
 
-            attn = torch.softmax(scores, dim=-1).masked_fill(mask, 0.0)
-            p_attn = self.dropout(attn)
-            # (batch, head, time, 2w + 1)
+        attn = torch.softmax(scores, dim=-1).masked_fill(mask, 0.0)
+        p_attn = self.dropout(attn)
+        # (batch, head, time, 2w + 1)
 
-            # compute local attention output with global attention value and add
-            if self.global_tokens > 0:
-                # compute sum of global and local attn
-                x = self._compute_attn_output_with_global_indices(
-                    value_vectors=v.transpose(1, 2),
-                    attn_probs=p_attn,
-                    max_num_global_attn_indices=max_num_global_attn_indices,
-                    is_index_global_attn_nonzero=is_index_global_attn_nonzero,
-                    is_local_index_global_attn_nonzero=is_local_index_global_attn_nonzero,
-                    w=w
-                )
-            else:
-                # compute local attn only
-                x = self.sliding_chunks_matmul_pv(p_attn, v, w).reshape(n_batch, -1, self.h * self.d_k)[:, :T]
+        # compute local attention output with global attention value and add
+        if self.global_tokens > 0:
+            # compute sum of global and local attn
+            x = self._compute_attn_output_with_global_indices(
+                value_vectors=v.transpose(1, 2),
+                attn_probs=p_attn,
+                max_num_global_attn_indices=max_num_global_attn_indices,
+                is_index_global_attn_nonzero=is_index_global_attn_nonzero,
+                is_local_index_global_attn_nonzero=is_local_index_global_attn_nonzero,
+                w=w
+            )
+        else:
+            # compute local attn only
+            x = self.sliding_chunks_matmul_pv(p_attn, v, w).reshape(n_batch, -1, self.h * self.d_k)[:, :T]
 
-            # compute value for global attention and overwrite to attention output
-            # TODO: remove the redundant computation
-            if self.global_tokens > 0:
-                global_attn_output, global_attn_probs = self._compute_global_attn_output_from_hidden(
-                    hidden_states=key,
-                    max_num_global_attn_indices=max_num_global_attn_indices,
-                    layer_head_mask=None,
-                    is_local_index_global_attn_nonzero=is_local_index_global_attn_nonzero,
-                    is_index_global_attn_nonzero=is_index_global_attn_nonzero,
-                    is_local_index_no_global_attn_nonzero=is_local_index_no_global_attn_nonzero,
-                    is_index_masked=pad_mask,
-                )
+        # compute value for global attention and overwrite to attention output
+        # TODO: remove the redundant computation
+        if self.global_tokens > 0:
+            global_attn_output, global_attn_probs = self._compute_global_attn_output_from_hidden(
+                hidden_states=key,
+                max_num_global_attn_indices=max_num_global_attn_indices,
+                layer_head_mask=None,
+                is_local_index_global_attn_nonzero=is_local_index_global_attn_nonzero,
+                is_index_global_attn_nonzero=is_index_global_attn_nonzero,
+                is_local_index_no_global_attn_nonzero=is_local_index_no_global_attn_nonzero,
+                is_index_masked=pad_mask,
+            )
 
-                # get only non zero global attn output
-                nonzero_global_attn_output = global_attn_output[
-                                             is_local_index_global_attn_nonzero[0], :,
-                                             is_local_index_global_attn_nonzero[1]
-                                             ]
+            # get only non zero global attn output
+            nonzero_global_attn_output = global_attn_output[
+                                         is_local_index_global_attn_nonzero[0], :,
+                                         is_local_index_global_attn_nonzero[1]
+                                         ]
 
-                # overwrite values with global attention
-                x[is_index_global_attn_nonzero] = nonzero_global_attn_output
+            # overwrite values with global attention
+            x[is_index_global_attn_nonzero] = nonzero_global_attn_output
 
-
-            # x = self.sliding_chunks_matmul_pv(p_attn, v, w).reshape(n_batch, -1, self.h * self.d_k)[:, :T]
-            # (batch, time, size)
+        # x = self.sliding_chunks_matmul_pv(p_attn, v, w).reshape(n_batch, -1, self.h * self.d_k)[:, :T]
+        # (batch, time, size)
 
         return self.linear_out(x.reshape(n_batch, -1, self.h * self.d_k)[:, :T])
 
