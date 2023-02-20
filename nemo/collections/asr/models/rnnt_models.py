@@ -38,6 +38,7 @@ from nemo.core.classes.mixins import AccessMixin
 from nemo.core.neural_types import AcousticEncodedRepresentation, AudioSignal, LengthsType, NeuralType, SpectrogramType
 from nemo.utils import logging
 
+import random
 
 class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
     """Base class for encoder decoder RNNT-based models."""
@@ -114,6 +115,9 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
 
         # Setup encoder adapters (from ASRAdapterModelMixin)
         self.setup_adapters()
+
+        self.max_fold_len = self._cfg.get('max_fold_len', 6000)
+        self.fold_chance = self._cfg.get('fold_chance', -1)
 
     def setup_optim_normalization(self):
         """
@@ -656,8 +660,26 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         if self.spec_augmentation is not None and self.training:
             processed_signal = self.spec_augmentation(input_spec=processed_signal, length=processed_signal_length)
 
+        #print(processed_signal.shape, processed_signal_length)
+
+        if self.training:
+            while processed_signal.shape[2] < self.max_fold_len and processed_signal.shape[0] > 1 and processed_signal.shape[0] % 2 == 0 and random.random() <= self.fold_chance:
+                processed_signal_length = processed_signal_length.reshape(-1, 2)
+                processed_signal_length[:, 0] = processed_signal.shape[2]
+                processed_signal_length = processed_signal_length.sum(-1)
+
+                processed_signal = processed_signal.transpose(-2, -1)
+                processed_signal = processed_signal.reshape(processed_signal.shape[0] // 2, processed_signal.shape[1] * 2, -1)
+                processed_signal = processed_signal.transpose(-2, -1)
+
+        #print(processed_signal.shape, processed_signal_length)
+        #print()
+
         encoded, encoded_len = self.encoder(audio_signal=processed_signal, length=processed_signal_length)
         return encoded, encoded_len
+
+
+
 
     # PTL-specific methods
     def training_step(self, batch, batch_nb):
@@ -673,6 +695,15 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         else:
             encoded, encoded_len = self.forward(input_signal=signal, input_signal_length=signal_len)
         del signal
+
+        while transcript.shape[0] > encoded.shape[0]:
+            transcript_len0 = transcript_len.reshape(-1, 2).sum(-1)
+            transcript0 = transcript.new_zeros(transcript.shape[0] // 2, transcript_len0.max())
+            transcript0[:, :transcript.shape[1]] = transcript[::2]
+            for i in range(transcript0.shape[0]):
+                transcript0[i, transcript_len[i * 2]:transcript_len[i * 2]+transcript_len[i * 2 + 1]] = transcript[i * 2 + 1, :transcript_len[i * 2 + 1]]
+
+            transcript, transcript_len = transcript0, transcript_len0
 
         # During training, loss must be computed, so decoder forward is necessary
         decoder, target_length, states = self.decoder(targets=transcript, target_length=transcript_len)
