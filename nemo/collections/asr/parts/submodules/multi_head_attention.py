@@ -338,94 +338,93 @@ class RelPositionMultiHeadAttentionLongformer(RelPositionMultiHeadAttention):
             query, key, value = query.to(torch.float32), key.to(torch.float32), value.to(torch.float32)
 
         # temporary until we solve this more gracefully
-        with avoid_float16_autocast_context():
-            q, k, v = self.forward_qkv(query, key, value)
-            n_batch, _, T, _ = q.size()
+        q, k, v = self.forward_qkv(query, key, value)
+        n_batch, _, T, _ = q.size()
 
-            w = max(self.att_context_size[0], self.att_context_size[1])
-            if w <= 0:
-                raise ValueError("When using local attention, context size must be set > 0")
-            pad_len = (2 * w - T % (2 * w)) % (2 * w)  # pad time to 2w
-            q = F.pad(q, (0, 0, 0, pad_len))  # (batch, head, time, size)
-            k = F.pad(k, (0, 0, 0, pad_len))  # (batch, head, time, size)
-            v = F.pad(v, (0, 0, 0, pad_len))  # (batch, head, time, size)
-            mask = F.pad(pad_mask, (0, pad_len), value=1.0)
+        w = max(self.att_context_size[0], self.att_context_size[1])
+        if w <= 0:
+            raise ValueError("When using local attention, context size must be set > 0")
+        pad_len = (2 * w - T % (2 * w)) % (2 * w)  # pad time to 2w
+        q = F.pad(q, (0, 0, 0, pad_len))  # (batch, head, time, size)
+        k = F.pad(k, (0, 0, 0, pad_len))  # (batch, head, time, size)
+        v = F.pad(v, (0, 0, 0, pad_len))  # (batch, head, time, size)
+        mask = F.pad(pad_mask, (0, pad_len), value=1.0)
 
-            q_with_bias_u = q + self.pos_bias_u.unsqueeze(1)  # (batch, head, time, size)
-            q_with_bias_v = q + self.pos_bias_v.unsqueeze(1)  # (batch, head, time, size)
+        q_with_bias_u = q + self.pos_bias_u.unsqueeze(1)  # (batch, head, time, size)
+        q_with_bias_v = q + self.pos_bias_v.unsqueeze(1)  # (batch, head, time, size)
 
-            diagonal_matrix_ac = self.sliding_chunks_matmul_qk(
-                q_with_bias_u, k, w, padding_value=0.0
-            )  # (batch, head, time, 2w + 1)
+        diagonal_matrix_ac = self.sliding_chunks_matmul_qk(
+            q_with_bias_u, k, w, padding_value=0.0
+        )  # (batch, head, time, 2w + 1)
 
-            # add relative positional embedding
+        # add relative positional embedding
 
-            n_batch_pos = pos_emb.size(0)
-            p = self.linear_pos(pos_emb).view(n_batch_pos, -1, self.h, self.d_k).transpose(1, 2)
-            # (batch, head, 2w, size)
-            diagonal_matrix_bd = torch.matmul(q_with_bias_v, p.transpose(-2, -1))
-            # (batch, head, time, 2w + 1)
+        n_batch_pos = pos_emb.size(0)
+        p = self.linear_pos(pos_emb).view(n_batch_pos, -1, self.h, self.d_k).transpose(1, 2)
+        # (batch, head, 2w, size)
+        diagonal_matrix_bd = torch.matmul(q_with_bias_v, p.transpose(-2, -1))
+        # (batch, head, time, 2w + 1)
 
-            start_pos = w - self.att_context_size[0]
-            end_pos = w + self.att_context_size[1]
+        start_pos = w - self.att_context_size[0]
+        end_pos = w + self.att_context_size[1]
 
-            diagonal_matrix_ac[:, :, :, : self.att_context_size[0]] += diagonal_matrix_bd[
-                                                                       :, :, :, : self.att_context_size[0]
-                                                                       ]
-            diagonal_matrix_ac[:, :, :, -(self.att_context_size[1] + 1):] += diagonal_matrix_bd[
-                                                                             :, :, :, self.att_context_size[0]:
-                                                                             ]
-            scores = diagonal_matrix_ac / self.s_d_k
-            # (batch, head, time, 2w + 1)
+        diagonal_matrix_ac[:, :, :, : self.att_context_size[0]] += diagonal_matrix_bd[
+                                                                   :, :, :, : self.att_context_size[0]
+                                                                   ]
+        diagonal_matrix_ac[:, :, :, -(self.att_context_size[1] + 1):] += diagonal_matrix_bd[
+                                                                         :, :, :, self.att_context_size[0]:
+                                                                         ]
+        scores = diagonal_matrix_ac / self.s_d_k
+        # (batch, head, time, 2w + 1)
 
-            # mask invalid positions
-            scores[:, :, :, :start_pos] = -10000.0
-            scores[:, :, :, end_pos + 1:] = -10000.0
+        # mask invalid positions
+        scores[:, :, :, :start_pos] = -10000.0
+        scores[:, :, :, end_pos + 1:] = -10000.0
 
-            # This implementation is fast and takes very little memory because num_heads x hidden_size = 1
-            # from (bsz x seq_len) to (bsz x num_heads x seqlen x hidden_size)
-            mask = mask.unsqueeze(dim=1).unsqueeze(dim=-1)
-            # cast to float/half then replace 1's with -inf
-            float_mask = mask.type_as(scores).masked_fill(mask, -10000.0)
-            ones = float_mask.new_ones(size=float_mask.size())  # tensor of ones
-            # diagonal mask with zeros everywhere and -inf inplace of padding
-            d_mask = self.sliding_chunks_matmul_qk(ones, float_mask, w, padding_value=0.0)
-            # (batch, head, time, 2w + 1)
+        # This implementation is fast and takes very little memory because num_heads x hidden_size = 1
+        # from (bsz x seq_len) to (bsz x num_heads x seqlen x hidden_size)
+        mask = mask.unsqueeze(dim=1).unsqueeze(dim=-1)
+        # cast to float/half then replace 1's with -inf
+        float_mask = mask.type_as(scores).masked_fill(mask, -10000.0)
+        ones = float_mask.new_ones(size=float_mask.size())  # tensor of ones
+        # diagonal mask with zeros everywhere and -inf inplace of padding
+        d_mask = self.sliding_chunks_matmul_qk(ones, float_mask, w, padding_value=0.0)
+        # (batch, head, time, 2w + 1)
 
-            scores += d_mask
+        scores += d_mask
 
-            if self.global_tokens > 0:
+        if self.global_tokens > 0:
 
-                is_index_global_attn = torch.zeros_like(pad_mask)
+            is_index_global_attn = torch.zeros_like(pad_mask)
 
-                if self.global_tokens_placing == "start":
-                    is_index_global_attn[:, :self.global_tokens] = 1
-                elif self.global_tokens_placing == "every_n":
-                    is_index_global_attn[:, ::self.global_tokens] = 1
+            if self.global_tokens_placing == "start":
+                is_index_global_attn[:, :self.global_tokens] = 1
+            elif self.global_tokens_placing == "every_n":
+                is_index_global_attn[:, ::self.global_tokens] = 1
 
-                # compute global attn indices required through out forward fn
-                (
-                    max_num_global_attn_indices,
-                    is_index_global_attn_nonzero,
-                    is_local_index_global_attn_nonzero,
-                    is_local_index_no_global_attn_nonzero,
-                ) = self._get_global_attn_indices(is_index_global_attn)
-                # calculate global attn probs from global key
+            # compute global attn indices required through out forward fn
+            (
+                max_num_global_attn_indices,
+                is_index_global_attn_nonzero,
+                is_local_index_global_attn_nonzero,
+                is_local_index_no_global_attn_nonzero,
+            ) = self._get_global_attn_indices(is_index_global_attn)
+            # calculate global attn probs from global key
 
-                global_key_attn_scores = self._concat_with_global_key_attn_probs(
-                    query_vectors=q.transpose(1, 2),
-                    key_vectors=k.transpose(1, 2),
-                    max_num_global_attn_indices=max_num_global_attn_indices,
-                    is_index_global_attn_nonzero=is_index_global_attn_nonzero,
-                    is_local_index_global_attn_nonzero=is_local_index_global_attn_nonzero,
-                    is_local_index_no_global_attn_nonzero=is_local_index_no_global_attn_nonzero,
-                ).transpose(1, 2)
-                # concat to local_attn_probs
-                # (batch_size, seq_len, num_heads, extra attention count + 2*window+1)
-                scores = torch.cat((global_key_attn_scores, scores), dim=-1)
+            global_key_attn_scores = self._concat_with_global_key_attn_probs(
+                query_vectors=q.transpose(1, 2),
+                key_vectors=k.transpose(1, 2),
+                max_num_global_attn_indices=max_num_global_attn_indices,
+                is_index_global_attn_nonzero=is_index_global_attn_nonzero,
+                is_local_index_global_attn_nonzero=is_local_index_global_attn_nonzero,
+                is_local_index_no_global_attn_nonzero=is_local_index_no_global_attn_nonzero,
+            ).transpose(1, 2)
+            # concat to local_attn_probs
+            # (batch_size, seq_len, num_heads, extra attention count + 2*window+1)
+            scores = torch.cat((global_key_attn_scores, scores), dim=-1)
 
-                # free memory
-                del global_key_attn_scores
+            # free memory
+            del global_key_attn_scores
 
             attn = torch.softmax(scores, dim=-1).masked_fill(mask, 0.0)
             p_attn = self.dropout(attn)
