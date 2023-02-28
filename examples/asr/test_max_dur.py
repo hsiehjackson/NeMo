@@ -38,7 +38,7 @@ def main(cfg: EvaluationConfig):
         # Binary search
         min_mins = 0
         max_mins = 1200
-        while max_mins - min_mins > 10:
+        while max_mins - min_mins > 2:
             test_minutes = (max_mins + min_mins) // 2
             model_cfg = ASRModel.restore_from(restore_path=cfg.model_dir + "/" + model_name, return_config=True)
             classpath = model_cfg.target  # original class path
@@ -62,6 +62,7 @@ def main(cfg: EvaluationConfig):
                 print(model_name, "passed", test_minutes, "minutes")
                 min_mins = test_minutes
             except RuntimeError as e:
+                print(e)
                 print(model_name, "ran out of memory on", test_minutes, "minutes")
                 for p in asr_model.parameters():
                     if p.grad is not None:
