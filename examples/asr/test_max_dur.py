@@ -64,7 +64,7 @@ def main(cfg: EvaluationConfig):
                     end_time = time.time()
                 elapsed_time = end_time - start_time  # calculate the elapsed time
                 #print(f"The function took {elapsed_time:.6f} seconds to run.")
-                print(model_name, "passed", test_minutes, "minutes, taking", {elapsed_time:.6f}, "seconds")
+                print(model_name, "passed", test_minutes, "minutes, taking", elapsed_time, "seconds")
                 min_mins = test_minutes
             except RuntimeError as e:
                 #print(e)
