@@ -54,7 +54,7 @@ def main(cfg: EvaluationConfig):
             length_long = torch.tensor([len], device=asr_model.device)
 
             # switch to local attn
-            asr_model.change_attention_model(self_attention_model="rel_pos_local_attn", att_context_size=(64, 64))
+            #asr_model.change_attention_model(self_attention_model="rel_pos_local_attn", att_context_size=(64, 64))
 
             try:
                 with torch.no_grad():
