@@ -57,7 +57,7 @@ def main(cfg: EvaluationConfig):
             #asr_model.change_attention_model(self_attention_model="rel_pos_local_attn", att_context_size=(64, 64))
 
             avg_time = 0
-            rounds = 5
+            rounds = 50
 
             for i in range(rounds):
                 with torch.no_grad():
