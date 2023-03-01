@@ -56,23 +56,21 @@ def main(cfg: EvaluationConfig):
             # switch to local attn
             #asr_model.change_attention_model(self_attention_model="rel_pos_local_attn", att_context_size=(64, 64))
 
-            try:
+            avg_time = 0
+            rounds = 5
+
+            for i in range(rounds):
                 with torch.no_grad():
                     start_time = time.time()
                     asr_model.forward(input_signal=input_signal_long, input_signal_length=length_long)
                     end_time = time.time()
                 elapsed_time = end_time - start_time  # calculate the elapsed time
-                #print(f"The function took {elapsed_time:.6f} seconds to run.")
-                print(model_name, "passed", test_minutes, "minutes, taking", elapsed_time, "seconds")
-                min_mins = test_minutes
-            except RuntimeError as e:
-                #print(e)
-                print(model_name, "ran out of memory on", test_minutes, "minutes")
-                for p in asr_model.parameters():
-                    if p.grad is not None:
-                        del p.grad  # free some memory
-                torch.cuda.empty_cache()
-                max_mins = test_minutes
+                avg_time += elapsed_time
+
+            avg_time /= rounds
+
+            print(model_name, "achieved avg time of", avg_time, "on", test_minutes, "minutes")
+
         #print('---maximum minutes for ' + model_name + ' is ' + str(max_mins))
 
 
