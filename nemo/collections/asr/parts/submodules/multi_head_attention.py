@@ -417,8 +417,8 @@ class RelPositionMultiHeadAttentionLongformer(RelPositionMultiHeadAttention):
         global_q /= self.s_d_k
 
         if self.use_global_xpos:
-            global_q = self.xpos(global_q.view(n_batch * self.h, -1, self.d_k)).view(n_batch, self.h, -1, self.d_k)
-            global_k = self.xpos(global_k.view(n_batch * self.h, -1, self.d_k)).view(n_batch, self.h, -1, self.d_k)
+            global_q = self.xpos(global_q.reshape(n_batch * self.h, -1, self.d_k)).reshape(n_batch, self.h, -1, self.d_k)
+            global_k = self.xpos(global_k.reshape(n_batch * self.h, -1, self.d_k)).reshape(n_batch, self.h, -1, self.d_k)
 
         if self.global_tokens > 0:
 
