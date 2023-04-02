@@ -31,6 +31,8 @@ from nemo.core.classes.mixins.adapter_mixins import AdapterModuleMixin
 
 __all__ = ['ConformerConvolution', 'ConformerFeedForward', 'ConformerLayer']
 
+from matplotlib import pyplot as plt
+
 
 class ConformerLayer(torch.nn.Module, AdapterModuleMixin, AccessMixin):
     """A single block of the Conformer encoder.
@@ -61,6 +63,8 @@ class ConformerLayer(torch.nn.Module, AdapterModuleMixin, AccessMixin):
         pos_bias_u=None,
         pos_bias_v=None,
         att_context_size=[-1, -1],
+        use_global_xpos=False,
+        use_global_abs_pos=False
     ):
         super(ConformerLayer, self).__init__()
 
@@ -106,6 +110,8 @@ class ConformerLayer(torch.nn.Module, AdapterModuleMixin, AccessMixin):
                 global_tokens=global_tokens,
                 global_tokens_placing=global_tokens_placing,
                 global_attn_separate=global_attn_separate,
+                use_global_xpos=use_global_xpos,
+                use_global_abs_pos=use_global_abs_pos
             )
         elif self_attention_model == 'abs_pos':
             self.self_attn = MultiHeadAttention(
@@ -149,7 +155,18 @@ class ConformerLayer(torch.nn.Module, AdapterModuleMixin, AccessMixin):
             x (torch.Tensor): (B, T, d_model)
         """
         residual = x
+
+        #plt.imshow(x[0, -300:].cpu().numpy())
+        #plt.show()
+
+        #plt.imshow(pad_mask.cpu().numpy())
+        #plt.show()
+
         x = self.norm_feed_forward1(x)
+
+        #plt.imshow(x[0].cpu().numpy())
+        #plt.show()
+
         x = self.feed_forward1(x)
         residual = residual + self.dropout(x) * self.fc_factor
 

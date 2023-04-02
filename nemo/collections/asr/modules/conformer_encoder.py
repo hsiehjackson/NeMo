@@ -105,6 +105,14 @@ class ConformerEncoder(NeuralModule, StreamingEncoder, Exportable):
             Defaults to 0.1.
         dropout_att (float): the dropout rate used for the attention layer
             Defaults to 0.0.
+        global_tokens (int): number of tokens to be used for global attention.
+            Only relevant if self_attention_model is 'rel_pos_local_attn'.
+            Defaults to 0.
+        global_tokens_placing (str): where the tokens should be placed.
+            Defaults to 'start'.
+        global_attn_separate (bool): whether the q, k, v layers used for global tokens should be separate.
+            Defaults to False.
+
     """
 
     def input_example(self, max_batch=1, max_dim=256):
@@ -192,9 +200,11 @@ class ConformerEncoder(NeuralModule, StreamingEncoder, Exportable):
             dropout_pre_encoder=0.1,
             dropout_emb=0.1,
             dropout_att=0.0,
-        global_tokens=0,
-        global_tokens_placing="start",
-        global_attn_separate=False
+            global_tokens=0,
+            global_tokens_placing="start",
+            global_attn_separate=False,
+            use_global_xpos=False,
+            use_global_abs_pos=False,
     ):
         super().__init__()
         d_ff = d_model * ff_expansion_factor
@@ -205,9 +215,12 @@ class ConformerEncoder(NeuralModule, StreamingEncoder, Exportable):
         self.att_context_style = att_context_style
         self.subsampling_factor = subsampling_factor
 
-        #self_attention_model = "rel_pos"
-
         self.self_attention_model = self_attention_model
+        self.global_tokens = global_tokens
+        self.global_attn_separate = global_attn_separate
+        self.global_tokens_placing = global_tokens_placing
+        self.use_global_xpos = use_global_xpos
+        self.use_global_abs_pos = use_global_abs_pos
 
         if att_context_size:
             self.att_context_size = list(att_context_size)
@@ -356,6 +369,8 @@ class ConformerEncoder(NeuralModule, StreamingEncoder, Exportable):
                 pos_bias_u=pos_bias_u,
                 pos_bias_v=pos_bias_v,
                 att_context_size=self.att_context_size,
+                use_global_xpos=use_global_xpos,
+                use_global_abs_pos=use_global_abs_pos
             )
             self.layers.append(layer)
 
@@ -656,6 +671,8 @@ class ConformerEncoder(NeuralModule, StreamingEncoder, Exportable):
             self,
             self_attention_model: str = None,
             att_context_size: List[int] = None,
+            global_tokens: Optional[int] = None,
+            global_attn_separate: Optional[bool] = None,
             update_config: bool = True,
             device: torch.device = None,
     ):
@@ -685,6 +702,12 @@ class ConformerEncoder(NeuralModule, StreamingEncoder, Exportable):
 
         if self_attention_model is None:
             self_attention_model = self._cfg.self_attention_model
+
+        if global_tokens is None:
+            global_tokens = self.global_tokens
+
+        if global_attn_separate is None:
+            global_attn_separate = self.global_attn_separate
 
         if self_attention_model == 'rel_pos_local_attn' and max(att_context_size) <= 0:
             raise ValueError("When using local attention, context size must be set > 0")
@@ -746,9 +769,9 @@ class ConformerEncoder(NeuralModule, StreamingEncoder, Exportable):
                         att_context_size=att_context_size,
                         pos_bias_u=None,
                         pos_bias_v=None,
-                        global_tokens=self._cfg.get("global_tokens", 0),
+                        global_tokens=global_tokens,
                         global_tokens_placing=self._cfg.get("global_token_placing", "start"),
-                        global_attn_separate=self._cfg.get("global_attn_separate", False)
+                        global_attn_separate=global_attn_separate
                     )
                 elif self_attention_model == 'abs_pos':
                     new_attn = MultiHeadAttention(
@@ -833,6 +856,29 @@ class ConformerEncoder(NeuralModule, StreamingEncoder, Exportable):
             if update_config:
                 self._cfg.conv_kernel_size = new_kernel_size
 
+    def copy_local_to_global_qkv(self):
+
+        for name, m in self.named_modules():
+            if type(m) == ConformerLayer:
+                state_dict = m.self_attn.state_dict()
+                # state_dict['depthwise_conv.weight'] = state_dict['depthwise_conv.weight'][:, :,
+                #                                      start:start + new_kernel_size]
+                # state_dict['depthwise_conv.weight'] = state_dict['depthwise_conv.weight'][:, :,
+                #                                      start:start + new_kernel_size]
+
+                state_dict['global_q.weight'] = state_dict['linear_q.weight']
+                state_dict['global_q.bias'] = state_dict['linear_q.bias']
+
+                state_dict['global_k.weight'] = state_dict['linear_v.weight']
+                state_dict['global_k.bias'] = state_dict['linear_v.bias']
+
+                state_dict['global_v.weight'] = state_dict['linear_v.weight']
+                state_dict['global_v.bias'] = state_dict['linear_v.bias']
+
+                m.self_attn.load_state_dict(state_dict, strict=False)
+
+        ##
+
 
 class ConformerEncoderAdapter(ConformerEncoder, adapter_mixins.AdapterModuleMixin):
 
@@ -898,3 +944,6 @@ class ConformerChangeConfig:
     # corresponding to left and right context, or -1 for full context.
     # If None is provided, the attention context size isn't changed.
     att_context_size: Optional[List[int]] = None
+
+    global_tokens: int = 0
+    global_attn_separate: bool = False
