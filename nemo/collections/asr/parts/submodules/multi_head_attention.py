@@ -296,7 +296,9 @@ class RelPositionMultiHeadAttentionLongformer(RelPositionMultiHeadAttention):
         if self.use_global_xpos:
             self.xpos = XPOS(n_feat // n_head)
         if self.use_global_abs_pos:
+            device = next(self.parameters()).device
             self.abs_pos_enc = PositionalEncoding(d_model=n_feat, dropout_rate=0.1)
+            self.abs_pos_enc.extend_pe(512, device)
 
         print()
 
@@ -391,11 +393,19 @@ class RelPositionMultiHeadAttentionLongformer(RelPositionMultiHeadAttention):
                 elif self.global_tokens_placing == "every_n":
                     is_index_global_attn[:, :: self.global_tokens] = 1
 
+                # compute global attn indices
+                (
+                    max_num_global_attn_indices,
+                    is_index_global_attn_nonzero,
+                    is_local_index_global_attn_nonzero,
+                    is_local_index_no_global_attn_nonzero,
+                ) = self._get_global_attn_indices(is_index_global_attn=is_index_global_attn)
+
                 if self.global_attn_separate:
                     if self.use_global_abs_pos:
-                        query[is_index_global_attn], _ = self.abs_pos_enc(query[is_index_global_attn])
-                        key[is_index_global_attn], _ = self.abs_pos_enc(key[is_index_global_attn])
-                        value[is_index_global_attn], _ = self.abs_pos_enc(value[is_index_global_attn])
+                        query[is_index_global_attn][:512] = self.abs_pos_enc(query[is_index_global_attn][:512].unsqueeze(0))[0].squeeze(0)
+                        key[is_index_global_attn][:512] = self.abs_pos_enc(key[is_index_global_attn][:512].unsqueeze(0))[0].squeeze(0)
+                        value[is_index_global_attn][:512] = self.abs_pos_enc(value[is_index_global_attn][:512].unsqueeze(0))[0].squeeze(0)
 
                     global_q = self.global_q(query).view(n_batch, -1, self.h, self.d_k)
                     global_k = self.global_k(key).view(n_batch, -1, self.h, self.d_k)
@@ -415,13 +425,6 @@ class RelPositionMultiHeadAttentionLongformer(RelPositionMultiHeadAttention):
                     global_k = self.xpos(global_k.view(n_batch * self.h, -1, self.d_k)).view(n_batch, self.h, -1,
                                                                                              self.d_k)
 
-                # compute global attn indices
-                (
-                    max_num_global_attn_indices,
-                    is_index_global_attn_nonzero,
-                    is_local_index_global_attn_nonzero,
-                    is_local_index_no_global_attn_nonzero,
-                ) = self._get_global_attn_indices(is_index_global_attn=is_index_global_attn)
 
                 # calculate global attn probs with global keys
                 global_key_attn = self.compute_global_key_attn(
