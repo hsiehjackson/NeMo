@@ -850,7 +850,7 @@ class CoreAttention(MegatronModule):
                     global_query_layer = rearrange(global_query_layer, 's b h d -> (b h) s d')
                     global_key_layer = rearrange(global_key_layer, 's b h d -> (b h) s d')
                     global_key_layer = self.xpos(global_key_layer, offset=0, downscale=True)
-                    global_query_layer = self.xpos(global_query_layer, offset=sq - 1, downscale=False)
+                    global_query_layer = self.xpos(global_query_layer, offset=0, downscale=False)
                     # permute back to the expected shape below
                     global_key_layer = global_key_layer.permute(1, 0, 2)
                     global_query_layer = global_query_layer.permute(1, 0, 2)
