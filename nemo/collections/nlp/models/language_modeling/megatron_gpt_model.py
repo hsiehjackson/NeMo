@@ -524,7 +524,7 @@ class MegatronGPTModel(MegatronBaseModel, TextGeneration):
             if parallel_state.get_pipeline_model_parallel_world_size() == 1:
                 batch = next(dataloader_iter)
                 for k in batch.keys():
-                    batch[k] = batch[k].cuda(non_blocking=True) if k not in ['attention_mask'] else None
+                    batch[k] = batch[k].cuda(non_blocking=True)# if k not in ['attention_mask'] else None
             else:
                 if parallel_state.is_pipeline_first_stage():
                     batch = next(dataloader_iter)

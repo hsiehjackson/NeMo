@@ -154,6 +154,7 @@ class ParallelTransformerLayer_(MegatronModule, adapter_mixins.AdapterModuleMixi
         num_moe_experts=1,
         moe_frequency=1,
         moe_dropout=0.0,
+        use_long_attention=False
     ):
         super(ParallelTransformerLayer_, self).__init__()
 
@@ -227,6 +228,7 @@ class ParallelTransformerLayer_(MegatronModule, adapter_mixins.AdapterModuleMixi
                 sequence_parallel=sequence_parallel,
                 gradient_accumulation_fusion=gradient_accumulation_fusion,
                 normalize_attention_scores=normalize_attention_scores,
+                use_long_attention=use_long_attention
             )
 
             if transformer_block_type == 'normformer':
@@ -651,6 +653,7 @@ class ParallelTransformerLayer(ParallelTransformerLayer_):
         num_moe_experts=1,
         moe_frequency=1,
         moe_dropout=0.0,
+        use_long_attention=False,
     ):
         super(ParallelTransformerLayer, self).__init__(
             init_method=init_method,
@@ -692,6 +695,7 @@ class ParallelTransformerLayer(ParallelTransformerLayer_):
             num_moe_experts=num_moe_experts,
             moe_frequency=moe_frequency,
             moe_dropout=moe_dropout,
+            use_long_attention=use_long_attention,
         )
 
         if precision == 'bf16':
@@ -914,6 +918,7 @@ class ParallelTransformer(MegatronModule):
         num_moe_experts=1,
         moe_frequency=1,
         moe_dropout=0.0,
+        use_long_attention=False,
     ):
         super(ParallelTransformer, self).__init__()
 
@@ -1089,6 +1094,7 @@ class ParallelTransformer(MegatronModule):
                     num_moe_experts=num_moe_experts,
                     moe_frequency=moe_frequency,
                     moe_dropout=moe_dropout,
+                    use_long_attention=use_long_attention
                 )
 
         if parallel_state.get_virtual_pipeline_model_parallel_world_size() is not None:

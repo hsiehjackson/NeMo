@@ -278,7 +278,10 @@ class JSONLMemMapDataset(TextMemMapDataset):
 
     def _build_data_from_text(self, text):
         """Return a dictionary of data based on a single JSON line."""
-        return json.loads(text)
+        text = json.loads(text)
+
+        # tokenize
+        return super()._build_data_from_text(text["text"])
 
 
 def _build_memmap_index_files(newline_int, build_index_fn, fn):
