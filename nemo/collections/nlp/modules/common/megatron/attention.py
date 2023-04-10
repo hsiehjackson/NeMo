@@ -879,6 +879,135 @@ class CoreAttention(MegatronModule):
                     alpha=(1.0 / self.norm_factor) if self.normalize_attention_scores else 1.0,
                 )
 
+            else:
+                # [sq/k, b, np, hn]
+                query_layer = query_layer.view(output_size[2], output_size[0], output_size[1], -1)
+                key_layer = key_layer.view(output_size[3], output_size[0], output_size[1], -1)
+                value_layer = value_layer.view(output_size[3], output_size[0], output_size[1], -1)
+
+                # [b, hn, sq/k, np]
+                query_layer = query_layer.permute(1, 2, 0, 3)
+                key_layer = key_layer.permute(1, 2, 0, 3)
+                value_layer = value_layer.permute(1, 2, 0, 3)
+
+                T_q = query_layer.shape[2]
+                T_k = key_layer.shape[2]
+                pad_len_q = (2 * self.local_context - T_q % (2 * self.local_context)) % (2 * self.local_context)
+                pad_len_k = (2 * self.local_context - T_k % (2 * self.local_context)) % (2 * self.local_context)
+
+                query_layer = F.pad(query_layer, (0, 0, 0, pad_len_q))  # (batch, head, time, size)
+                key_layer = F.pad(key_layer, (0, 0, 0, pad_len_k))  # (batch, head, time, size)
+                value_layer = F.pad(value_layer, (0, 0, 0, pad_len_k))  # (batch, head, time, size)
+                attention_mask = F.pad(attention_mask, (0, 0, 0, pad_len_q), value=True)
+
+
+                # [b, hn, sq, 2w+1]
+                attention_scores = self.sliding_chunks_matmul_qk(query_layer, key_layer, self.local_context,
+                                                                 padding_value=0)
+
+                attention_mask = attention_mask.unsqueeze(dim=-1)
+                float_mask = attention_mask.type_as(attention_scores).masked_fill(attention_mask, -10000.0)
+                ones = float_mask.new_ones(size=float_mask.size())  # tensor of ones
+                # diagonal mask with zeros everywhere and -inf inplace of padding
+                d_mask = self.sliding_chunks_matmul_qk(ones, float_mask, self.local_context, padding_value=0.0)
+                # (batch, head, time, 2w + 1)
+
+                d_mask = d_mask < -1
+                # attention_scores += d_mask
+
+                # attention_probs = F.softmax(attention_scores, dim=-1)
+                attention_probs = self.scale_mask_softmax(attention_scores, d_mask)
+
+                if not self.sequence_parallel:
+                    with tensor_parallel.random.get_cuda_rng_tracker().fork():
+                        attention_probs = self.attention_dropout(attention_probs)
+                else:
+                    attention_probs = self.attention_dropout(attention_probs)
+
+                # matmul: [b * np, sq, hn]
+                context_layer = self.sliding_chunks_matmul_pv(attention_probs, value_layer, self.local_context)
+                context_layer = context_layer.reshape(context_layer.shape[0], context_layer.shape[1], -1)
+
+                if self.global_tokens > 0:
+
+                    # create q, k, v for global attn
+                    if self.global_attn_separate:
+                        global_q, global_k, global_v = global_query_layer, global_key_layer, global_value_layer
+                        global_q = global_q.view(output_size[2], output_size[0], output_size[1], -1)
+                        global_k = global_k.view(output_size[3], output_size[0], output_size[1], -1)
+                        global_v = global_v.view(output_size[3], output_size[0], output_size[1], -1)
+                        global_q = global_q.permute(1, 2, 0, 3)
+                        global_k = global_k.permute(1, 2, 0, 3)
+                        global_v = global_v.permute(1, 2, 0, 3)
+                        global_q = F.pad(global_q, (0, 0, 0, pad_len_q))  # (batch, head, time, size)
+                        global_k = F.pad(global_k, (0, 0, 0, pad_len_k))  # (batch, head, time, size)
+                        global_v = F.pad(global_v, (0, 0, 0, pad_len_k))  # (batch, head, time, size)
+                    else:
+                        global_q, global_k, global_v = query_layer, key_layer, value_layer
+
+                    # assign which tokens are global
+                    is_index_global_attn = torch.zeros_like(attention_mask.squeeze())
+                    is_index_global_attn[
+                    :, : self.global_tokens * self.global_tokens_spacing: self.global_tokens_spacing
+                    ] = 1.0
+
+                    # compute global attn indices
+                    (
+                        max_num_global_attn_indices,
+                        is_index_global_attn_nonzero,
+                        is_local_index_global_attn_nonzero,
+                        is_local_index_no_global_attn_nonzero,
+                    ) = self._get_global_attn_indices(is_index_global_attn=is_index_global_attn)
+
+                    # calculate global attn probs with global keys
+                    # (batch, time, head, max_num_global_attn_indices)
+                    global_key_attn = self._compute_global_key_attn(
+                        query=global_q.transpose(1, 2),
+                        key=global_k.transpose(1, 2),
+                        max_num_global_attn_indices=max_num_global_attn_indices,
+                        is_index_global_attn_nonzero=is_index_global_attn_nonzero,
+                        is_local_index_global_attn_nonzero=is_local_index_global_attn_nonzero,
+                        is_local_index_no_global_attn_nonzero=is_local_index_no_global_attn_nonzero,
+                    ).transpose(1, 2)
+
+                    # global_key_attn = torch.softmax(global_key_attn, dim=-1).masked_fill(attention_mask, 0.0)
+                    global_key_attn = self.scale_mask_softmax(global_key_attn, attention_mask)
+                    if not self.sequence_parallel:
+                        with tensor_parallel.random.get_cuda_rng_tracker().fork():
+                            global_key_attn = self.attention_dropout(global_key_attn)
+                    else:
+                        global_key_attn = self.attention_dropout(global_key_attn)
+
+                    # compute outputs for global attention from all tokens to global
+                    # (batch, time, head x head_dim)
+                    out_all_to_global = self._compute_out_all_to_global(
+                        value=global_v,
+                        attn_probs=global_key_attn,
+                        max_num_global_attn_indices=max_num_global_attn_indices,
+                        is_index_global_attn_nonzero=is_index_global_attn_nonzero,
+                        is_local_index_global_attn_nonzero=is_local_index_global_attn_nonzero,
+                    )
+
+                    # compute outputs for global attention from global tokens to all
+                    # (batch, max_num_global_attn_indices, head x head_dim)
+                    out_global_to_all = self._compute_out_global_to_all(
+                        query=global_q,
+                        key=global_k,
+                        value=global_v,
+                        max_num_global_attn_indices=max_num_global_attn_indices,
+                        is_local_index_global_attn_nonzero=is_local_index_global_attn_nonzero,
+                        is_index_global_attn_nonzero=is_index_global_attn_nonzero,
+                        is_local_index_no_global_attn_nonzero=is_local_index_no_global_attn_nonzero,
+                        is_index_masked=attention_mask,
+                    )
+
+                    context_layer += out_all_to_global
+
+                    context_layer[is_index_global_attn_nonzero] += out_global_to_all
+
+                context_layer = context_layer.transpose(0, 1).contiguous()
+                # [batch, seq, head, dim]
+
         # change view to [b, np, sq, sk]
         if not self.use_long_attention:
             attention_scores = matmul_result.view(*output_size)
@@ -958,119 +1087,6 @@ class CoreAttention(MegatronModule):
             # [sq, b, np, hn] --> [sq, b, hp]
             new_context_layer_shape = context_layer.size()[:-2] + (self.hidden_size_per_partition,)
             context_layer = context_layer.view(*new_context_layer_shape)
-        else:
-            #[sq/k, b, np, hn]
-            query_layer = query_layer.view(output_size[2], output_size[0], output_size[1], -1)
-            key_layer = key_layer.view(output_size[3], output_size[0], output_size[1], -1)
-            value_layer = value_layer.view(output_size[3], output_size[0], output_size[1], -1)
-
-            #[b, hn, sq/k, np]
-            query_layer = query_layer.permute(1, 2, 0, 3)
-            key_layer = key_layer.permute(1, 2, 0, 3)
-            value_layer = value_layer.permute(1, 2, 0, 3)
-
-            #[b, hn, sq, 2w+1]
-            attention_scores = self.sliding_chunks_matmul_qk(query_layer, key_layer, self.local_context, padding_value=0)
-
-            attention_mask = attention_mask.unsqueeze(dim=-1)
-            float_mask = attention_mask.type_as(attention_scores).masked_fill(attention_mask, -10000.0)
-            ones = float_mask.new_ones(size=float_mask.size())  # tensor of ones
-            # diagonal mask with zeros everywhere and -inf inplace of padding
-            d_mask = self.sliding_chunks_matmul_qk(ones, float_mask, self.local_context, padding_value=0.0)
-            # (batch, head, time, 2w + 1)
-
-            d_mask = d_mask < -1
-            #attention_scores += d_mask
-
-            #attention_probs = F.softmax(attention_scores, dim=-1)
-            attention_probs = self.scale_mask_softmax(attention_scores, d_mask)
-
-            if not self.sequence_parallel:
-                with tensor_parallel.random.get_cuda_rng_tracker().fork():
-                    attention_probs = self.attention_dropout(attention_probs)
-            else:
-                attention_probs = self.attention_dropout(attention_probs)
-
-            # matmul: [b * np, sq, hn]
-            context_layer = self.sliding_chunks_matmul_pv(attention_probs, value_layer, self.local_context)
-            context_layer = context_layer.reshape(context_layer.shape[0], context_layer.shape[1], -1)
-
-            if self.global_tokens > 0:
-
-                # create q, k, v for global attn
-                if self.global_attn_separate:
-                    global_q, global_k, global_v = global_query_layer, global_key_layer, global_value_layer
-                    global_q = global_q.view(output_size[2], output_size[0], output_size[1], -1)
-                    global_k = global_k.view(output_size[3], output_size[0], output_size[1], -1)
-                    global_v = global_v.view(output_size[3], output_size[0], output_size[1], -1)
-                    global_q = global_q.permute(1, 2, 0, 3)
-                    global_k = global_k.permute(1, 2, 0, 3)
-                    global_v = global_v.permute(1, 2, 0, 3)
-                else:
-                    global_q, global_k, global_v = query_layer, key_layer, value_layer
-
-                # assign which tokens are global
-                is_index_global_attn = torch.zeros_like(attention_mask.squeeze())
-                is_index_global_attn[
-                    :, : self.global_tokens * self.global_tokens_spacing : self.global_tokens_spacing
-                ] = 1.0
-
-                # compute global attn indices
-                (
-                    max_num_global_attn_indices,
-                    is_index_global_attn_nonzero,
-                    is_local_index_global_attn_nonzero,
-                    is_local_index_no_global_attn_nonzero,
-                ) = self._get_global_attn_indices(is_index_global_attn=is_index_global_attn)
-
-                # calculate global attn probs with global keys
-                # (batch, time, head, max_num_global_attn_indices)
-                global_key_attn = self._compute_global_key_attn(
-                    query=global_q.transpose(1, 2),
-                    key=global_k.transpose(1, 2),
-                    max_num_global_attn_indices=max_num_global_attn_indices,
-                    is_index_global_attn_nonzero=is_index_global_attn_nonzero,
-                    is_local_index_global_attn_nonzero=is_local_index_global_attn_nonzero,
-                    is_local_index_no_global_attn_nonzero=is_local_index_no_global_attn_nonzero,
-                ).transpose(1, 2)
-
-                #global_key_attn = torch.softmax(global_key_attn, dim=-1).masked_fill(attention_mask, 0.0)
-                global_key_attn = self.scale_mask_softmax(global_key_attn, attention_mask)
-                if not self.sequence_parallel:
-                    with tensor_parallel.random.get_cuda_rng_tracker().fork():
-                        global_key_attn = self.attention_dropout(global_key_attn)
-                else:
-                    global_key_attn = self.attention_dropout(global_key_attn)
-
-                # compute outputs for global attention from all tokens to global
-                # (batch, time, head x head_dim)
-                out_all_to_global = self._compute_out_all_to_global(
-                    value=global_v,
-                    attn_probs=global_key_attn,
-                    max_num_global_attn_indices=max_num_global_attn_indices,
-                    is_index_global_attn_nonzero=is_index_global_attn_nonzero,
-                    is_local_index_global_attn_nonzero=is_local_index_global_attn_nonzero,
-                )
-
-                # compute outputs for global attention from global tokens to all
-                # (batch, max_num_global_attn_indices, head x head_dim)
-                out_global_to_all = self._compute_out_global_to_all(
-                    query=global_q,
-                    key=global_k,
-                    value=global_v,
-                    max_num_global_attn_indices=max_num_global_attn_indices,
-                    is_local_index_global_attn_nonzero=is_local_index_global_attn_nonzero,
-                    is_index_global_attn_nonzero=is_index_global_attn_nonzero,
-                    is_local_index_no_global_attn_nonzero=is_local_index_no_global_attn_nonzero,
-                    is_index_masked=attention_mask,
-                )
-
-                context_layer += out_all_to_global
-
-                context_layer[is_index_global_attn_nonzero] += out_global_to_all
-
-            context_layer = context_layer.transpose(0, 1).contiguous()
-            # [batch, seq, head, dim]
 
         return context_layer
 
