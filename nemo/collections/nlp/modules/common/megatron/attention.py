@@ -31,9 +31,6 @@ import math
 from functools import lru_cache
 from typing import List, Tuple
 
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
 
 from nemo.utils import avoid_float16_autocast_context
 
@@ -388,8 +385,9 @@ class ParallelAttention(MegatronModule, adapter_mixins.AdapterModuleMixin):
             # [sq, b, (np * 3 * hn)] --> [sq, b, np, 3 * hn]
             new_tensor_shape = mixed_x_layer.size()[:-1] + (
                 self.num_attention_heads_per_partition,
-                3 * self.hidden_size_per_attention_head *
-                (2 if self.use_long_attention and self.global_tokens > 0 and self.global_attn_separate else 1),
+                3
+                * self.hidden_size_per_attention_head
+                * (2 if self.use_long_attention and self.global_tokens > 0 and self.global_attn_separate else 1),
             )
             if self.megatron_legacy:
                 mixed_x_layer = self._transpose_last_dim(mixed_x_layer, 3, True)
@@ -397,8 +395,14 @@ class ParallelAttention(MegatronModule, adapter_mixins.AdapterModuleMixin):
 
             if self.use_long_attention and self.global_tokens > 0 and self.global_attn_separate:
                 # [sq, b, np, 6 * hn] --> 3 [sq, b, np, hn]
-                (query_layer, key_layer, value_layer, global_query_layer, global_key_layer, global_value_layer) = \
-                    tensor_parallel.split_tensor_along_last_dim(mixed_x_layer, 6)
+                (
+                    query_layer,
+                    key_layer,
+                    value_layer,
+                    global_query_layer,
+                    global_key_layer,
+                    global_value_layer,
+                ) = tensor_parallel.split_tensor_along_last_dim(mixed_x_layer, 6)
             else:
                 # [sq, b, np, 3 * hn] --> 3 [sq, b, np, hn]
                 (query_layer, key_layer, value_layer) = tensor_parallel.split_tensor_along_last_dim(mixed_x_layer, 3)
@@ -880,6 +884,10 @@ class CoreAttention(MegatronModule):
                 )
 
             else:
+
+                if len(attention_mask.shape) > 3:
+                    attention_mask = attention_mask.sum(-1) == 0
+                    # attention_mask = attention_mask.transpose(-2, -1)
                 # [sq/k, b, np, hn]
                 query_layer = query_layer.view(output_size[2], output_size[0], output_size[1], -1)
                 key_layer = key_layer.view(output_size[3], output_size[0], output_size[1], -1)
@@ -898,12 +906,12 @@ class CoreAttention(MegatronModule):
                 query_layer = F.pad(query_layer, (0, 0, 0, pad_len_q))  # (batch, head, time, size)
                 key_layer = F.pad(key_layer, (0, 0, 0, pad_len_k))  # (batch, head, time, size)
                 value_layer = F.pad(value_layer, (0, 0, 0, pad_len_k))  # (batch, head, time, size)
-                attention_mask = F.pad(attention_mask, (0, 0, 0, pad_len_q), value=True)
-
+                attention_mask = F.pad(attention_mask, (0, pad_len_q), value=True)
 
                 # [b, hn, sq, 2w+1]
-                attention_scores = self.sliding_chunks_matmul_qk(query_layer, key_layer, self.local_context,
-                                                                 padding_value=0)
+                attention_scores = self.sliding_chunks_matmul_qk(
+                    query_layer, key_layer, self.local_context, padding_value=0
+                )
 
                 attention_mask = attention_mask.unsqueeze(dim=-1)
                 float_mask = attention_mask.type_as(attention_scores).masked_fill(attention_mask, -10000.0)
@@ -946,9 +954,9 @@ class CoreAttention(MegatronModule):
                         global_q, global_k, global_v = query_layer, key_layer, value_layer
 
                     # assign which tokens are global
-                    is_index_global_attn = torch.zeros_like(attention_mask.squeeze())
+                    is_index_global_attn = torch.zeros_like(attention_mask.squeeze(3).squeeze(1))
                     is_index_global_attn[
-                    :, : self.global_tokens * self.global_tokens_spacing: self.global_tokens_spacing
+                        :, : self.global_tokens * self.global_tokens_spacing : self.global_tokens_spacing
                     ] = 1.0
 
                     # compute global attn indices
@@ -1005,6 +1013,8 @@ class CoreAttention(MegatronModule):
 
                     context_layer[is_index_global_attn_nonzero] += out_global_to_all
 
+                context_layer = context_layer[:, : output_size[2]]
+
                 context_layer = context_layer.transpose(0, 1).contiguous()
                 # [batch, seq, head, dim]
 
@@ -1013,9 +1023,9 @@ class CoreAttention(MegatronModule):
             attention_scores = matmul_result.view(*output_size)
             if self.position_embedding_type.lower() == 'sandwich':
                 b, np, sq, sk = attention_scores.shape
-                sandwich_bias = sandwich_pos_bias(sq, sk,
-                                                  self.hidden_size_per_attention_head,
-                                                  np, torch.cuda.current_device())
+                sandwich_bias = sandwich_pos_bias(
+                    sq, sk, self.hidden_size_per_attention_head, np, torch.cuda.current_device()
+                )
                 attention_scores += sandwich_bias
 
             if relative_position_bias is not None:
@@ -1089,8 +1099,6 @@ class CoreAttention(MegatronModule):
             context_layer = context_layer.view(*new_context_layer_shape)
 
         return context_layer
-
-
 
     def _get_global_attn_indices(self, is_index_global_attn: torch.Tensor) -> Tuple:
         """
@@ -1264,7 +1272,7 @@ class CoreAttention(MegatronModule):
         global_attn_scores = global_attn_scores.transpose(1, 2)
 
         # compute global attn probs
-        #global_attn_probs = nn.functional.softmax(global_attn_scores, dim=-1)
+        # global_attn_probs = nn.functional.softmax(global_attn_scores, dim=-1)
         global_attn_probs = self.scale_mask_softmax(global_attn_scores, is_index_masked.transpose(2, 3))
 
         global_attn_probs = global_attn_probs.view(batch_size * h, max_num_global_attn_indices, seq_len)
