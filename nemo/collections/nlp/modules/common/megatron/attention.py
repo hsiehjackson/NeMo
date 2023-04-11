@@ -981,10 +981,17 @@ class CoreAttention(MegatronModule):
                     global_key_attn = self.scale_mask_softmax(global_key_attn, rep_mask)
                     global_key_attn = self.attention_dropout(global_key_attn)
 
+                    value_vectors_only_global = torch.zeros(
+                        output_size[0], max_num_global_attn_indices, output_size[1], value_layer.shape[-1],
+                        dtype=value_layer.dtype,
+                        device=torch.cuda.current_device(),
+                    )
+
                     # compute outputs for global attention from all tokens to global
                     # (batch, time, head x head_dim)
                     out_all_to_global = self._compute_out_all_to_global(
                         value=global_v,
+                        value_vectors_only_global=value_vectors_only_global,
                         attn_probs=global_key_attn,
                         max_num_global_attn_indices=max_num_global_attn_indices,
                         is_index_global_attn_nonzero=is_index_global_attn_nonzero,
@@ -1182,6 +1189,7 @@ class CoreAttention(MegatronModule):
     def _compute_out_all_to_global(
         self,
         value: torch.Tensor,
+        value_vectors_only_global: torch.Tensor,
         attn_probs: torch.Tensor,
         max_num_global_attn_indices: int,
         is_index_global_attn_nonzero: tuple,
@@ -1205,9 +1213,6 @@ class CoreAttention(MegatronModule):
         value = value.transpose(1, 2)
 
         # get value vectors for global only
-        value_vectors_only_global = torch.zeros(
-            batch_size, max_num_global_attn_indices, h, d_k, device=torch.cuda.current_device(),
-        )
         value_vectors_only_global[is_local_index_global_attn_nonzero] = value[is_index_global_attn_nonzero]
 
         # compute attn output only global
