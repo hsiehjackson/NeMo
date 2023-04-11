@@ -950,7 +950,9 @@ class CoreAttention(MegatronModule):
                         global_q, global_k, global_v = query_layer, key_layer, value_layer
 
                     # assign which tokens are global
-                    is_index_global_attn = torch.zeros_like(attention_mask.squeeze(3).squeeze(1))
+                    is_index_global_attn = torch.zeros_like(
+                        attention_mask.squeeze(3).squeeze(1), device=torch.cuda.current_device()
+                    )
                     is_index_global_attn[
                         :, : self.global_tokens * self.global_tokens_spacing : self.global_tokens_spacing
                     ] = 1.0
@@ -1376,7 +1378,7 @@ class CoreAttention(MegatronModule):
             input_tensor (torch.Tensor): # (batch x head, time, size)
             w (int): Chunk overlap size
         """
-        beginning_mask, ending_mask = self._get_invalid_locations_mask(w, input_tensor.device)
+        beginning_mask, ending_mask = self._get_invalid_locations_mask(w, device=torch.cuda.current_device())
         seq_len = input_tensor.size(2)
         beginning_input = input_tensor[:, :, :w, : w + 1]
         beginning_mask = beginning_mask[:, :, :seq_len].expand(beginning_input.size())
