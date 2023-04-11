@@ -979,12 +979,7 @@ class CoreAttention(MegatronModule):
                     ).transpose(1, 2)
 
                     # global_key_attn = torch.softmax(global_key_attn, dim=-1).masked_fill(attention_mask, 0.0)
-                    rep_mask = repeat(
-                        attention_mask,
-                        'b h t m -> b (h h2) t (m m2)',
-                        h2=global_key_attn.shape[1],
-                        m2=global_key_attn.shape[3],
-                    )
+                    rep_mask = repeat(attention_mask, 'b h t m -> b h t (m m2)', m2=global_key_attn.shape[3])
                     global_key_attn = self.scale_mask_softmax(global_key_attn, rep_mask)
                     if not self.sequence_parallel:
                         with tensor_parallel.random.get_cuda_rng_tracker().fork():
@@ -1280,12 +1275,7 @@ class CoreAttention(MegatronModule):
         # compute global attn probs
         # global_attn_probs = nn.functional.softmax(global_attn_scores, dim=-1)
         is_index_masked = is_index_masked.transpose(2, 3)
-        rep_is_index_masked = repeat(
-            is_index_masked,
-            'b h m t -> b (h h2) (m m2) t',
-            h2=global_attn_scores.shape[1],
-            m2=global_attn_scores.shape[2],
-        )
+        rep_is_index_masked = repeat(is_index_masked, 'b h m t -> b h (m m2) t', m2=global_attn_scores.shape[2])
         global_attn_probs = self.scale_mask_softmax(global_attn_scores, rep_is_index_masked)
 
         global_attn_probs = global_attn_probs.view(batch_size * h, max_num_global_attn_indices, seq_len)
