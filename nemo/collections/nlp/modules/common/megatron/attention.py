@@ -1205,7 +1205,7 @@ class CoreAttention(MegatronModule):
         value = value.transpose(1, 2)
 
         # get value vectors for global only
-        value_vectors_only_global = value.new_zeros(
+        value_vectors_only_global = torch.zeros(
             batch_size, max_num_global_attn_indices, h, d_k, device=torch.cuda.current_device(),
         )
         value_vectors_only_global[is_local_index_global_attn_nonzero] = value[is_index_global_attn_nonzero]
