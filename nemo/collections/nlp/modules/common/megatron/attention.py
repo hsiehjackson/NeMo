@@ -926,11 +926,7 @@ class CoreAttention(MegatronModule):
                 # attention_probs = F.softmax(attention_scores, dim=-1)
                 attention_probs = self.scale_mask_softmax(attention_scores, d_mask)
 
-                if not self.sequence_parallel:
-                    with tensor_parallel.random.get_cuda_rng_tracker().fork():
-                        attention_probs = self.attention_dropout(attention_probs)
-                else:
-                    attention_probs = self.attention_dropout(attention_probs)
+                attention_probs = self.attention_dropout(attention_probs)
 
                 # matmul: [b * np, sq, hn]
                 context_layer = self.sliding_chunks_matmul_pv(attention_probs, value_layer, self.local_context)
@@ -981,11 +977,7 @@ class CoreAttention(MegatronModule):
                     # global_key_attn = torch.softmax(global_key_attn, dim=-1).masked_fill(attention_mask, 0.0)
                     rep_mask = repeat(attention_mask, 'b h t m -> b h t (m m2)', m2=global_key_attn.shape[3])
                     global_key_attn = self.scale_mask_softmax(global_key_attn, rep_mask)
-                    if not self.sequence_parallel:
-                        with tensor_parallel.random.get_cuda_rng_tracker().fork():
-                            global_key_attn = self.attention_dropout(global_key_attn)
-                    else:
-                        global_key_attn = self.attention_dropout(global_key_attn)
+                    global_key_attn = self.attention_dropout(global_key_attn)
 
                     # compute outputs for global attention from all tokens to global
                     # (batch, time, head x head_dim)
@@ -1280,11 +1272,7 @@ class CoreAttention(MegatronModule):
 
         global_attn_probs = global_attn_probs.view(batch_size * h, max_num_global_attn_indices, seq_len)
 
-        if not self.sequence_parallel:
-            with tensor_parallel.random.get_cuda_rng_tracker().fork():
-                global_attn_probs = self.attention_dropout(global_attn_probs)
-        else:
-            global_attn_probs = self.attention_dropout(global_attn_probs)
+        global_attn_probs = self.attention_dropout(global_attn_probs)
 
         # global attn output
         global_attn_output = torch.bmm(global_attn_probs, global_v)
