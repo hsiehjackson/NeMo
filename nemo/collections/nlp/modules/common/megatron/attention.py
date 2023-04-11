@@ -1159,7 +1159,9 @@ class CoreAttention(MegatronModule):
         batch_size, h, d_k = key.shape[0], key.shape[2], key.shape[3]
 
         # create only global key vectors
-        key_only_global = key.new_zeros(batch_size, max_num_global_attn_indices, h, d_k)
+        key_only_global = key.new_zeros(
+            batch_size, max_num_global_attn_indices, h, d_k, device=torch.cuda.current_device()
+        )
 
         key_only_global[is_local_index_global_attn_nonzero] = key[is_index_global_attn_nonzero]
 
@@ -1201,7 +1203,9 @@ class CoreAttention(MegatronModule):
         value = value.transpose(1, 2)
 
         # get value vectors for global only
-        value_vectors_only_global = value.new_zeros(batch_size, max_num_global_attn_indices, h, d_k)
+        value_vectors_only_global = value.new_zeros(
+            batch_size, max_num_global_attn_indices, h, d_k, device=torch.cuda.current_device(),
+        )
         value_vectors_only_global[is_local_index_global_attn_nonzero] = value[is_index_global_attn_nonzero]
 
         # compute attn output only global
@@ -1249,7 +1253,9 @@ class CoreAttention(MegatronModule):
         global_v = value.reshape(batch_size * h, -1, d_k)
 
         global_q = query.transpose(1, 2)
-        global_q_from_global = global_q.new_zeros(batch_size, max_num_global_attn_indices, h, d_k)
+        global_q_from_global = global_q.new_zeros(
+            batch_size, max_num_global_attn_indices, h, d_k, device=torch.cuda.current_device(),
+        )
         global_q_from_global[is_local_index_global_attn_nonzero] = global_q[is_index_global_attn_nonzero]
         global_q_from_global = global_q_from_global.transpose(0, 1).reshape(batch_size * h, -1, d_k)
 
