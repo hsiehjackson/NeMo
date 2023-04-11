@@ -918,7 +918,7 @@ class ParallelTransformer(MegatronModule):
         num_moe_experts=1,
         moe_frequency=1,
         moe_dropout=0.0,
-        use_long_attention=True,
+        use_long_attention=False,
     ):
         super(ParallelTransformer, self).__init__()
 
