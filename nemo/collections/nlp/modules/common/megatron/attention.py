@@ -850,7 +850,7 @@ class CoreAttention(MegatronModule):
                 key_layer = key_layer.permute(1, 0, 2)
                 query_layer = query_layer.permute(1, 0, 2)
 
-                if self.use_long_attention and self.global_attn_separate:
+                if self.use_long_attention and self.global_tokens > 0 and self.global_attn_separate:
                     global_query_layer = rearrange(global_query_layer, 's b h d -> (b h) s d')
                     global_key_layer = rearrange(global_key_layer, 's b h d -> (b h) s d')
                     global_key_layer = self.xpos(global_key_layer, offset=0, downscale=True)
@@ -964,6 +964,7 @@ class CoreAttention(MegatronModule):
                         is_local_index_global_attn_nonzero,
                         is_local_index_no_global_attn_nonzero,
                     ) = self._get_global_attn_indices(is_index_global_attn=is_index_global_attn)
+
 
                     # calculate global attn probs with global keys
                     # (batch, time, head, max_num_global_attn_indices)
@@ -1119,7 +1120,7 @@ class CoreAttention(MegatronModule):
         num_global_attn_indices = is_index_global_attn.long().sum(dim=1)
 
         # Find the maximum number of global attention indices in the batch
-        max_num_global_attn_indices = num_global_attn_indices.max()
+        max_num_global_attn_indices = num_global_attn_indices.max().item()
 
         # Get the indices of global attention (non-zero elements)
         is_index_global_attn_nonzero = is_index_global_attn.nonzero(as_tuple=True)
