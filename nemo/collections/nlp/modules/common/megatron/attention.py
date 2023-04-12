@@ -990,7 +990,8 @@ class CoreAttention(MegatronModule):
 
                     # compute outputs for global attention from all tokens to global
                     # (batch, time, head x head_dim)
-                    out_all_to_global = self._compute_out_all_to_global(
+                    out_all_to_global = self.\
+                        _compute_out_all_to_global(
                         value=global_v,
                         value_vectors_only_global=value_vectors_only_global,
                         attn_probs=global_key_attn,
@@ -1216,8 +1217,12 @@ class CoreAttention(MegatronModule):
         # get value vectors for global only
         value_vectors_only_global[is_local_index_global_attn_nonzero] = value[is_index_global_attn_nonzero]
 
+        value_vectors_only_global = value_vectors_only_global.transpose(1, 2)
+
         # compute attn output only global
-        out_all_to_global = torch.matmul(attn_probs, value_vectors_only_global.transpose(1, 2)).transpose(1, 2)
+        out_all_to_global = torch.matmul(attn_probs, value_vectors_only_global)
+
+        out_all_to_global = out_all_to_global.transpose(1, 2)
 
         out_all_to_global = out_all_to_global.reshape(batch_size, time, -1)
 
@@ -1265,7 +1270,8 @@ class CoreAttention(MegatronModule):
             batch_size, max_num_global_attn_indices, h, d_k, device=torch.cuda.current_device(),
         )
         global_q_from_global[is_local_index_global_attn_nonzero] = global_q[is_index_global_attn_nonzero]
-        global_q_from_global = global_q_from_global.transpose(0, 1).reshape(batch_size * h, -1, d_k)
+        global_q_from_global = global_q_from_global.transpose(0, 1)
+        global_q_from_global = global_q_from_global.reshape(batch_size * h, -1, d_k)
 
         # compute attn scores
         global_attn_scores = torch.bmm(global_q_from_global, global_k.transpose(1, 2))
