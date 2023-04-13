@@ -216,6 +216,10 @@ class MegatronTokenLevelEncoderDecoderModule(MegatronModule):
                 moe_dropout=encoder_cfg.get('moe_dropout', 0.0),
                 position_embedding_type=encoder_cfg.get('position_embedding_type', 'learned_absolute'),
                 use_long_attention=encoder_cfg.get("use_long_attention", False),
+                local_context=encoder_cfg.get("local_context", 128),
+                global_tokens=encoder_cfg.get("global_tokens", 512),
+                global_tokens_spacing=encoder_cfg.get("global_tokens_spacing", 16),
+                global_attn_separate=encoder_cfg.get("global_attn_separate", True),
             )
 
         if add_decoder:
