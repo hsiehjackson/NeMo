@@ -83,6 +83,10 @@ class MegatronTransformerEncoderModule(MegatronModule, Exportable, MegatronEncod
         moe_dropout=0.0,
         use_long_attention=False,
         position_embedding_type='learned_absolute',
+        local_context=128,
+        global_tokens=1024,
+        global_tokens_spacing=16,
+        global_attn_separate=True,
     ):
         super(MegatronTransformerEncoderModule, self).__init__()
 
@@ -150,6 +154,10 @@ class MegatronTransformerEncoderModule(MegatronModule, Exportable, MegatronEncod
             moe_dropout=moe_dropout,
             position_embedding_type=position_embedding_type,
             use_long_attention=use_long_attention,
+            local_context=local_context,
+            global_tokens=global_tokens,
+            global_tokens_spacing=global_tokens_spacing,
+            global_attn_separate=global_attn_separate,
         )
         self._model_key = 'model'
 
