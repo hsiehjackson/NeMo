@@ -926,7 +926,11 @@ class CoreAttention(MegatronModule):
                 # attention_probs = F.softmax(attention_scores, dim=-1)
                 attention_probs = self.scale_mask_softmax(attention_scores, d_mask)
 
-                attention_probs = self.attention_dropout(attention_probs)
+                if not self.sequence_parallel:
+                    with tensor_parallel.random.get_cuda_rng_tracker().fork():
+                        attention_probs = self.attention_dropout(attention_probs)
+                else:
+                    attention_probs = self.attention_dropout(attention_probs)
 
                 # matmul: [b * np, sq, hn]
                 context_layer = self.sliding_chunks_matmul_pv(attention_probs, value_layer, self.local_context)
@@ -950,9 +954,7 @@ class CoreAttention(MegatronModule):
                         global_q, global_k, global_v = query_layer, key_layer, value_layer
 
                     # assign which tokens are global
-                    is_index_global_attn = torch.zeros_like(
-                        attention_mask.squeeze(3).squeeze(1), device=torch.cuda.current_device()
-                    )
+                    is_index_global_attn = torch.zeros_like(attention_mask.squeeze(3).squeeze(1))
                     is_index_global_attn[
                         :, : self.global_tokens * self.global_tokens_spacing : self.global_tokens_spacing
                     ] = 1.0
@@ -964,7 +966,6 @@ class CoreAttention(MegatronModule):
                         is_local_index_global_attn_nonzero,
                         is_local_index_no_global_attn_nonzero,
                     ) = self._get_global_attn_indices(is_index_global_attn=is_index_global_attn)
-
 
                     # calculate global attn probs with global keys
                     # (batch, time, head, max_num_global_attn_indices)
@@ -980,20 +981,16 @@ class CoreAttention(MegatronModule):
                     # global_key_attn = torch.softmax(global_key_attn, dim=-1).masked_fill(attention_mask, 0.0)
                     rep_mask = repeat(attention_mask, 'b h t m -> b h t (m m2)', m2=global_key_attn.shape[3])
                     global_key_attn = self.scale_mask_softmax(global_key_attn, rep_mask)
-                    global_key_attn = self.attention_dropout(global_key_attn)
-
-                    value_vectors_only_global = torch.zeros(
-                        output_size[0], max_num_global_attn_indices, output_size[1], value_layer.shape[-1],
-                        dtype=value_layer.dtype,
-                        device=torch.cuda.current_device(),
-                    )
+                    if not self.sequence_parallel:
+                        with tensor_parallel.random.get_cuda_rng_tracker().fork():
+                            global_key_attn = self.attention_dropout(global_key_attn)
+                    else:
+                        global_key_attn = self.attention_dropout(global_key_attn)
 
                     # compute outputs for global attention from all tokens to global
                     # (batch, time, head x head_dim)
-                    out_all_to_global = self.\
-                        _compute_out_all_to_global(
+                    out_all_to_global = self._compute_out_all_to_global(
                         value=global_v,
-                        value_vectors_only_global=value_vectors_only_global,
                         attn_probs=global_key_attn,
                         max_num_global_attn_indices=max_num_global_attn_indices,
                         is_index_global_attn_nonzero=is_index_global_attn_nonzero,
@@ -1016,8 +1013,6 @@ class CoreAttention(MegatronModule):
                     context_layer += out_all_to_global
 
                     context_layer[is_index_global_attn_nonzero] += out_global_to_all
-
-                    torch.cuda.empty_cache()
 
                 context_layer = context_layer[:, : output_size[2]]
 
@@ -1123,7 +1118,7 @@ class CoreAttention(MegatronModule):
         num_global_attn_indices = is_index_global_attn.long().sum(dim=1)
 
         # Find the maximum number of global attention indices in the batch
-        max_num_global_attn_indices = num_global_attn_indices.max().item()
+        max_num_global_attn_indices = num_global_attn_indices.max()
 
         # Get the indices of global attention (non-zero elements)
         is_index_global_attn_nonzero = is_index_global_attn.nonzero(as_tuple=True)
@@ -1172,9 +1167,7 @@ class CoreAttention(MegatronModule):
         batch_size, h, d_k = key.shape[0], key.shape[2], key.shape[3]
 
         # create only global key vectors
-        key_only_global = key.new_zeros(
-            batch_size, max_num_global_attn_indices, h, d_k, device=torch.cuda.current_device()
-        )
+        key_only_global = key.new_zeros(batch_size, max_num_global_attn_indices, h, d_k)
 
         key_only_global[is_local_index_global_attn_nonzero] = key[is_index_global_attn_nonzero]
 
@@ -1193,7 +1186,6 @@ class CoreAttention(MegatronModule):
     def _compute_out_all_to_global(
         self,
         value: torch.Tensor,
-        value_vectors_only_global: torch.Tensor,
         attn_probs: torch.Tensor,
         max_num_global_attn_indices: int,
         is_index_global_attn_nonzero: tuple,
@@ -1217,14 +1209,11 @@ class CoreAttention(MegatronModule):
         value = value.transpose(1, 2)
 
         # get value vectors for global only
+        value_vectors_only_global = value.new_zeros(batch_size, max_num_global_attn_indices, h, d_k)
         value_vectors_only_global[is_local_index_global_attn_nonzero] = value[is_index_global_attn_nonzero]
 
-        value_vectors_only_global = value_vectors_only_global.transpose(1, 2)
-
         # compute attn output only global
-        out_all_to_global = torch.matmul(attn_probs, value_vectors_only_global)
-
-        out_all_to_global = out_all_to_global.transpose(1, 2)
+        out_all_to_global = torch.matmul(attn_probs, value_vectors_only_global.transpose(1, 2)).transpose(1, 2)
 
         out_all_to_global = out_all_to_global.reshape(batch_size, time, -1)
 
@@ -1268,12 +1257,9 @@ class CoreAttention(MegatronModule):
         global_v = value.reshape(batch_size * h, -1, d_k)
 
         global_q = query.transpose(1, 2)
-        global_q_from_global = global_q.new_zeros(
-            batch_size, max_num_global_attn_indices, h, d_k, device=torch.cuda.current_device(),
-        )
+        global_q_from_global = global_q.new_zeros(batch_size, max_num_global_attn_indices, h, d_k)
         global_q_from_global[is_local_index_global_attn_nonzero] = global_q[is_index_global_attn_nonzero]
-        global_q_from_global = global_q_from_global.transpose(0, 1)
-        global_q_from_global = global_q_from_global.reshape(batch_size * h, -1, d_k)
+        global_q_from_global = global_q_from_global.transpose(0, 1).reshape(batch_size * h, -1, d_k)
 
         # compute attn scores
         global_attn_scores = torch.bmm(global_q_from_global, global_k.transpose(1, 2))
@@ -1294,7 +1280,11 @@ class CoreAttention(MegatronModule):
 
         global_attn_probs = global_attn_probs.view(batch_size * h, max_num_global_attn_indices, seq_len)
 
-        global_attn_probs = self.attention_dropout(global_attn_probs)
+        if not self.sequence_parallel:
+            with tensor_parallel.random.get_cuda_rng_tracker().fork():
+                global_attn_probs = self.attention_dropout(global_attn_probs)
+        else:
+            global_attn_probs = self.attention_dropout(global_attn_probs)
 
         # global attn output
         global_attn_output = torch.bmm(global_attn_probs, global_v)
@@ -1392,7 +1382,7 @@ class CoreAttention(MegatronModule):
             input_tensor (torch.Tensor): # (batch x head, time, size)
             w (int): Chunk overlap size
         """
-        beginning_mask, ending_mask = self._get_invalid_locations_mask(w, device=torch.cuda.current_device())
+        beginning_mask, ending_mask = self._get_invalid_locations_mask(w, input_tensor.device)
         seq_len = input_tensor.size(2)
         beginning_input = input_tensor[:, :, :w, : w + 1]
         beginning_mask = beginning_mask[:, :, :seq_len].expand(beginning_input.size())
