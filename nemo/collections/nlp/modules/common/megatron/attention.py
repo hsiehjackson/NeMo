@@ -1017,6 +1017,8 @@ class CoreAttention(MegatronModule):
 
                     context_layer[is_index_global_attn_nonzero] += out_global_to_all
 
+                    torch.cuda.empty_cache()
+
                 context_layer = context_layer[:, : output_size[2]]
 
                 context_layer = context_layer.transpose(0, 1).contiguous()
