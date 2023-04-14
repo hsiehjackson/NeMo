@@ -913,6 +913,8 @@ class CoreAttention(MegatronModule):
                     query_layer, key_layer, self.local_context, padding_value=0
                 )
 
+                attention_scores /= self.norm_factor
+
                 attention_mask = attention_mask.unsqueeze(dim=-1)
                 float_mask = attention_mask.type_as(attention_scores).masked_fill(attention_mask, -10000.0)
                 ones = float_mask.new_ones(size=float_mask.size())  # tensor of ones
@@ -1180,6 +1182,7 @@ class CoreAttention(MegatronModule):
             is_local_index_no_global_attn_nonzero[0], is_local_index_no_global_attn_nonzero[1], :, :
         ] = torch.finfo(attn_probs_from_global_key.dtype).min
         attn_probs_from_global_key = attn_probs_from_global_key.transpose(1, 3)
+        attn_probs_from_global_key /= self.norm_factor
 
         return attn_probs_from_global_key
 
@@ -1271,6 +1274,7 @@ class CoreAttention(MegatronModule):
             is_local_index_no_global_attn_nonzero[0], is_local_index_no_global_attn_nonzero[1], :, :
         ] = torch.finfo(global_attn_scores.dtype).min
         global_attn_scores = global_attn_scores.transpose(1, 2)
+        global_attn_scores /= self.norm_factor
 
         # compute global attn probs
         # global_attn_probs = nn.functional.softmax(global_attn_scores, dim=-1)
