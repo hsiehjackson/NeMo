@@ -157,7 +157,10 @@ class MegatronTokenLevelEncoderDecoderModule(MegatronModule):
                 if parallel_state.get_pipeline_model_parallel_rank() != 0:
                     self.encoder_relative_position_embeddings_weight().data.fill_(0)
                     self.encoder_relative_position_embeddings_weight().shared = True
-            elif self.encoder_cfg.get('position_embedding_type', 'learned_absolute') == 'alibi':
+            elif (
+                self.encoder_cfg.get('position_embedding_type', 'learned_absolute') == 'alibi'
+                and self.encoder_cfg.get('use_long_attention') == False
+            ):
                 self.encoder_relative_position_embedding = ALiBiRelativePositionEmbedding(
                     bidirectional=True,
                     num_attention_heads=encoder_cfg.num_attention_heads,

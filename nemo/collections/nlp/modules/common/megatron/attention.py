@@ -31,6 +31,10 @@ import math
 from functools import lru_cache
 from typing import List, Tuple
 
+from nemo.collections.nlp.modules.common.megatron.alibi_relative_position_embedding import (
+    ALiBiRelativePositionEmbedding,
+)
+from nemo.collections.nlp.modules.common.megatron.layer_type import LayerType
 
 from nemo.utils import avoid_float16_autocast_context
 
@@ -772,6 +776,16 @@ class CoreAttention(MegatronModule):
         if position_embedding_type.lower() == 'xpos':
             self.xpos = XPOS(hidden_size / num_attention_heads)
 
+        if position_embedding_type == 'alibi' and use_long_attention:
+            self.pos_emb = ALiBiRelativePositionEmbedding(
+                bidirectional=True,
+                num_attention_heads=num_attention_heads,
+                layer_type=LayerType.encoder,
+                num_attention_heads_alibi=None,
+                max_seq_len=None,
+                use_long_attention=True,
+            )
+
         self.use_long_attention = use_long_attention
         self.local_context = local_context
         self.global_tokens = global_tokens
@@ -915,6 +929,16 @@ class CoreAttention(MegatronModule):
 
                 attention_scores /= self.norm_factor
 
+                if self.position_embedding_type == 'alibi':
+                    local_pos_bias = self.pos_emb.forward_local(attention_scores.shape[-2], self.local_context)
+                    attention_scores += local_pos_bias[
+                        :,
+                        self.num_attention_heads_partition_offset : self.num_attention_heads_partition_offset
+                        + self.num_attention_heads_per_partition,
+                        : attention_scores.size(2),
+                        : attention_scores.size(3),
+                    ]
+
                 attention_mask = attention_mask.unsqueeze(dim=-1)
                 float_mask = attention_mask.type_as(attention_scores).masked_fill(attention_mask, -10000.0)
                 ones = float_mask.new_ones(size=float_mask.size())  # tensor of ones
@@ -980,6 +1004,22 @@ class CoreAttention(MegatronModule):
                         is_local_index_no_global_attn_nonzero=is_local_index_no_global_attn_nonzero,
                     ).transpose(1, 2)
 
+                    if self.position_embedding_type == 'alibi':
+                        global_pos_bias = self.pos_emb.forward_global(
+                            global_q.shape[0],
+                            global_q.shape[-2],
+                            max_num_global_attn_indices,
+                            is_index_global_attn_nonzero,
+                            is_local_index_global_attn_nonzero,
+                        )
+                        global_key_attn += global_pos_bias[
+                            :,
+                            self.num_attention_heads_partition_offset : self.num_attention_heads_partition_offset
+                            + self.num_attention_heads_per_partition,
+                        ]
+                    else:
+                        global_pos_bias = None
+
                     # global_key_attn = torch.softmax(global_key_attn, dim=-1).masked_fill(attention_mask, 0.0)
                     rep_mask = repeat(attention_mask, 'b h t m -> b h t (m m2)', m2=global_key_attn.shape[3])
                     global_key_attn = self.scale_mask_softmax(global_key_attn, rep_mask)
@@ -1010,6 +1050,7 @@ class CoreAttention(MegatronModule):
                         is_index_global_attn_nonzero=is_index_global_attn_nonzero,
                         is_local_index_no_global_attn_nonzero=is_local_index_no_global_attn_nonzero,
                         is_index_masked=attention_mask,
+                        global_pos_bias=global_pos_bias,
                     )
 
                     context_layer += out_all_to_global
@@ -1232,6 +1273,7 @@ class CoreAttention(MegatronModule):
         is_index_global_attn_nonzero: tuple,
         is_local_index_no_global_attn_nonzero: tuple,
         is_index_masked: torch.Tensor,
+        global_pos_bias: torch.Tensor,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Compute the attention output of global tokens attending to all.
@@ -1275,6 +1317,13 @@ class CoreAttention(MegatronModule):
         ] = torch.finfo(global_attn_scores.dtype).min
         global_attn_scores = global_attn_scores.transpose(1, 2)
         global_attn_scores /= self.norm_factor
+
+        if self.position_embedding_type == 'alibi':
+            global_attn_scores += global_pos_bias[
+                :,
+                self.num_attention_heads_partition_offset : self.num_attention_heads_partition_offset
+                + self.num_attention_heads_per_partition,
+            ].transpose(-2, -1)
 
         # compute global attn probs
         # global_attn_probs = nn.functional.softmax(global_attn_scores, dim=-1)

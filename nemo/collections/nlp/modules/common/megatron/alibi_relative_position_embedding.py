@@ -68,7 +68,13 @@ class ALiBiRelativePositionEmbedding(torch.nn.Module):
     """
 
     def __init__(
-        self, bidirectional, num_attention_heads, layer_type, num_attention_heads_alibi=None, max_seq_len=512
+        self,
+        bidirectional,
+        num_attention_heads,
+        layer_type,
+        num_attention_heads_alibi=None,
+        max_seq_len=512,
+        use_long_attention=False,
     ):
         """
         Args:
@@ -101,7 +107,10 @@ class ALiBiRelativePositionEmbedding(torch.nn.Module):
         # cache the slopes
         self.slopes = build_slopes(num_attention_heads, num_attention_heads_alibi)
         # cache the relative position bias. shape (num_attention_heads, max_seq_len, max_seq_len)
-        self.relative_position = build_relative_position(max_seq_len, max_seq_len, num_attention_heads)
+        if use_long_attention:
+            self.relative_position = None
+        else:
+            self.relative_position = build_relative_position(max_seq_len, max_seq_len, num_attention_heads)
 
     def forward(self, query_seq_length, key_seq_length):
         # used cached relative position if possible
@@ -118,3 +127,33 @@ class ALiBiRelativePositionEmbedding(torch.nn.Module):
 
         # shape (1, num_heads, query_length, key_length)
         return -relative_position.unsqueeze(0) * self.slopes
+
+    def forward_local(self, seq_length, local_context):
+
+        relative_position = torch.abs(torch.arange(-local_context, local_context + 1)).cuda()
+        relative_position = relative_position[None, None, :].expand(self.num_attention_heads, seq_length, -1)
+
+        return -relative_position.unsqueeze(0) * self.slopes
+
+    def forward_global(
+        self,
+        batch_size,
+        seq_length,
+        max_num_global_tokens,
+        is_index_global_attn,
+        is_local_index_no_global_attn_nonzero,
+    ):
+        relative_position = (
+            torch.arange(seq_length)[None, None, :].cuda().expand(batch_size, max_num_global_tokens, -1)
+        )
+        relative_position = relative_position.contiguous()
+
+        relative_position[is_local_index_no_global_attn_nonzero] -= is_index_global_attn[1].unsqueeze(1)
+        relative_position = torch.abs(relative_position).transpose(1, 2)
+
+        relative_position = relative_position[:, None, :, :].expand(-1, self.num_attention_heads, -1, -1)
+
+        return -relative_position * self.slopes
+
+
+# (batch, time, head, max_num_global_attn_indices)
