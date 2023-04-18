@@ -57,6 +57,19 @@ def _modify_config(t5_cfg, cfg, add_cfg_to_tree=False):
                 t5_cfg.encoder.ffn_dropout = cfg.model.get('ffn_dropout', 0.1)
             if hasattr(t5_cfg.decoder, 'ffn_dropout'):
                 t5_cfg.decoder.ffn_dropout = cfg.model.get('ffn_dropout', 0.1)
+            if hasattr(cfg.model, 'use_long_attention'):
+                t5_cfg.encoder.use_long_attention = cfg.model.use_long_attention
+            if hasattr(cfg.model, 'global_attn_separate'):
+                t5_cfg.encoder.global_attn_separate = cfg.model.global_attn_separate
+            if hasattr(cfg.model, 'global_tokens_spacing'):
+                t5_cfg.encoder.global_tokens_spacing = cfg.model.global_tokens_spacing
+            if hasattr(cfg.model, 'global_tokens'):
+                t5_cfg.encoder.global_tokens = cfg.model.global_tokens
+            if hasattr(cfg.model, 'local_context'):
+                t5_cfg.encoder.local_context = cfg.model.local_context
+            if hasattr(cfg.model, 'position_embedding_type'):
+                t5_cfg.encoder.position_embedding_type = cfg.model.position_embedding_type
+                t5_cfg.decoder.position_embedding_type = cfg.model.position_embedding_type
         else:
             t5_cfg.hidden_dropout = cfg.model.get('hidden_dropout', 0.1)
             t5_cfg.attention_dropout = cfg.model.get('attention_dropout', 0.1)
@@ -69,6 +82,7 @@ def _modify_config(t5_cfg, cfg, add_cfg_to_tree=False):
         # XNLI has eval languages in the yaml config.
         if hasattr(cfg.model, 'eval_languages'):
             t5_cfg.eval_languages = cfg.model.eval_languages
+
 
         # This is needed when modifying a hparam file directly to load `.ckpt` files.
         # This is not needed to modify the cfg in `.nemo` files.
