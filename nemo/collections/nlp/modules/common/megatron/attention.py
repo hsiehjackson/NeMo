@@ -836,7 +836,12 @@ class CoreAttention(MegatronModule):
         # ===================================
 
         # [b, np, sq, sk]
-        output_size = (query_layer.size(1), query_layer.size(2), query_layer.size(0), key_layer.size(0))
+        output_size = (
+            query_layer.size(1),
+            query_layer.size(2),
+            query_layer.size(0) - total_transient_tokens,
+            key_layer.size(0) - total_transient_tokens,
+        )
 
         # TODO: figure out how to do this
         # apply relative positional encoding (rotary embedding)
@@ -927,9 +932,9 @@ class CoreAttention(MegatronModule):
                     # attention_mask = attention_mask.transpose(-2, -1)
 
                 if self.transient_global_tokens:
-                    transient_k = key_layer[:total_transient_tokens].transpose(0, 1)
-                    transient_v = value_layer[:total_transient_tokens].transpose(0, 1)
-
+                    if not self.global_attn_separate:
+                        transient_k = key_layer[:total_transient_tokens].transpose(0, 1)
+                        transient_v = value_layer[:total_transient_tokens].transpose(0, 1)
                     query_layer = query_layer[total_transient_tokens:]
                     key_layer = key_layer[total_transient_tokens:]
                     value_layer = value_layer[total_transient_tokens:]
@@ -995,6 +1000,14 @@ class CoreAttention(MegatronModule):
                 context_layer = context_layer.reshape(context_layer.shape[0], context_layer.shape[1], -1)
 
                 if self.global_tokens > 0:
+
+                    if self.transient_global_tokens and self.global_attn_separate:
+                        transient_k = global_key_layer[:total_transient_tokens].transpose(0, 1)
+                        transient_v = global_value_layer[:total_transient_tokens].transpose(0, 1)
+
+                        global_query_layer = global_query_layer[total_transient_tokens:]
+                        global_key_layer = global_key_layer[total_transient_tokens:]
+                        global_value_layer = global_value_layer[total_transient_tokens:]
 
                     # create q, k, v for global attn
                     if self.global_attn_separate:
