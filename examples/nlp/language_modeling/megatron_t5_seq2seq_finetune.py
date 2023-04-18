@@ -101,6 +101,7 @@ def load_from_nemo(cls, cfg, trainer, t5_cfg, modify_confg_fn):
         trainer=trainer,
         override_config_path=t5_cfg,
         save_restore_connector=NLPSaveRestoreConnector(),
+        strict=False,
     )
     return model
 
@@ -132,7 +133,9 @@ def load_from_checkpoint_dir(cls, cfg, trainer, modify_confg_fn):
     t5_cfg = modify_confg_fn(hparams_file.cfg, cfg, add_cfg_to_tree=True)
     with tempfile.NamedTemporaryFile(suffix='.yaml') as f:
         OmegaConf.save(config=t5_cfg, f=f.name)
-        model = cls.load_from_checkpoint(checkpoint_path=checkpoint_path, trainer=trainer, hparams_file=f.name,)
+        model = cls.load_from_checkpoint(
+            checkpoint_path=checkpoint_path, trainer=trainer, hparams_file=f.name, strict=False
+        )
         return model
 
 
@@ -189,7 +192,7 @@ def main(cfg) -> None:
     if hasattr(cfg.model.data.train_ds, 'task_name'):
         if cfg.model.restore_from_path:
             t5_cfg = MegatronT5GLUEModel.restore_from(
-                restore_path=cfg.model.restore_from_path, trainer=trainer, return_config=True, strict=False,
+                restore_path=cfg.model.restore_from_path, trainer=trainer, return_config=True
             )
             model = load_from_nemo(MegatronT5GLUEModel, cfg, trainer, t5_cfg, modify_confg_fn=_modify_config)
         else:
@@ -198,7 +201,7 @@ def main(cfg) -> None:
     elif hasattr(cfg.model.data.train_ds, 'file_names'):
         if cfg.model.restore_from_path:
             t5_cfg = MegatronT0Model.restore_from(
-                restore_path=cfg.model.restore_from_path, trainer=trainer, return_config=True, strict=False,
+                restore_path=cfg.model.restore_from_path, trainer=trainer, return_config=True
             )
             model = load_from_nemo(MegatronT0Model, cfg, trainer, t5_cfg, modify_confg_fn=_modify_config)
         else:
@@ -207,7 +210,7 @@ def main(cfg) -> None:
     else:
         if cfg.model.restore_from_path:
             t5_cfg = MegatronT5FinetuneModel.restore_from(
-                restore_path=cfg.model.restore_from_path, trainer=trainer, return_config=True, strict=False,
+                restore_path=cfg.model.restore_from_path, trainer=trainer, return_config=True
             )
             model = load_from_nemo(MegatronT5FinetuneModel, cfg, trainer, t5_cfg, modify_confg_fn=_modify_config)
         else:
