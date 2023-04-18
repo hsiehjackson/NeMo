@@ -189,7 +189,7 @@ def main(cfg) -> None:
     if hasattr(cfg.model.data.train_ds, 'task_name'):
         if cfg.model.restore_from_path:
             t5_cfg = MegatronT5GLUEModel.restore_from(
-                restore_path=cfg.model.restore_from_path, trainer=trainer, return_config=True
+                restore_path=cfg.model.restore_from_path, trainer=trainer, return_config=True, strict=False,
             )
             model = load_from_nemo(MegatronT5GLUEModel, cfg, trainer, t5_cfg, modify_confg_fn=_modify_config)
         else:
@@ -198,7 +198,7 @@ def main(cfg) -> None:
     elif hasattr(cfg.model.data.train_ds, 'file_names'):
         if cfg.model.restore_from_path:
             t5_cfg = MegatronT0Model.restore_from(
-                restore_path=cfg.model.restore_from_path, trainer=trainer, return_config=True
+                restore_path=cfg.model.restore_from_path, trainer=trainer, return_config=True, strict=False,
             )
             model = load_from_nemo(MegatronT0Model, cfg, trainer, t5_cfg, modify_confg_fn=_modify_config)
         else:
@@ -207,7 +207,7 @@ def main(cfg) -> None:
     else:
         if cfg.model.restore_from_path:
             t5_cfg = MegatronT5FinetuneModel.restore_from(
-                restore_path=cfg.model.restore_from_path, trainer=trainer, return_config=True
+                restore_path=cfg.model.restore_from_path, trainer=trainer, return_config=True, strict=False,
             )
             model = load_from_nemo(MegatronT5FinetuneModel, cfg, trainer, t5_cfg, modify_confg_fn=_modify_config)
         else:
