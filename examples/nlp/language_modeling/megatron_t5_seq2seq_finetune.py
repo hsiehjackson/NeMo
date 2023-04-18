@@ -67,6 +67,8 @@ def _modify_config(t5_cfg, cfg, add_cfg_to_tree=False):
                 t5_cfg.encoder.global_tokens = cfg.model.global_tokens
             if hasattr(cfg.model, 'local_context'):
                 t5_cfg.encoder.local_context = cfg.model.local_context
+            if hasattr(cfg.model, 'transient_global_tokens'):
+                t5_cfg.encoder.transient_global_tokens = cfg.model.transient_global_tokens
             if hasattr(cfg.model, 'position_embedding_type'):
                 t5_cfg.encoder.position_embedding_type = cfg.model.position_embedding_type
                 t5_cfg.decoder.position_embedding_type = cfg.model.position_embedding_type
