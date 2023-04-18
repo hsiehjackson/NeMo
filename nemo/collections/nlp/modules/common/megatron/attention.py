@@ -105,6 +105,7 @@ class ParallelAttention(MegatronModule, adapter_mixins.AdapterModuleMixin):
         global_tokens=1024,
         global_tokens_spacing=16,
         global_attn_separate=True,
+        transient_global_tokens=False,
     ):
         super(ParallelAttention, self).__init__()
 
@@ -113,6 +114,7 @@ class ParallelAttention(MegatronModule, adapter_mixins.AdapterModuleMixin):
         self.global_tokens = global_tokens
         self.global_tokens_spacing = 16
         self.global_attn_separate = global_attn_separate
+        self.transient_global_tokens = transient_global_tokens
 
         self.layer_number = max(1, layer_number)
         self.attention_type = attention_type
@@ -184,6 +186,9 @@ class ParallelAttention(MegatronModule, adapter_mixins.AdapterModuleMixin):
                 gradient_accumulation_fusion=gradient_accumulation_fusion,
             )
 
+        if self.transient_global_tokens:
+            self.transient_norm = torch.nn.LayerNorm(hidden_size)
+
         self.core_attention = CoreAttention(
             layer_number=self.layer_number,
             num_attention_heads=num_attention_heads,
@@ -204,6 +209,7 @@ class ParallelAttention(MegatronModule, adapter_mixins.AdapterModuleMixin):
             global_tokens=global_tokens,
             global_tokens_spacing=global_tokens_spacing,
             global_attn_separate=global_attn_separate,
+            transient_global_tokens=transient_global_tokens,
         )
 
         # Output.
@@ -381,6 +387,16 @@ class ParallelAttention(MegatronModule, adapter_mixins.AdapterModuleMixin):
         # Query, Key, and Value
         # =====================
 
+        if self.transient_global_tokens:
+            avg_hidden_states = hidden_states.reshape(self.global_tokens_spacing, -1, 1, hidden_states.shape[-1])
+            avg_hidden_states = avg_hidden_states.mean(dim=0)
+            avg_hidden_states = self.transient_norm(avg_hidden_states)
+
+            hidden_states = torch.cat((avg_hidden_states, hidden_states), dim=0)
+            total_transient_tokens = avg_hidden_states.shape[0]
+        else:
+            total_transient_tokens = 0
+
         global_query_layer = global_key_layer = global_value_layer = None
         if self.attention_type == AttnType.self_attn:
             # Attention heads [sq, b, h] --> [sq, b, (np * 3 * hn)]
@@ -509,6 +525,7 @@ class ParallelAttention(MegatronModule, adapter_mixins.AdapterModuleMixin):
                 rotary_pos_emb=rotary_pos_emb,
                 relative_position_bias=relative_position_bias,
                 headscale_tensor=self.head_scale_tensor if self.headscale else None,
+                total_transient_tokens=total_transient_tokens
             )
 
         # =================
@@ -713,6 +730,7 @@ class CoreAttention(MegatronModule):
         global_tokens=1024,
         global_tokens_spacing=16,
         global_attn_separate=True,
+        transient_global_tokens=False,
     ):
 
         super(CoreAttention, self).__init__()
@@ -792,6 +810,9 @@ class CoreAttention(MegatronModule):
         self.global_tokens_spacing = global_tokens_spacing
         self.global_attn_separate = global_attn_separate
 
+        self.transient_global_tokens = transient_global_tokens
+
+
     def forward(
         self,
         query_layer,
@@ -806,11 +827,14 @@ class CoreAttention(MegatronModule):
         rotary_pos_emb=None,
         relative_position_bias=None,
         headscale_tensor=None,
+        total_transient_tokens=0
     ):
 
         # ===================================
         # Raw attention scores. [b, np, s, s]
         # ===================================
+
+
 
         # [b, np, sq, sk]
         output_size = (query_layer.size(1), query_layer.size(2), query_layer.size(0), key_layer.size(0))
@@ -902,18 +926,27 @@ class CoreAttention(MegatronModule):
                 if len(attention_mask.shape) > 3:
                     attention_mask = attention_mask.sum(-1) == 0
                     # attention_mask = attention_mask.transpose(-2, -1)
+
+                if self.transient_global_tokens:
+                    transient_k = key_layer[:total_transient_tokens].transpose(0, 1)
+                    transient_v = value_layer[:total_transient_tokens].transpose(0, 1)
+
+                    query_layer = query_layer[total_transient_tokens:]
+                    key_layer = key_layer[total_transient_tokens:]
+                    value_layer = value_layer[total_transient_tokens:]
+
                 # [sq/k, b, np, hn]
-                query_layer = query_layer.view(output_size[2], output_size[0], output_size[1], -1)
-                key_layer = key_layer.view(output_size[3], output_size[0], output_size[1], -1)
-                value_layer = value_layer.view(output_size[3], output_size[0], output_size[1], -1)
+                T_q = query_layer.shape[0]
+                T_k = key_layer.shape[0]
+                query_layer = query_layer.view(T_q, output_size[0], output_size[1], -1)
+                key_layer = key_layer.view(T_k, output_size[0], output_size[1], -1)
+                value_layer = value_layer.view(T_k, output_size[0], output_size[1], -1)
 
                 # [b, hn, sq/k, np]
                 query_layer = query_layer.permute(1, 2, 0, 3)
                 key_layer = key_layer.permute(1, 2, 0, 3)
                 value_layer = value_layer.permute(1, 2, 0, 3)
 
-                T_q = query_layer.shape[2]
-                T_k = key_layer.shape[2]
                 pad_len_q = (2 * self.local_context - T_q % (2 * self.local_context)) % (2 * self.local_context)
                 pad_len_k = (2 * self.local_context - T_k % (2 * self.local_context)) % (2 * self.local_context)
 
@@ -979,11 +1012,14 @@ class CoreAttention(MegatronModule):
                     else:
                         global_q, global_k, global_v = query_layer, key_layer, value_layer
 
+                    #attention_mask = F.pad(attention_mask, (0, 0, total_transient_tokens, 0), value=False)
                     # assign which tokens are global
+
                     is_index_global_attn = torch.zeros_like(attention_mask.squeeze(3).squeeze(1))
                     is_index_global_attn[
                         :, : self.global_tokens * self.global_tokens_spacing : self.global_tokens_spacing
                     ] = 1.0
+
 
                     # compute global attn indices
                     (
@@ -992,6 +1028,14 @@ class CoreAttention(MegatronModule):
                         is_local_index_global_attn_nonzero,
                         is_local_index_no_global_attn_nonzero,
                     ) = self._get_global_attn_indices(is_index_global_attn=is_index_global_attn)
+
+                    if self.transient_global_tokens:
+                        global_k = global_k.transpose(1, 2)
+                        global_v = global_v.transpose(1, 2)
+                        global_k[is_index_global_attn_nonzero] = transient_k[is_local_index_global_attn_nonzero]
+                        global_v[is_index_global_attn_nonzero] = transient_v[is_local_index_global_attn_nonzero]
+                        global_k = global_k.transpose(1, 2)
+                        global_v = global_v.transpose(1, 2)
 
                     # calculate global attn probs with global keys
                     # (batch, time, head, max_num_global_attn_indices)
@@ -1039,23 +1083,27 @@ class CoreAttention(MegatronModule):
                         is_local_index_global_attn_nonzero=is_local_index_global_attn_nonzero,
                     )
 
-                    # compute outputs for global attention from global tokens to all
-                    # (batch, max_num_global_attn_indices, head x head_dim)
-                    out_global_to_all = self._compute_out_global_to_all(
-                        query=global_q,
-                        key=global_k,
-                        value=global_v,
-                        max_num_global_attn_indices=max_num_global_attn_indices,
-                        is_local_index_global_attn_nonzero=is_local_index_global_attn_nonzero,
-                        is_index_global_attn_nonzero=is_index_global_attn_nonzero,
-                        is_local_index_no_global_attn_nonzero=is_local_index_no_global_attn_nonzero,
-                        is_index_masked=attention_mask,
-                        global_pos_bias=global_pos_bias,
-                    )
 
                     context_layer += out_all_to_global
 
-                    context_layer[is_index_global_attn_nonzero] += out_global_to_all
+
+                    if not self.transient_global_tokens:
+                        # compute outputs for global attention from global tokens to all
+                        # (batch, max_num_global_attn_indices, head x head_dim)
+                        out_global_to_all = self._compute_out_global_to_all(
+                            query=global_q,
+                            key=global_k,
+                            value=global_v,
+                            max_num_global_attn_indices=max_num_global_attn_indices,
+                            is_local_index_global_attn_nonzero=is_local_index_global_attn_nonzero,
+                            is_index_global_attn_nonzero=is_index_global_attn_nonzero,
+                            is_local_index_no_global_attn_nonzero=is_local_index_no_global_attn_nonzero,
+                            is_index_masked=attention_mask,
+                            global_pos_bias=global_pos_bias,
+                        )
+
+
+                        context_layer[is_index_global_attn_nonzero] += out_global_to_all
 
                 context_layer = context_layer[:, : output_size[2]]
 
