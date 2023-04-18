@@ -388,7 +388,9 @@ class ParallelAttention(MegatronModule, adapter_mixins.AdapterModuleMixin):
         # =====================
 
         if self.transient_global_tokens:
-            avg_hidden_states = hidden_states.reshape(self.global_tokens_spacing, -1, 1, hidden_states.shape[-1])
+            avg_hidden_states = hidden_states.reshape(
+                self.global_tokens_spacing, -1, hidden_states.shape[-2], hidden_states.shape[-1]
+            )
             avg_hidden_states = avg_hidden_states.mean(dim=0)
             avg_hidden_states = self.transient_norm(avg_hidden_states)
 
@@ -525,7 +527,7 @@ class ParallelAttention(MegatronModule, adapter_mixins.AdapterModuleMixin):
                 rotary_pos_emb=rotary_pos_emb,
                 relative_position_bias=relative_position_bias,
                 headscale_tensor=self.head_scale_tensor if self.headscale else None,
-                total_transient_tokens=total_transient_tokens
+                total_transient_tokens=total_transient_tokens,
             )
 
         # =================
@@ -812,7 +814,6 @@ class CoreAttention(MegatronModule):
 
         self.transient_global_tokens = transient_global_tokens
 
-
     def forward(
         self,
         query_layer,
@@ -827,14 +828,12 @@ class CoreAttention(MegatronModule):
         rotary_pos_emb=None,
         relative_position_bias=None,
         headscale_tensor=None,
-        total_transient_tokens=0
+        total_transient_tokens=0,
     ):
 
         # ===================================
         # Raw attention scores. [b, np, s, s]
         # ===================================
-
-
 
         # [b, np, sq, sk]
         output_size = (query_layer.size(1), query_layer.size(2), query_layer.size(0), key_layer.size(0))
@@ -1012,14 +1011,13 @@ class CoreAttention(MegatronModule):
                     else:
                         global_q, global_k, global_v = query_layer, key_layer, value_layer
 
-                    #attention_mask = F.pad(attention_mask, (0, 0, total_transient_tokens, 0), value=False)
+                    # attention_mask = F.pad(attention_mask, (0, 0, total_transient_tokens, 0), value=False)
                     # assign which tokens are global
 
                     is_index_global_attn = torch.zeros_like(attention_mask.squeeze(3).squeeze(1))
                     is_index_global_attn[
                         :, : self.global_tokens * self.global_tokens_spacing : self.global_tokens_spacing
                     ] = 1.0
-
 
                     # compute global attn indices
                     (
@@ -1083,9 +1081,7 @@ class CoreAttention(MegatronModule):
                         is_local_index_global_attn_nonzero=is_local_index_global_attn_nonzero,
                     )
 
-
                     context_layer += out_all_to_global
-
 
                     if not self.transient_global_tokens:
                         # compute outputs for global attention from global tokens to all
@@ -1101,7 +1097,6 @@ class CoreAttention(MegatronModule):
                             is_index_masked=attention_mask,
                             global_pos_bias=global_pos_bias,
                         )
-
 
                         context_layer[is_index_global_attn_nonzero] += out_global_to_all
 

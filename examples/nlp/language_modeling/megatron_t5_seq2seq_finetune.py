@@ -83,7 +83,6 @@ def _modify_config(t5_cfg, cfg, add_cfg_to_tree=False):
         if hasattr(cfg.model, 'eval_languages'):
             t5_cfg.eval_languages = cfg.model.eval_languages
 
-
         # This is needed when modifying a hparam file directly to load `.ckpt` files.
         # This is not needed to modify the cfg in `.nemo` files.
         if add_cfg_to_tree:

@@ -223,7 +223,7 @@ class MegatronTokenLevelEncoderDecoderModule(MegatronModule):
                 global_tokens=encoder_cfg.get("global_tokens", 512),
                 global_tokens_spacing=encoder_cfg.get("global_tokens_spacing", 16),
                 global_attn_separate=encoder_cfg.get("global_attn_separate", True),
-                transient_global_tokens=encoder_cfg.get("transient_global_tokens", False)
+                transient_global_tokens=encoder_cfg.get("transient_global_tokens", False),
             )
 
         if add_decoder:
