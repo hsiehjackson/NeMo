@@ -294,9 +294,9 @@ class MegatronT5FinetuneModel(MegatronT5Model):
         # Call parent validation step to get the loss.
         # NOTE: There could be extra keys in the processed_batch dictionary such as "langs" for XNLI, this will be ignored in the parent class.
         loss = super().validation_step(processed_batch, batch_idx)
-
+        
         predicted_token_ids, _ = self.decode(
-            tokens_enc=processed_batch['text_enc'], enc_mask=processed_batch['enc_mask'], num_tokens_to_generate=30
+            tokens_enc=processed_batch['text_enc'], enc_mask=processed_batch['enc_mask'], num_tokens_to_generate=self.cfg.data.validation_ds.max_tgt_seq_length if mode == 'validation' else self.cfg.data.test_ds.max_tgt_seq_length
         )
 
         # Special ids to text function to handle stripping <eos> and special tokens with sentencepiece tokenizers.
