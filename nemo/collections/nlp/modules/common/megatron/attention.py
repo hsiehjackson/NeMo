@@ -482,7 +482,8 @@ class ParallelAttention(MegatronModule, adapter_mixins.AdapterModuleMixin):
         side_bias_idx = None
 
         if self.transient_global_tokens:
-            avg_hidden_states = hidden_states.reshape(
+            avg_hidden_states = _pad_to_multiple(hidden_states, self.global_tokens_spacing, 0)
+            avg_hidden_states = avg_hidden_states.reshape(
                 self.global_tokens_spacing, -1, hidden_states.shape[-2], hidden_states.shape[-1]
             )
             avg_hidden_states = avg_hidden_states.mean(dim=0)
