@@ -157,10 +157,7 @@ class MegatronTokenLevelEncoderDecoderModule(MegatronModule):
                 if parallel_state.get_pipeline_model_parallel_rank() != 0:
                     self.encoder_relative_position_embeddings_weight().data.fill_(0)
                     self.encoder_relative_position_embeddings_weight().shared = True
-            elif (
-                self.encoder_cfg.get('position_embedding_type', 'learned_absolute') == 'alibi'
-                and self.encoder_cfg.get('use_long_attention') == False
-            ):
+            elif self.encoder_cfg.get('position_embedding_type', 'learned_absolute') == 'alibi':
                 self.encoder_relative_position_embedding = ALiBiRelativePositionEmbedding(
                     bidirectional=True,
                     num_attention_heads=encoder_cfg.num_attention_heads,
@@ -498,9 +495,12 @@ class MegatronTokenLevelEncoderDecoderModule(MegatronModule):
             enc_seq_length = enc_attn_mask.size(1)
 
         if self.add_encoder and self.encoder_relative_position_embedding is not None:
-            encoder_self_attention_relative_position_bias = self.encoder_relative_position_embedding(
-                query_seq_length=enc_seq_length, key_seq_length=enc_seq_length,
-            )
+            if not self.encoder_cfg.get('use_long_attention'):
+                encoder_self_attention_relative_position_bias = self.encoder_relative_position_embedding(
+                    query_seq_length=enc_seq_length, key_seq_length=enc_seq_length,
+                )
+            else:
+                encoder_self_attention_relative_position_bias = self.encoder_relative_position_embedding
 
         if output_enc_hidden_only:
             # When pipeline parallel > 1 we need to make sure encoder exist (will be missing in decoder)

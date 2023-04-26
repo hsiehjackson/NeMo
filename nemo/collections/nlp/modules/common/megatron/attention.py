@@ -16,6 +16,7 @@ import math
 
 import torch
 import torch.nn.functional as F
+from torch import nn
 from einops import rearrange, repeat
 
 from nemo.collections.nlp.modules.common.megatron.adapters.parallel_adapters import AdapterName, InfusedAdapterConfig
@@ -68,6 +69,97 @@ except (ImportError, ModuleNotFoundError):
 """
 
 
+def _pad_to_multiple(x: torch.Tensor, block_len: int, dim: int, pad_value: int = 0) -> torch.Tensor:
+    """Pad a tensor so that a sequence length will be a multiple of `block_len`"""
+    pad_len = -x.shape[dim] % block_len
+    # Handle cases when an empty input sequence is given
+    if not all(x.shape):
+        new_shape = list(x.shape)
+        new_shape[dim] += pad_len
+        return torch.zeros(new_shape, dtype=x.dtype)
+
+    pad = [(0, 0)] * x.ndim
+    pad[dim] = (0, pad_len)
+    pad = sum(pad[::-1], ())
+    x = nn.functional.pad(x, pad=pad, mode="constant", value=pad_value)
+    return x
+
+
+def _split_into_blocks(x: torch.Tensor, block_len: int, dim: int) -> torch.Tensor:
+    """Split an input tensor into blocks of a given `block_len` along the given `dim`. If the dimension length
+    is not a multiple of `block_len`, it will be padded first with selected `pad_value`.
+    """
+    # pad tensor to multiple of block_len
+    if x.shape[dim] % block_len != 0:
+        x = _pad_to_multiple(x, block_len, dim, pad_value=0)
+    num_blocks = x.shape[dim] // block_len
+    output_shape = x.shape[:dim] + (num_blocks, block_len) + x.shape[(dim + 1) :]
+    # If 0 is in output_shape, we cannot apply reshape because of incompatibility with ONNX conversion
+    if 0 in output_shape:
+        return torch.empty(output_shape, dtype=x.dtype, device=x.device)
+    return x.reshape(output_shape)
+
+
+def _concatenate_3_blocks(x: torch.Tensor, block_dim: int, sequence_dim: int, pad_value: int = 0) -> torch.Tensor:
+    """Concatenate three consecutive blocks for each input block for local attentiont.
+
+    For more information, see: https://arxiv.org/pdf/2112.07916.pdf.
+    """
+    num_blocks = x.shape[block_dim]
+
+    pad = [(0, 0)] * x.ndim
+    pad[block_dim] = (1, 1)
+    pad = sum(pad[::-1], ())
+    # [batch_size, num_blocks, block_len] -> [batch_size, num_blocks + 2, block_len]
+    x = nn.functional.pad(x, pad=pad, mode="constant", value=pad_value)
+
+    blocks_list: List[torch.Tensor] = []
+    for i in range(3):
+        # We use indexing approach here:
+        # https://numpy.org/doc/stable/user/basics.indexing.html#dealing-with-variable-numbers-of-indices-within-programs
+        indices = [slice(0, None)] * x.ndim
+        indices[block_dim] = slice(i, i + num_blocks)
+        indices = tuple(indices)
+        blocks_list.append(x[indices])
+    # [batch_size, num_blocks, 3 * block_len, ...]
+    return torch.cat(blocks_list, dim=sequence_dim)
+
+
+def _make_3block_relative_position_ids(block_len: int) -> torch.Tensor:
+    """Makes 3-blocked relative position ids for local attention."""
+    position_ids = torch.arange(3 * block_len, dtype=torch.int32)
+    center_position_ids = position_ids[block_len:-block_len]
+    # [block_len, 3 * block_len]
+    relative_position_ids = position_ids.unsqueeze(0) - center_position_ids.unsqueeze(1)
+    return relative_position_ids
+
+
+def _mask_local_attention_mask(local_attention_mask: torch.Tensor, block_len: int) -> torch.Tensor:
+    """Mask local attention mask to enforce that tokens are not allowed to attend tokens farther than ``local_radius."""
+    relative_position_ids = _make_3block_relative_position_ids(block_len)
+    locality_mask = torch.abs(relative_position_ids) < block_len
+    locality_mask = locality_mask[None, None, :, :]
+    locality_mask = locality_mask.to(local_attention_mask.device)
+    return torch.logical_and(local_attention_mask, locality_mask)
+
+
+def _get_local_attention_mask(attention_mask: torch.Tensor, block_len: int, device: torch.device) -> torch.Tensor:
+    """Prepare attention mask to be applied for a local attention."""
+    # [batch_size, num_blocks, block_len]
+    _blocked_attention_mask = _split_into_blocks(attention_mask, block_len, dim=1)
+    # [batch_size, num_block, 3 * block_len]
+    _3blocked_attention_mask = _concatenate_3_blocks(_blocked_attention_mask, block_dim=1, sequence_dim=2)
+
+    _blocked_attention_mask = _blocked_attention_mask.unsqueeze(-1)
+    _3blocked_attention_mask = _3blocked_attention_mask.unsqueeze(-2)
+    # [batch_size, num_block, block_len, 3 * block_len]
+    local_attention_mask = torch.logical_and(_blocked_attention_mask, _3blocked_attention_mask)
+    local_attention_mask = _mask_local_attention_mask(local_attention_mask, block_len)
+    # [batch_size, 1, num_block, block_len, 3 * block_len]
+    return local_attention_mask.unsqueeze(1).to(device)
+
+
+
 class ParallelAttention(MegatronModule, adapter_mixins.AdapterModuleMixin):
     """Parallel self-attention layer abstract class.
 
@@ -112,8 +204,8 @@ class ParallelAttention(MegatronModule, adapter_mixins.AdapterModuleMixin):
         self.use_long_attention = use_long_attention
         self.local_context = local_context
         self.global_tokens = global_tokens
-        self.global_tokens_spacing = 16
-        self.global_attn_separate = global_attn_separate
+        self.global_tokens_spacing = global_tokens_spacing
+        self.global_attn_separate = False
         self.transient_global_tokens = transient_global_tokens
 
         self.layer_number = max(1, layer_number)
@@ -208,7 +300,7 @@ class ParallelAttention(MegatronModule, adapter_mixins.AdapterModuleMixin):
             local_context=local_context,
             global_tokens=global_tokens,
             global_tokens_spacing=global_tokens_spacing,
-            global_attn_separate=global_attn_separate,
+            global_attn_separate=False,
             transient_global_tokens=transient_global_tokens,
         )
 
@@ -387,12 +479,22 @@ class ParallelAttention(MegatronModule, adapter_mixins.AdapterModuleMixin):
         # Query, Key, and Value
         # =====================
 
+        side_bias_idx = None
+
         if self.transient_global_tokens:
             avg_hidden_states = hidden_states.reshape(
                 self.global_tokens_spacing, -1, hidden_states.shape[-2], hidden_states.shape[-1]
             )
             avg_hidden_states = avg_hidden_states.mean(dim=0)
             avg_hidden_states = self.transient_norm(avg_hidden_states)
+
+            side_bias_idx = torch.arange(
+                self.global_tokens_spacing // 2,
+                self.global_tokens_spacing // 2 + hidden_states.shape[0],
+                self.global_tokens_spacing,
+                device=hidden_states.device,
+            )
+            side_bias_idx = side_bias_idx[None, :].expand(hidden_states.shape[1], -1)
 
             hidden_states = torch.cat((avg_hidden_states, hidden_states), dim=0)
             total_transient_tokens = avg_hidden_states.shape[0]
@@ -528,6 +630,7 @@ class ParallelAttention(MegatronModule, adapter_mixins.AdapterModuleMixin):
                 relative_position_bias=relative_position_bias,
                 headscale_tensor=self.head_scale_tensor if self.headscale else None,
                 total_transient_tokens=total_transient_tokens,
+                side_bias_idx=side_bias_idx,
             )
 
         # =================
@@ -829,6 +932,7 @@ class CoreAttention(MegatronModule):
         relative_position_bias=None,
         headscale_tensor=None,
         total_transient_tokens=0,
+        side_bias_idx=None,
     ):
 
         # ===================================
@@ -887,19 +991,15 @@ class CoreAttention(MegatronModule):
                 query_layer = rearrange(query_layer, 's b h d -> (b h) s d')
                 key_layer = rearrange(key_layer, 's b h d -> (b h) s d')
                 key_layer = self.xpos(key_layer, offset=0, downscale=True)
-                query_layer = self.xpos(query_layer, offset=sq - 1, downscale=False)
+                query_layer = self.xpos(query_layer, offset=0, downscale=False)
+
                 # permute back to the expected shape below
                 key_layer = key_layer.permute(1, 0, 2)
                 query_layer = query_layer.permute(1, 0, 2)
 
-                if self.use_long_attention and self.global_tokens > 0 and self.global_attn_separate:
-                    global_query_layer = rearrange(global_query_layer, 's b h d -> (b h) s d')
-                    global_key_layer = rearrange(global_key_layer, 's b h d -> (b h) s d')
-                    global_key_layer = self.xpos(global_key_layer, offset=0, downscale=True)
-                    global_query_layer = self.xpos(global_query_layer, offset=0, downscale=False)
-                    # permute back to the expected shape below
-                    global_key_layer = global_key_layer.permute(1, 0, 2)
-                    global_query_layer = global_query_layer.permute(1, 0, 2)
+                if self.use_long_attention:
+                    key_layer = key_layer.reshape(key_layer.shape[0], bs, hn, -1)
+                    query_layer = query_layer.reshape(sq, bs, hn, np)
 
             if not self.use_long_attention:
                 # [sq, b, np, hn] -> [sq, b * np, hn]
@@ -932,62 +1032,102 @@ class CoreAttention(MegatronModule):
                     # attention_mask = attention_mask.transpose(-2, -1)
 
                 if self.transient_global_tokens:
-                    if not self.global_attn_separate:
-                        transient_k = key_layer[:total_transient_tokens].transpose(0, 1)
-                        transient_v = value_layer[:total_transient_tokens].transpose(0, 1)
+                    transient_k = key_layer[:total_transient_tokens]
+                    transient_v = value_layer[:total_transient_tokens]
+
+                    transient_k = transient_k.permute(1, 2, 0, 3)
+                    transient_v = transient_v.permute(1, 2, 0, 3)
+
                     query_layer = query_layer[total_transient_tokens:]
                     key_layer = key_layer[total_transient_tokens:]
                     value_layer = value_layer[total_transient_tokens:]
-
-                # [sq/k, b, np, hn]
-                T_q = query_layer.shape[0]
-                T_k = key_layer.shape[0]
-                query_layer = query_layer.view(T_q, output_size[0], output_size[1], -1)
-                key_layer = key_layer.view(T_k, output_size[0], output_size[1], -1)
-                value_layer = value_layer.view(T_k, output_size[0], output_size[1], -1)
 
                 # [b, hn, sq/k, np]
                 query_layer = query_layer.permute(1, 2, 0, 3)
                 key_layer = key_layer.permute(1, 2, 0, 3)
                 value_layer = value_layer.permute(1, 2, 0, 3)
 
-                pad_len_q = (2 * self.local_context - T_q % (2 * self.local_context)) % (2 * self.local_context)
-                pad_len_k = (2 * self.local_context - T_k % (2 * self.local_context)) % (2 * self.local_context)
+                # Split into blocks -> (batch_size, n_heads, num_blocks, block_len, dim_per_head)
+                query_layer = _split_into_blocks(query_layer, self.local_context, dim=2)
+                key_layer = _split_into_blocks(key_layer, self.local_context, dim=2)
+                value_layer = _split_into_blocks(value_layer, self.local_context, dim=2)
 
-                query_layer = F.pad(query_layer, (0, 0, 0, pad_len_q))  # (batch, head, time, size)
-                key_layer = F.pad(key_layer, (0, 0, 0, pad_len_k))  # (batch, head, time, size)
-                value_layer = F.pad(value_layer, (0, 0, 0, pad_len_k))  # (batch, head, time, size)
-                attention_mask = F.pad(attention_mask, (0, pad_len_q), value=True)
+                # Concatenate 3 blocks for keys and values -> (batch_size, n_heads, num_blocks, 3 * block_len, dim_per_head)
+                key_layer = _concatenate_3_blocks(key_layer, block_dim=2, sequence_dim=3)
+                value_layer = _concatenate_3_blocks(value_layer, block_dim=2, sequence_dim=3)
 
-                # [b, hn, sq, 2w+1]
-                attention_scores = self.sliding_chunks_matmul_qk(
-                    query_layer, key_layer, self.local_context, padding_value=0
+                bs, nh, nb = key_layer.shape[:3]
+
+                if self.transient_global_tokens:
+                    # Tile side inputs across local key/value blocks
+                    # New shape: (batch_size, n_heads, num_blocks, global_seq_len, dim_per_head)
+                    reps = [1] * (transient_k.ndim + 1)
+                    reps[2] = key_layer.shape[2]
+                    transient_k = transient_k.unsqueeze(2).repeat(reps)
+                    transient_v = transient_v.unsqueeze(2).repeat(reps)
+
+                    # Concatenate "local" and "side"/"global" key/value states to allow each token to attend global aggregated ones
+                    # New shape: (batch_size, n_heads, num_blocks, 3 * block_len + global_seq_len, dim_per_head)
+                    key_layer = torch.cat([key_layer, transient_k], dim=3)
+                    value_layer = torch.cat([value_layer, transient_v], dim=3)
+
+                query_layer = query_layer.reshape(-1, query_layer.shape[-2], self.hidden_size_per_attention_head)
+                key_layer = key_layer.reshape(-1, key_layer.shape[-2], self.hidden_size_per_attention_head)
+                value_layer = value_layer.reshape(-1, key_layer.shape[-2], self.hidden_size_per_attention_head)
+
+                # preallocting input tensor: [b * np, sq, sk]
+                matmul_input_buffer = torch.empty(
+                    key_layer.shape[0],
+                    query_layer.shape[1],
+                    key_layer.shape[1],
+                    dtype=query_layer.dtype,
+                    device=torch.cuda.current_device(),
                 )
 
-                attention_scores /= self.norm_factor
+                # Raw attention scores. [b * np, sq, sk]
+                attention_scores = torch.baddbmm(
+                    matmul_input_buffer,
+                    query_layer,  # [b * np, sq, hn]
+                    key_layer.transpose(1, 2),  # [b * np, hn, sk]
+                    beta=0.0,
+                    alpha=(1.0 / self.norm_factor) if self.normalize_attention_scores else 1.0,
+                )
 
-                if self.position_embedding_type == 'alibi':
-                    local_pos_bias = self.pos_emb.forward_local(attention_scores.shape[-2], self.local_context)
-                    attention_scores += local_pos_bias[
+                # We need to adjust position bias shape to be sum with mask
+                local_attention_mask = _get_local_attention_mask(
+                    ~attention_mask.squeeze(1), self.local_context, query_layer.device
+                )
+                # Replace masked positions with -10_000 (according to the original implementation)
+                local_attention_mask = torch.where(local_attention_mask, 0.0, -1e10)
+
+                attention_scores = attention_scores.reshape(bs, nh, nb, self.local_context, -1)
+
+                attention_scores[..., : self.local_context * 3] += local_attention_mask
+
+                if relative_position_bias is not None:
+                    pos_bias = self.get_local_pos_bias(
+                        relative_position_bias, attention_scores.shape[2], self.local_context
+                    )
+
+                    if side_bias_idx is not None:
+                        side_pos_bias = self.get_side_pos_bias(
+                            relative_position_bias, attention_scores.shape[2], self.local_context, side_bias_idx
+                        )
+                        pos_bias = pos_bias.expand(*side_pos_bias.shape[:-1], -1)
+                        pos_bias = torch.cat((pos_bias, side_pos_bias), dim=-1)
+
+                    attention_scores[
                         :,
                         self.num_attention_heads_partition_offset : self.num_attention_heads_partition_offset
                         + self.num_attention_heads_per_partition,
-                        : attention_scores.size(2),
-                        : attention_scores.size(3),
+                    ] += pos_bias[
+                        :,
+                        self.num_attention_heads_partition_offset : self.num_attention_heads_partition_offset
+                        + self.num_attention_heads_per_partition,
                     ]
 
-                attention_mask = attention_mask.unsqueeze(dim=-1)
-                float_mask = attention_mask.type_as(attention_scores).masked_fill(attention_mask, -10000.0)
-                ones = float_mask.new_ones(size=float_mask.size())  # tensor of ones
-                # diagonal mask with zeros everywhere and -inf inplace of padding
-                d_mask = self.sliding_chunks_matmul_qk(ones, float_mask, self.local_context, padding_value=0.0)
-                # (batch, head, time, 2w + 1)
-
-                d_mask = d_mask < -1
-                # attention_scores += d_mask
-
-                # attention_probs = F.softmax(attention_scores, dim=-1)
-                attention_probs = self.scale_mask_softmax(attention_scores, d_mask)
+                attention_probs = F.softmax(attention_scores, dim=-1)
+                # attention_probs = self.scale_mask_softmax(attention_scores, None)
 
                 if not self.sequence_parallel:
                     with tensor_parallel.random.get_cuda_rng_tracker().fork():
@@ -996,122 +1136,10 @@ class CoreAttention(MegatronModule):
                     attention_probs = self.attention_dropout(attention_probs)
 
                 # matmul: [b * np, sq, hn]
-                context_layer = self.sliding_chunks_matmul_pv(attention_probs, value_layer, self.local_context)
-                context_layer = context_layer.reshape(context_layer.shape[0], context_layer.shape[1], -1)
-
-                if self.global_tokens > 0:
-
-                    if self.transient_global_tokens and self.global_attn_separate:
-                        transient_k = global_key_layer[:total_transient_tokens].transpose(0, 1)
-                        transient_v = global_value_layer[:total_transient_tokens].transpose(0, 1)
-
-                        global_query_layer = global_query_layer[total_transient_tokens:]
-                        global_key_layer = global_key_layer[total_transient_tokens:]
-                        global_value_layer = global_value_layer[total_transient_tokens:]
-
-                    # create q, k, v for global attn
-                    if self.global_attn_separate:
-                        global_q, global_k, global_v = global_query_layer, global_key_layer, global_value_layer
-                        global_q = global_q.view(output_size[2], output_size[0], output_size[1], -1)
-                        global_k = global_k.view(output_size[3], output_size[0], output_size[1], -1)
-                        global_v = global_v.view(output_size[3], output_size[0], output_size[1], -1)
-                        global_q = global_q.permute(1, 2, 0, 3)
-                        global_k = global_k.permute(1, 2, 0, 3)
-                        global_v = global_v.permute(1, 2, 0, 3)
-                        global_q = F.pad(global_q, (0, 0, 0, pad_len_q))  # (batch, head, time, size)
-                        global_k = F.pad(global_k, (0, 0, 0, pad_len_k))  # (batch, head, time, size)
-                        global_v = F.pad(global_v, (0, 0, 0, pad_len_k))  # (batch, head, time, size)
-                    else:
-                        global_q, global_k, global_v = query_layer, key_layer, value_layer
-
-                    # attention_mask = F.pad(attention_mask, (0, 0, total_transient_tokens, 0), value=False)
-                    # assign which tokens are global
-
-                    is_index_global_attn = torch.zeros_like(attention_mask.squeeze(3).squeeze(1))
-                    is_index_global_attn[
-                        :, : self.global_tokens * self.global_tokens_spacing : self.global_tokens_spacing
-                    ] = 1.0
-
-                    # compute global attn indices
-                    (
-                        max_num_global_attn_indices,
-                        is_index_global_attn_nonzero,
-                        is_local_index_global_attn_nonzero,
-                        is_local_index_no_global_attn_nonzero,
-                    ) = self._get_global_attn_indices(is_index_global_attn=is_index_global_attn)
-
-                    if self.transient_global_tokens:
-                        global_k = global_k.transpose(1, 2)
-                        global_v = global_v.transpose(1, 2)
-                        global_k[is_index_global_attn_nonzero] = transient_k[is_local_index_global_attn_nonzero]
-                        global_v[is_index_global_attn_nonzero] = transient_v[is_local_index_global_attn_nonzero]
-                        global_k = global_k.transpose(1, 2)
-                        global_v = global_v.transpose(1, 2)
-
-                    # calculate global attn probs with global keys
-                    # (batch, time, head, max_num_global_attn_indices)
-                    global_key_attn = self._compute_global_key_attn(
-                        query=global_q.transpose(1, 2),
-                        key=global_k.transpose(1, 2),
-                        max_num_global_attn_indices=max_num_global_attn_indices,
-                        is_index_global_attn_nonzero=is_index_global_attn_nonzero,
-                        is_local_index_global_attn_nonzero=is_local_index_global_attn_nonzero,
-                        is_local_index_no_global_attn_nonzero=is_local_index_no_global_attn_nonzero,
-                    ).transpose(1, 2)
-
-                    if self.position_embedding_type == 'alibi':
-                        global_pos_bias = self.pos_emb.forward_global(
-                            global_q.shape[0],
-                            global_q.shape[-2],
-                            max_num_global_attn_indices,
-                            is_index_global_attn_nonzero,
-                            is_local_index_global_attn_nonzero,
-                        )
-                        global_key_attn += global_pos_bias[
-                            :,
-                            self.num_attention_heads_partition_offset : self.num_attention_heads_partition_offset
-                            + self.num_attention_heads_per_partition,
-                        ]
-                    else:
-                        global_pos_bias = None
-
-                    # global_key_attn = torch.softmax(global_key_attn, dim=-1).masked_fill(attention_mask, 0.0)
-                    rep_mask = repeat(attention_mask, 'b h t m -> b h t (m m2)', m2=global_key_attn.shape[3])
-                    global_key_attn = self.scale_mask_softmax(global_key_attn, rep_mask)
-                    if not self.sequence_parallel:
-                        with tensor_parallel.random.get_cuda_rng_tracker().fork():
-                            global_key_attn = self.attention_dropout(global_key_attn)
-                    else:
-                        global_key_attn = self.attention_dropout(global_key_attn)
-
-                    # compute outputs for global attention from all tokens to global
-                    # (batch, time, head x head_dim)
-                    out_all_to_global = self._compute_out_all_to_global(
-                        value=global_v,
-                        attn_probs=global_key_attn,
-                        max_num_global_attn_indices=max_num_global_attn_indices,
-                        is_index_global_attn_nonzero=is_index_global_attn_nonzero,
-                        is_local_index_global_attn_nonzero=is_local_index_global_attn_nonzero,
-                    )
-
-                    context_layer += out_all_to_global
-
-                    if not self.transient_global_tokens:
-                        # compute outputs for global attention from global tokens to all
-                        # (batch, max_num_global_attn_indices, head x head_dim)
-                        out_global_to_all = self._compute_out_global_to_all(
-                            query=global_q,
-                            key=global_k,
-                            value=global_v,
-                            max_num_global_attn_indices=max_num_global_attn_indices,
-                            is_local_index_global_attn_nonzero=is_local_index_global_attn_nonzero,
-                            is_index_global_attn_nonzero=is_index_global_attn_nonzero,
-                            is_local_index_no_global_attn_nonzero=is_local_index_no_global_attn_nonzero,
-                            is_index_masked=attention_mask,
-                            global_pos_bias=global_pos_bias,
-                        )
-
-                        context_layer[is_index_global_attn_nonzero] += out_global_to_all
+                attention_probs = attention_probs.reshape(bs * nh * nb, self.local_context, -1)
+                context_layer = torch.bmm(attention_probs, value_layer)
+                context_layer = context_layer.reshape(bs, nh, nb * self.local_context, -1)
+                context_layer = context_layer.transpose(1, 2).reshape(bs, nb * self.local_context, -1)
 
                 context_layer = context_layer[:, : output_size[2]]
 
@@ -1200,405 +1228,23 @@ class CoreAttention(MegatronModule):
 
         return context_layer
 
-    def _get_global_attn_indices(self, is_index_global_attn: torch.Tensor) -> Tuple:
-        """
-        Compute global attention indices.
+    def get_local_pos_bias(self, relative_position_bias, num_blocks, block_length):
+        memory_position = torch.arange(3 * block_length, dtype=torch.long, device=torch.cuda.current_device())
+        context_position = memory_position[block_length:-block_length]
 
-        Args:
-            is_index_global_attn (torch.Tensor): (batch, time) A boolean tensor indicating if an index is a global attention index.
+        relative_position = memory_position[None, :] - context_position[:, None]
 
-        Returns:
-            max_num_global_attn_indices (int): Maximum number of global attention indices in the batch.
-            is_index_global_attn_nonzero (tuple): Indices of global attention (non-zero elements).
-            is_local_index_global_attn_nonzero (tuple): Indices of non-padding values within global attention indices.
-            is_local_index_no_global_attn_nonzero (tuple): Indices of padding values within global attention indices.
-        """
-        # Calculate the number of global attention indices in the batch
-        num_global_attn_indices = is_index_global_attn.long().sum(dim=1)
+        bias = relative_position_bias.get_bias(relative_position[None, :])[:, :, None]
 
-        # Find the maximum number of global attention indices in the batch
-        max_num_global_attn_indices = num_global_attn_indices.max()
+        return bias
 
-        # Get the indices of global attention (non-zero elements)
-        is_index_global_attn_nonzero = is_index_global_attn.nonzero(as_tuple=True)
+    def get_side_pos_bias(self, relative_position_bias, num_blocks, block_length, side_bias_idx):
+        context_position = torch.arange(num_blocks * block_length, device=side_bias_idx.device)
 
-        # Create a helper tensor to find the local indices of global attention
-        is_local_index_global_attn = torch.arange(
-            max_num_global_attn_indices, device=is_index_global_attn.device
-        ) < num_global_attn_indices.unsqueeze(dim=-1)
+        # bs, time, side
+        relative_position = side_bias_idx[:, None, :] - context_position[None, :, None]
 
-        # Find the non-padding values within global attention indices
-        is_local_index_global_attn_nonzero = is_local_index_global_attn.nonzero(as_tuple=True)
+        bias = relative_position_bias.get_bias(relative_position)
+        bias = bias.reshape(bias.shape[0], bias.shape[1], num_blocks, block_length, -1)
 
-        # Find the padding values within global attention indices
-        is_local_index_no_global_attn_nonzero = (is_local_index_global_attn == 0).nonzero(as_tuple=True)
-
-        return (
-            max_num_global_attn_indices,
-            is_index_global_attn_nonzero,
-            is_local_index_global_attn_nonzero,
-            is_local_index_no_global_attn_nonzero,
-        )
-
-    def _compute_global_key_attn(
-        self,
-        key: torch.Tensor,
-        query: torch.Tensor,
-        max_num_global_attn_indices: int,
-        is_index_global_attn_nonzero: tuple,
-        is_local_index_global_attn_nonzero: tuple,
-        is_local_index_no_global_attn_nonzero: tuple,
-    ) -> torch.Tensor:
-        """
-        Compute the attention probabilities using only global key vectors.
-
-        Args:
-            key (torch.Tensor): (batch, time, head, head_dim) The key vectors.
-            query (torch.Tensor): (batch, time, head, head_dim) The query vectors.
-            max_num_global_attn_indices (int): Maximum number of global attention indices in the batch.
-            is_index_global_attn_nonzero (tuple): Indices of global attention (non-zero elements).
-            is_local_index_global_attn_nonzero (tuple): Non-padding values within global attention indices.
-            is_local_index_no_global_attn_nonzero (tuple): Padding values within global attention indices.
-
-        Returns:
-            attn_probs_from_global_key (torch.Tensor): (batch, time, head, max_num_global_attn_indices) The computed attention probabilities using only global key vectors.
-        """
-        batch_size, h, d_k = key.shape[0], key.shape[2], key.shape[3]
-
-        # create only global key vectors
-        key_only_global = key.new_zeros(batch_size, max_num_global_attn_indices, h, d_k)
-
-        key_only_global[is_local_index_global_attn_nonzero] = key[is_index_global_attn_nonzero]
-
-        # (batch_size, seq_len, head, max_num_global_attn_indices)
-        attn_probs_from_global_key = torch.einsum("blhd,bshd->blhs", (query, key_only_global))
-
-        # need to transpose since ONNX export only supports consecutive indexing: https://pytorch.org/docs/stable/onnx.html#writes-sets
-        attn_probs_from_global_key = attn_probs_from_global_key.transpose(1, 3)
-        attn_probs_from_global_key[
-            is_local_index_no_global_attn_nonzero[0], is_local_index_no_global_attn_nonzero[1], :, :
-        ] = torch.finfo(attn_probs_from_global_key.dtype).min
-        attn_probs_from_global_key = attn_probs_from_global_key.transpose(1, 3)
-        attn_probs_from_global_key /= self.norm_factor
-
-        return attn_probs_from_global_key
-
-    def _compute_out_all_to_global(
-        self,
-        value: torch.Tensor,
-        attn_probs: torch.Tensor,
-        max_num_global_attn_indices: int,
-        is_index_global_attn_nonzero: tuple,
-        is_local_index_global_attn_nonzero: tuple,
-    ) -> torch.Tensor:
-        """
-        Compute the attention output of all tokens attending to global.
-
-        Args:
-            value (torch.Tensor): (batch, head, time, head_dim) The value vectors for global attention.
-            attn_probs (torch.Tensor): (batch, head, time, max_num_global_attn_indices) The attention probabilities.
-            max_num_global_attn_indices (int): Maximum number of global attention indices in the batch.
-            is_index_global_attn_nonzero (tuple): Indices of global attention (non-zero elements).
-            is_local_index_global_attn_nonzero (tuple): Non-padding values within global attention indices.
-
-        Returns:
-            torch.Tensor: (batch, time, head x head_dim) The attention output of all tokens attending to global.
-        """
-        batch_size, h, time, d_k = value.shape[0], value.shape[1], value.shape[2], value.shape[3]
-
-        value = value.transpose(1, 2)
-
-        # get value vectors for global only
-        value_vectors_only_global = value.new_zeros(batch_size, max_num_global_attn_indices, h, d_k)
-        value_vectors_only_global[is_local_index_global_attn_nonzero] = value[is_index_global_attn_nonzero]
-
-        # compute attn output only global
-        out_all_to_global = torch.matmul(attn_probs, value_vectors_only_global.transpose(1, 2)).transpose(1, 2)
-
-        out_all_to_global = out_all_to_global.reshape(batch_size, time, -1)
-
-        return out_all_to_global
-
-    def _compute_out_global_to_all(
-        self,
-        query: torch.Tensor,
-        key: torch.Tensor,
-        value: torch.Tensor,
-        max_num_global_attn_indices: int,
-        is_local_index_global_attn_nonzero: tuple,
-        is_index_global_attn_nonzero: tuple,
-        is_local_index_no_global_attn_nonzero: tuple,
-        is_index_masked: torch.Tensor,
-        global_pos_bias: torch.Tensor,
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-        """
-        Compute the attention output of global tokens attending to all.
-
-        Args:
-            query (torch.Tensor): (batch, head, time, head_dim) The queries for global attention.
-            key (torch.Tensor): (batch, head, time, head_dim) The keys for global attention.
-            value (torch.Tensor): (batch, head, time, head_dim) The values for global attention.
-            max_num_global_attn_indices (int): Maximum number of global attention indices in the batch.
-            is_local_index_global_attn_nonzero (tuple): Non-padding values within global attention indices.
-            is_index_global_attn_nonzero (tuple): Indices of global attention (non-zero elements).
-            is_local_index_no_global_attn_nonzero (tuple): Padding values within global attention indices.
-            is_index_masked (torch.Tensor): (batch, time) A boolean tensor indicating if an index is masked.
-
-        Returns:
-            global_attn_output (torch.Tensor): (batch, max_num_global_attn_indices, head x head_dim)
-            The attention output of global tokens attending to all.
-        """
-
-        batch_size = key.shape[0]
-        seq_len = key.shape[2]
-        h = key.shape[1]
-        d_k = key.shape[-1]
-
-        global_k = key.reshape(batch_size * h, -1, d_k)
-        global_v = value.reshape(batch_size * h, -1, d_k)
-
-        global_q = query.transpose(1, 2)
-        global_q_from_global = global_q.new_zeros(batch_size, max_num_global_attn_indices, h, d_k)
-        global_q_from_global[is_local_index_global_attn_nonzero] = global_q[is_index_global_attn_nonzero]
-        global_q_from_global = global_q_from_global.transpose(0, 1).reshape(batch_size * h, -1, d_k)
-
-        # compute attn scores
-        global_attn_scores = torch.bmm(global_q_from_global, global_k.transpose(1, 2))
-        global_attn_scores = global_attn_scores.view(batch_size, h, max_num_global_attn_indices, seq_len)
-
-        # need to transpose since ONNX export only supports consecutive indexing: https://pytorch.org/docs/stable/onnx.html#writes-sets
-        global_attn_scores = global_attn_scores.transpose(1, 2)
-        global_attn_scores[
-            is_local_index_no_global_attn_nonzero[0], is_local_index_no_global_attn_nonzero[1], :, :
-        ] = torch.finfo(global_attn_scores.dtype).min
-        global_attn_scores = global_attn_scores.transpose(1, 2)
-        global_attn_scores /= self.norm_factor
-
-        if self.position_embedding_type == 'alibi':
-            global_attn_scores += global_pos_bias[
-                :,
-                self.num_attention_heads_partition_offset : self.num_attention_heads_partition_offset
-                + self.num_attention_heads_per_partition,
-            ].transpose(-2, -1)
-
-        # compute global attn probs
-        # global_attn_probs = nn.functional.softmax(global_attn_scores, dim=-1)
-        is_index_masked = is_index_masked.transpose(2, 3)
-        rep_is_index_masked = repeat(is_index_masked, 'b h m t -> b h (m m2) t', m2=global_attn_scores.shape[2])
-        global_attn_probs = self.scale_mask_softmax(global_attn_scores, rep_is_index_masked)
-
-        global_attn_probs = global_attn_probs.view(batch_size * h, max_num_global_attn_indices, seq_len)
-
-        if not self.sequence_parallel:
-            with tensor_parallel.random.get_cuda_rng_tracker().fork():
-                global_attn_probs = self.attention_dropout(global_attn_probs)
-        else:
-            global_attn_probs = self.attention_dropout(global_attn_probs)
-
-        # global attn output
-        global_attn_output = torch.bmm(global_attn_probs, global_v)
-        global_attn_output = global_attn_output.view(batch_size, h, max_num_global_attn_indices, d_k)
-
-        global_attn_output = global_attn_output[
-            is_local_index_global_attn_nonzero[0], :, is_local_index_global_attn_nonzero[1]
-        ]
-
-        global_attn_output = global_attn_output.reshape(global_attn_output.shape[0], -1)
-
-        return global_attn_output
-
-    # Longformer implementation for overlap case
-    #
-    def _skew(self, x: torch.Tensor, direction: List[int], padding_value: float) -> torch.Tensor:
-        """Convert diagonals into columns (or columns into diagonals depending on `direction`
-
-        Args:
-            x (torch.Tensor): (batch x head, chunk_count, 2w, 2w)
-            direction (List[int]): padding directions
-            padding_value (float): value to pad with
-
-        Returns:
-            output (torch.Tensor): (batch x head, chunk_count, 2w, 2w + 1)
-
-        """
-        x_padded = F.pad(x, direction, value=padding_value)
-        x_padded = x_padded.view(*x_padded.size()[:-2], x_padded.size(-1), x_padded.size(-2))
-        return x_padded
-
-    def _skew2(self, x: torch.Tensor, padding_value: float) -> torch.Tensor:
-        """Shift every row 1 step to right converting columns into diagonals
-
-        Args:
-            x (torch.Tensor): (batch x head, chunks_count + 1, w, 2w + 1)
-            padding_value (float): value to pad with
-
-        Returns:
-            output (torch.Tensor): (batch x head, chunks_count + 1, w, 3w)
-        """
-        # X = B x C x M x L
-        B, C, M, L = x.size()
-        x = F.pad(x, (0, M + 1), value=padding_value)  # B x C x M x (L+M+1)
-        x = x.view(B, C, -1)  # B x C x ML+MM+M
-        x = x[:, :, :-M]  # B x C x ML+MM
-        x = x.view(B, C, M, M + L)  # B x C, M x L+M
-        x = x[:, :, :, :-1]
-        return x
-
-    def _chunk_overlap(self, x: torch.Tensor, w: int) -> torch.Tensor:
-        """Convert into overlapping chunks.
-
-        Args:
-            x (torch.Tensor): # (batch x head, time, size)
-            w (int): Chunk overlap size
-
-        Returns:
-            output (torch.Tensor): # (batch x head, chunk_count, 2w, size)
-        """
-
-        # non-overlapping chunks of size = 2w
-        x = x.view(x.size(0), x.size(1) // (w * 2), w * 2, x.size(2))
-
-        # use `as_strided` to make the chunks overlap with an overlap size = w
-        chunk_size = list(x.size())
-        chunk_size[1] = chunk_size[1] * 2 - 1
-
-        chunk_stride = list(x.stride())
-        chunk_stride[1] = chunk_stride[1] // 2
-        return x.as_strided(size=chunk_size, stride=chunk_stride)
-
-    @lru_cache()
-    def _get_invalid_locations_mask(self, w: int, device: str):
-
-        diagonals_list = []
-        for j in range(-w, 1):
-            diagonal_mask = torch.zeros(w, device='cpu', dtype=torch.uint8)
-            diagonal_mask[:-j] = 1
-            diagonals_list.append(diagonal_mask)
-
-        mask = torch.stack(diagonals_list, dim=-1)
-        mask = mask[None, None, :, :]
-
-        ending_mask = mask.flip(dims=(2, 3)).bool().to(device)
-        return mask.bool().to(device), ending_mask
-
-    def mask_invalid_locations(
-        self, input_tensor: torch.Tensor, w: int,
-    ):
-        """
-        Mask locations invalid for the sliding window attention
-
-        Args:
-            input_tensor (torch.Tensor): # (batch x head, time, size)
-            w (int): Chunk overlap size
-        """
-        beginning_mask, ending_mask = self._get_invalid_locations_mask(w, input_tensor.device)
-        seq_len = input_tensor.size(2)
-        beginning_input = input_tensor[:, :, :w, : w + 1]
-        beginning_mask = beginning_mask[:, :, :seq_len].expand(beginning_input.size())
-        beginning_input.masked_fill_(beginning_mask, -float('inf'))
-
-        ending_input = input_tensor[:, :, -w:, -(w + 1) :]
-        ending_mask = ending_mask[:, :, -seq_len:].expand(ending_input.size())
-        ending_input.masked_fill_(ending_mask, -float('inf'))
-
-    def sliding_chunks_matmul_qk(self, q: torch.Tensor, k: torch.Tensor, w: int, padding_value: float) -> torch.Tensor:
-        """Matrix multiplication of query x key tensors using with a sliding window attention pattern.
-        This implementation splits the input into overlapping chunks of size 2w
-        with an overlap of size w
-
-        Args:
-            q (torch.Tensor): (batch, head, time, size)
-            k (torch.Tensor): (batch, head, time, size)
-            w (int): Chunk overlap size
-            padding_value (float): Value to pad with
-
-        Returns:
-            output (torch.Tensor): (batch, head, time, 2w + 1)
-        """
-        bsz, num_heads, seqlen, head_dim = q.size()
-        assert seqlen % (w * 2) == 0
-        assert q.size() == k.size()
-
-        chunks_count = seqlen // w - 1
-
-        # group bsz and num_heads dimensions into one, then chunk seqlen into chunks of size w * 2
-        q = q.reshape(bsz * num_heads, seqlen, head_dim)
-        k = k.reshape(bsz * num_heads, seqlen, head_dim)
-
-        chunk_q = self._chunk_overlap(q, w)  # (batch x head, chunk_count, 2w, size)
-        chunk_k = self._chunk_overlap(k, w)  # (batch x head, chunk_count, 2w, size)
-
-        # matrix multipication
-        # bcxd: bsz*num_heads x chunks x 2w x head_dim
-        # bcyd: bsz*num_heads x chunks x 2w x head_dim
-        # bcxy: bsz*num_heads x chunks x 2w x 2w
-        chunk_attn = torch.einsum('bcxd,bcyd->bcxy', (chunk_q, chunk_k))  # multiply
-        # (batch x head, chunk_count, 2w, 2w)
-
-        # convert diagonals into columns
-        diagonal_chunk_attn = self._skew(chunk_attn, direction=(0, 0, 0, 1), padding_value=padding_value)
-        # (batch x head, chunk_count, 2w, 2w + 1)
-
-        # allocate space for the overall attention matrix where the chunks are combined. The last dimension
-        # has (w * 2 + 1) columns. The first (w) columns are the w lower triangles (attention from a word to
-        # w previous words). The following column is attention score from each word to itself, then
-        # followed by w columns for the upper triangle.
-
-        diagonal_attn = diagonal_chunk_attn.new_empty((bsz * num_heads, chunks_count + 1, w, w * 2 + 1))
-        # (batch x head, chunk_count + 1, w, 2w + 1)
-
-        # copy parts from diagonal_chunk_attn into the compined matrix of attentions
-        # - copying the main diagonal and the upper triangle
-        diagonal_attn[:, :-1, :, w:] = diagonal_chunk_attn[:, :, :w, : w + 1]
-        diagonal_attn[:, -1, :, w:] = diagonal_chunk_attn[:, -1, w:, : w + 1]
-        # - copying the lower triangle
-        diagonal_attn[:, 1:, :, :w] = diagonal_chunk_attn[:, :, -(w + 1) : -1, w + 1 :]
-        diagonal_attn[:, 0, 1:w, 1:w] = diagonal_chunk_attn[:, 0, : w - 1, 1 - w :]
-
-        # separate bsz and num_heads dimensions again
-        diagonal_attn = diagonal_attn.view(bsz, num_heads, seqlen, 2 * w + 1)
-        # (batch, head, time, 2w + 1)
-
-        self.mask_invalid_locations(diagonal_attn, w)
-
-        return diagonal_attn
-
-    def sliding_chunks_matmul_pv(self, prob: torch.Tensor, v: torch.Tensor, w: int):
-        """Same as sliding_chunks_matmul_qk but for prob and value tensors.
-
-        Args:
-            prob (torch.Tensor): (batch, head, time, size)
-            v (torch.Tensor): (batch, head, time, size)
-            w (int): Chunk overlap size
-
-        Returns:
-            output (torch.Tensor): (batch, time, head, size)
-        """
-        bsz, num_heads, seqlen, head_dim = v.size()
-        chunks_count = seqlen // w - 1
-        # group bsz and num_heads dimensions into one, then chunk seqlen into chunks of size 2w
-        chunk_prob = prob.reshape(bsz * num_heads, seqlen // w, w, 2 * w + 1)
-        # (batch x head, chunks_count + 1, w, 2w + 1)
-
-        # group bsz and num_heads dimensions into one
-        v = v.reshape(bsz * num_heads, seqlen, head_dim)
-        # (batch x head, time, size)
-
-        # pad seqlen with w at the beginning of the sequence and another w at the end
-        padded_v = F.pad(v, (0, 0, w, w), value=-1)
-        # (batch x head, time + 2w, size)
-
-        # chunk padded_v into chunks of size 3w and an overlap of size w
-        chunk_v_size = (bsz * num_heads, chunks_count + 1, 3 * w, head_dim)
-        chunk_v_stride = padded_v.stride()
-        chunk_v_stride = chunk_v_stride[0], w * chunk_v_stride[1], chunk_v_stride[1], chunk_v_stride[2]
-        chunk_v = padded_v.as_strided(size=chunk_v_size, stride=chunk_v_stride)
-        # (batch x head, chunks_count + 1, 3w, size)
-
-        skewed_prob = self._skew2(chunk_prob, padding_value=0)
-        # (batch x head, chunks_count + 1, w, 3w)
-
-        context = torch.einsum('bcwd,bcdh->bcwh', (skewed_prob, chunk_v))
-        # (batch x head, chunks_count + 1, w, size)
-
-        return context.view(bsz, num_heads, seqlen, head_dim).transpose(1, 2)
+        return bias

@@ -128,32 +128,8 @@ class ALiBiRelativePositionEmbedding(torch.nn.Module):
         # shape (1, num_heads, query_length, key_length)
         return -relative_position.unsqueeze(0) * self.slopes
 
-    def forward_local(self, seq_length, local_context):
+    def get_bias(self, relative_position):
 
-        relative_position = torch.abs(torch.arange(-local_context, local_context + 1)).cuda()
-        relative_position = relative_position[None, None, :].expand(self.num_attention_heads, seq_length, -1)
-
-        return -relative_position.unsqueeze(0) * self.slopes
-
-    def forward_global(
-        self,
-        batch_size,
-        seq_length,
-        max_num_global_tokens,
-        is_index_global_attn,
-        is_local_index_no_global_attn_nonzero,
-    ):
-        relative_position = (
-            torch.arange(seq_length)[None, None, :].cuda().expand(batch_size, max_num_global_tokens, -1)
-        )
-        relative_position = relative_position.contiguous()
-
-        relative_position[is_local_index_no_global_attn_nonzero] -= is_index_global_attn[1].unsqueeze(1)
-        relative_position = torch.abs(relative_position).transpose(1, 2)
-
-        relative_position = relative_position[:, None, :, :].expand(-1, self.num_attention_heads, -1, -1)
+        relative_position = relative_position.unsqueeze(1).expand(-1, self.num_attention_heads, -1, -1).abs()
 
         return -relative_position * self.slopes
-
-
-# (batch, time, head, max_num_global_attn_indices)
