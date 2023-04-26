@@ -197,7 +197,7 @@ class ParallelAttention(MegatronModule, adapter_mixins.AdapterModuleMixin):
         global_tokens=1024,
         global_tokens_spacing=16,
         global_attn_separate=True,
-        transient_global_tokens=False,
+        transient_global_tokens=True,
     ):
         super(ParallelAttention, self).__init__()
 
