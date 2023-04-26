@@ -206,7 +206,7 @@ class ParallelAttention(MegatronModule, adapter_mixins.AdapterModuleMixin):
         self.global_tokens = global_tokens
         self.global_tokens_spacing = global_tokens_spacing
         self.global_attn_separate = False
-        self.transient_global_tokens = use_long_attention
+        self.transient_global_tokens = transient_global_tokens
 
         self.layer_number = max(1, layer_number)
         self.attention_type = attention_type
