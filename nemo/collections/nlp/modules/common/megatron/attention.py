@@ -526,6 +526,12 @@ class ParallelAttention(MegatronModule, adapter_mixins.AdapterModuleMixin):
         else:
             total_transient_tokens = 0
 
+            if self.global_tokens > 0:
+                side_bias_idx = torch.arange(0, hidden_states.shape[0], self.global_tokens_spacing, device=hidden_states.device)
+                side_bias_idx = side_bias_idx[None, :].expand(hidden_states.shape[1], -1)
+
+
+
         global_query_layer = global_key_layer = global_value_layer = None
         if self.attention_type == AttnType.self_attn:
             # Attention heads [sq, b, h] --> [sq, b, (np * 3 * hn)]
@@ -1056,16 +1062,23 @@ class CoreAttention(MegatronModule):
                     attention_mask = attention_mask.sum(-1) == 0
                     # attention_mask = attention_mask.transpose(-2, -1)
 
-                if self.transient_global_tokens:
-                    transient_k = key_layer[:total_transient_tokens]
-                    transient_v = value_layer[:total_transient_tokens]
+                if side_bias_idx is not None:
+                    if self.transient_global_tokens:
+                        side_k = key_layer[:total_transient_tokens]
+                        side_v = value_layer[:total_transient_tokens]
 
-                    transient_k = transient_k.permute(1, 2, 0, 3)
-                    transient_v = transient_v.permute(1, 2, 0, 3)
+                        side_k = side_k.permute(1, 2, 0, 3)
+                        side_v = side_v.permute(1, 2, 0, 3)
 
-                    query_layer = query_layer[total_transient_tokens:]
-                    key_layer = key_layer[total_transient_tokens:]
-                    value_layer = value_layer[total_transient_tokens:]
+                        query_layer = query_layer[total_transient_tokens:]
+                        key_layer = key_layer[total_transient_tokens:]
+                        value_layer = value_layer[total_transient_tokens:]
+                    else:
+                        side_k = torch.gather(key_layer.transpose(0, 1), dim=1, index=side_bias_idx[..., None, None].expand(-1, -1, key_layer.shape[-2], key_layer.shape[-1]))
+                        side_v = torch.gather(value_layer.transpose(0, 1), dim=1, index=side_bias_idx[..., None, None].expand(-1, -1, value_layer.shape[-2], value_layer.shape[-1]))
+
+                        side_k = side_k.transpose(1, 2)
+                        side_v = side_v.transpose(1, 2)
 
                 # [b, hn, sq/k, np]
                 query_layer = query_layer.permute(1, 2, 0, 3)
@@ -1083,18 +1096,18 @@ class CoreAttention(MegatronModule):
 
                 bs, nh, nb = key_layer.shape[:3]
 
-                if self.transient_global_tokens:
+                if side_bias_idx is not None:
                     # Tile side inputs across local key/value blocks
                     # New shape: (batch_size, n_heads, num_blocks, global_seq_len, dim_per_head)
-                    reps = [1] * (transient_k.ndim + 1)
+                    reps = [1] * (side_k.ndim + 1)
                     reps[2] = key_layer.shape[2]
-                    transient_k = transient_k.unsqueeze(2).repeat(reps)
-                    transient_v = transient_v.unsqueeze(2).repeat(reps)
+                    side_k = side_k.unsqueeze(2).repeat(reps)
+                    side_v = side_v.unsqueeze(2).repeat(reps)
 
-                    # Concatenate "local" and "side"/"global" key/value states to allow each token to attend global aggregated ones
+                    # Concatenate "local" and "side"/"global" key/value states
                     # New shape: (batch_size, n_heads, num_blocks, 3 * block_len + global_seq_len, dim_per_head)
-                    key_layer = torch.cat([key_layer, transient_k], dim=3)
-                    value_layer = torch.cat([value_layer, transient_v], dim=3)
+                    key_layer = torch.cat([key_layer, side_k], dim=3)
+                    value_layer = torch.cat([value_layer, side_v], dim=3)
 
                 query_layer = query_layer.reshape(-1, query_layer.shape[-2], self.hidden_size_per_attention_head)
                 key_layer = key_layer.reshape(-1, key_layer.shape[-2], self.hidden_size_per_attention_head)
