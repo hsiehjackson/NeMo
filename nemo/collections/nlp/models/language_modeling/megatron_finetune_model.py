@@ -601,6 +601,7 @@ class MegatronT5FinetuneModel(MegatronT5Model):
                 add_bos_to_input=data_cfg.get('add_bos_to_input', True),
                 add_eos_to_input=data_cfg.get('add_eos_to_input', True),
                 replace_bos_with_pad=data_cfg.get('replace_bos_with_pad', False),
+                truncate_from_right=data_cfg.get('truncate_from_right', True),
             )
             datasets.append(dataset)
 
