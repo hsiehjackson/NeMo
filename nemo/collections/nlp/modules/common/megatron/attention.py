@@ -306,7 +306,7 @@ class ParallelAttention(MegatronModule, adapter_mixins.AdapterModuleMixin):
                 gradient_accumulation_fusion=gradient_accumulation_fusion,
             )
 
-        if self.transient_global_tokens:
+        if self.global_token_mode == "transient":
             self.transient_norm = LongT5LayerNorm(hidden_size)
 
         self.core_attention = CoreAttention(
@@ -544,6 +544,7 @@ class ParallelAttention(MegatronModule, adapter_mixins.AdapterModuleMixin):
                 side_bias_idx = torch.arange(0, hidden_states.shape[0], self.global_tokens_spacing, device=hidden_states.device)
                 random_offset = torch.randint(0, self.global_tokens_spacing, side_bias_idx.shape, device=hidden_states.device)
                 side_bias_idx += random_offset
+                side_bias_idx = torch.clamp(side_bias_idx, max=hidden_states.shape[0] - 1)
             elif self.global_token_mode == "random":
                 side_bias_idx = torch.randperm(hidden_states.shape[0], device=hidden_states.device)[:self.global_tokens]
             else:
