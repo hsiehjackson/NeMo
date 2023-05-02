@@ -160,6 +160,7 @@ class ParallelTransformerLayer_(MegatronModule, adapter_mixins.AdapterModuleMixi
         global_tokens_spacing=16,
         global_attn_separate=True,
         transient_global_tokens=False,
+        global_token_mode="equal_spacing",
     ):
         super(ParallelTransformerLayer_, self).__init__()
 
@@ -239,6 +240,7 @@ class ParallelTransformerLayer_(MegatronModule, adapter_mixins.AdapterModuleMixi
                 global_tokens_spacing=global_tokens_spacing,
                 global_attn_separate=global_attn_separate,
                 transient_global_tokens=transient_global_tokens,
+                global_token_mode=global_token_mode,
             )
 
             if transformer_block_type == 'normformer':
@@ -669,6 +671,7 @@ class ParallelTransformerLayer(ParallelTransformerLayer_):
         global_tokens_spacing=16,
         global_attn_separate=True,
         transient_global_tokens=False,
+        global_token_mode="equal_spacing",
     ):
         super(ParallelTransformerLayer, self).__init__(
             init_method=init_method,
@@ -716,6 +719,7 @@ class ParallelTransformerLayer(ParallelTransformerLayer_):
             global_tokens_spacing=global_tokens_spacing,
             global_attn_separate=global_attn_separate,
             transient_global_tokens=transient_global_tokens,
+            global_token_mode=global_token_mode,
         )
 
         if precision == 'bf16':
@@ -944,6 +948,7 @@ class ParallelTransformer(MegatronModule):
         global_tokens_spacing=16,
         global_attn_separate=True,
         transient_global_tokens=False,
+        global_token_mode="equal_spacing",
     ):
         super(ParallelTransformer, self).__init__()
 
@@ -1125,6 +1130,7 @@ class ParallelTransformer(MegatronModule):
                     global_tokens_spacing=global_tokens_spacing,
                     global_attn_separate=global_attn_separate,
                     transient_global_tokens=transient_global_tokens,
+                    global_token_mode=global_token_mode,
                 )
 
         if parallel_state.get_virtual_pipeline_model_parallel_world_size() is not None:

@@ -88,6 +88,7 @@ class MegatronTransformerEncoderModule(MegatronModule, Exportable, MegatronEncod
         global_tokens_spacing=16,
         global_attn_separate=True,
         transient_global_tokens=False,
+        global_token_mode="equal_spacing",
     ):
         super(MegatronTransformerEncoderModule, self).__init__()
 
@@ -160,6 +161,7 @@ class MegatronTransformerEncoderModule(MegatronModule, Exportable, MegatronEncod
             global_tokens_spacing=global_tokens_spacing,
             global_attn_separate=global_attn_separate,
             transient_global_tokens=transient_global_tokens,
+            global_token_mode=global_token_mode,
         )
         self._model_key = 'model'
 

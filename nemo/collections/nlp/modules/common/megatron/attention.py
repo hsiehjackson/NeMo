@@ -221,7 +221,8 @@ class ParallelAttention(MegatronModule, adapter_mixins.AdapterModuleMixin):
         global_tokens=1024,
         global_tokens_spacing=16,
         global_attn_separate=True,
-        transient_global_tokens=False,
+        transient_global_tokens=False,#tmp
+        global_token_mode="equal_spacing",
     ):
         super(ParallelAttention, self).__init__()
 
@@ -231,6 +232,9 @@ class ParallelAttention(MegatronModule, adapter_mixins.AdapterModuleMixin):
         self.global_tokens_spacing = global_tokens_spacing
         self.global_attn_separate = False
         self.transient_global_tokens = transient_global_tokens
+        if self.transient_global_tokens:
+            global_token_mode = "transient"
+        self.global_token_mode = global_token_mode
 
         self.layer_number = max(1, layer_number)
         self.attention_type = attention_type
@@ -505,7 +509,7 @@ class ParallelAttention(MegatronModule, adapter_mixins.AdapterModuleMixin):
 
         side_bias_idx = None
 
-        if self.transient_global_tokens:
+        if self.global_token_mode == "transient":
             avg_hidden_states = _pad_to_multiple(hidden_states, self.global_tokens_spacing, 0)
             avg_hidden_states = avg_hidden_states.reshape(
                 self.global_tokens_spacing, -1, hidden_states.shape[-2], hidden_states.shape[-1]
@@ -526,10 +530,27 @@ class ParallelAttention(MegatronModule, adapter_mixins.AdapterModuleMixin):
         else:
             total_transient_tokens = 0
 
-            if self.global_tokens > 0:
+            if self.global_token_mode == "equal_spacing":
                 side_bias_idx = torch.arange(0, hidden_states.shape[0], self.global_tokens_spacing, device=hidden_states.device)
-                side_bias_idx = side_bias_idx[None, :].expand(hidden_states.shape[1], -1)
+            elif self.global_token_mode == "start_and_equal_spacing":
+                side_bias_idx = torch.arange(self.global_tokens, device=hidden_states.device)
+                side_bias_idx = torch.cat((side_bias_idx,
+                                           torch.arange(self.global_tokens, hidden_states.shape[0], self.global_tokens_spacing, device=hidden_states.device)),
+                                          dim=0)
+            elif self.global_token_mode == "random_spacing":
+                random_spacing = torch.randint(self.global_tokens_spacing, self.global_tokens_spacing * 2, (1,)).item()
+                side_bias_idx = torch.arange(0, hidden_states.shape[0], random_spacing, device=hidden_states.device)
+            elif self.global_token_mode == "equal_spacing_random_offset":
+                side_bias_idx = torch.arange(0, hidden_states.shape[0], self.global_tokens_spacing, device=hidden_states.device)
+                random_offset = torch.randint(0, self.global_tokens_spacing, side_bias_idx.shape, device=hidden_states.device)
+                side_bias_idx += random_offset
+            elif self.global_token_mode == "random":
+                side_bias_idx = torch.randperm(hidden_states.shape[0], device=hidden_states.device)[:self.global_tokens]
+            else:
+                side_bias_idx = None
 
+            if side_bias_idx is not None:
+                side_bias_idx = side_bias_idx[None, :].expand(hidden_states.shape[1], -1)
 
 
         global_query_layer = global_key_layer = global_value_layer = None
