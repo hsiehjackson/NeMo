@@ -334,7 +334,7 @@ class ParallelAttention(MegatronModule, adapter_mixins.AdapterModuleMixin):
             global_tokens=global_tokens,
             global_tokens_spacing=global_tokens_spacing,
             global_attn_separate=False,
-            transient_global_tokens=self.transient_global_tokens,
+            transient_global_tokens=self.global_token_mode == "transient",
         )
 
         # Output.
