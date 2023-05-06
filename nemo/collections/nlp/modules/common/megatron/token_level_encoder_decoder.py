@@ -221,8 +221,7 @@ class MegatronTokenLevelEncoderDecoderModule(MegatronModule):
                 global_tokens_spacing=encoder_cfg.get("global_tokens_spacing", 16),
                 global_attn_separate=encoder_cfg.get("global_attn_separate", True),
                 transient_global_tokens=encoder_cfg.get("transient_global_tokens", False),
-                global_token_mode=encoder_cfg.get("global_token_mode", "equal_spacing"),
-                multi_query_attention=decoder_cfg.get('multi_query_attention', False),
+                global_token_mode=encoder_cfg.get("global_token_mode", "equal_spacing")
             )
 
         if add_decoder:
@@ -343,8 +342,15 @@ class MegatronTokenLevelEncoderDecoderModule(MegatronModule):
                 moe_frequency=decoder_cfg.get('moe_frequency', 1),
                 moe_dropout=decoder_cfg.get('moe_dropout', 0.0),
                 position_embedding_type=decoder_cfg.get('position_embedding_type', 'learned_absolute'),
-                multi_query_attention=decoder_cfg.get('multi_query_attention', False),
-                multi_query_cross_attention=decoder_cfg.get('multi_query_cross_attention', False)
+                transformer_engine=decoder_cfg.get('transformer_engine', False),
+                fp8=decoder_cfg.get('fp8', False),
+                fp8_e4m3=decoder_cfg.get('fp8_e4m3', False),
+                fp8_hybrid=decoder_cfg.get('fp8_hybrid', False),
+                fp8_margin=decoder_cfg.get('fp8_margin', 0),
+                fp8_interval=decoder_cfg.get('fp8_interval', 1),
+                fp8_amax_history_len=decoder_cfg.get('fp8_amax_history_len', 1),
+                fp8_amax_compute_algo=decoder_cfg.get('fp8_amax_compute_algo', 'most_recent'),
+                reduce_amax=decoder_cfg.get('reduce_amax', True),
             )
 
         self.enc_dec_model = MegatronTransformerEncoderDecoderModule(

@@ -58,6 +58,14 @@ except (ImportError, ModuleNotFoundError):
     ModelType = ApexGuardDefaults()
     HAVE_APEX = False
 
+try:
+    import transformer_engine
+
+    HAVE_TE = True
+
+except (ImportError, ModuleNotFoundError):
+    HAVE_TE = False
+
 
 __all__ = ["MegatronLMEncoderDecoderModel"]
 
@@ -970,6 +978,10 @@ class MegatronLMEncoderDecoderModel(MegatronBaseModel):
                     'position_embedding_type', 'learned_absolute'
                 ) == 'relative' and not self.cfg.decoder.get('relative_position_bias_self_attention_only', True):
                     self.enc_dec_model.sync_initial_decoder_cross_attention_relative_position_embeddings()
+        
+        if self.cfg.decoder.get('transformer_engine', False):
+            self.setup_transformer_engine_tp_groups()
+
 
     def setup_training_data(self, cfg):
         if hasattr(self, '_train_ds'):
@@ -1134,6 +1146,9 @@ class MegatronLMEncoderDecoderModel(MegatronBaseModel):
             if self.trainer.strategy.launcher is not None:
                 self.trainer.strategy.launcher.launch(dummy, trainer=self.trainer)
             self.trainer.strategy.setup_environment()
+
+            if self.cfg.decoder.get('transformer_engine', False):
+                self.setup_transformer_engine_tp_groups()
 
             # Reconfigure microbatch sizes here because on model restore, this will contain the micro/global batch configuration used while training.
             _reconfigure_microbatch_calculator(
@@ -1347,3 +1362,27 @@ class MegatronLMEncoderDecoderModel(MegatronBaseModel):
 
     def list_available_models(self):
         pass
+
+    def _set_tp_groups(self, module):
+        """ Helper method to set tp groups for transformer engine"""
+
+        if self.cfg.decoder.get('transformer_engine', False):
+            logging.info(f'Setting up transformer engine modules for tensor parallelism.')
+            if self.cfg.get('megatron_amp_O2', 'False'):
+                # when using O2 additional module key is added that casts the weights
+                for layer in module.module.enc_dec_model.decoder.layers:
+                    layer.set_tensor_parallel_group(parallel_state.get_tensor_model_parallel_group())
+
+            else:
+                for layer in module.enc_dec_model.decoder.layers:
+                    layer.set_tensor_parallel_group(parallel_state.get_tensor_model_parallel_group())
+
+    def setup_transformer_engine_tp_groups(self):
+        """ This should be called after model parallel groups have been initialized
+            and only needs to be called when using Transformer Engine.
+        """
+        if isinstance(self.enc_dec_model, list):
+            for module in self.enc_dec_model:
+                self._set_tp_groups(module)
+        else:
+            self._set_tp_groups(self.enc_dec_model)

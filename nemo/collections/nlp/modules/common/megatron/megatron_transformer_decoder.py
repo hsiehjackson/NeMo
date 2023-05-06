@@ -85,8 +85,16 @@ class MegatronTransformerDecoderModule(MegatronModule, Exportable, MegatronDecod
         moe_frequency=1,
         moe_dropout=0.0,
         position_embedding_type='learned_absolute',
-        multi_query_attention=False,
-        multi_query_cross_attention=False
+        transformer_engine=False,
+        fp8=False,
+        fp8_e4m3=False,
+        fp8_hybrid=False,
+        fp8_margin=0,
+        fp8_interval=1,
+        fp8_amax_history_len=1,
+        fp8_amax_compute_algo='most_recent',
+        reduce_amax=True,
+        use_emha=False,
     ):
         super(MegatronTransformerDecoderModule, self).__init__()
 
@@ -151,8 +159,16 @@ class MegatronTransformerDecoderModule(MegatronModule, Exportable, MegatronDecod
             moe_frequency=moe_frequency,
             moe_dropout=moe_dropout,
             position_embedding_type=position_embedding_type,
-            multi_query_attention=multi_query_attention,
-            multi_query_cross_attention=multi_query_cross_attention
+            transformer_engine=transformer_engine,
+            fp8=fp8,
+            fp8_e4m3=fp8_e4m3,
+            fp8_hybrid=fp8_hybrid,
+            fp8_margin=fp8_margin,
+            fp8_interval=fp8_interval,
+            fp8_amax_history_len=fp8_amax_history_len,
+            fp8_amax_compute_algo=fp8_amax_compute_algo,
+            reduce_amax=reduce_amax,
+            use_emha=use_emha,
         )
         self._model_key = 'model'
 
