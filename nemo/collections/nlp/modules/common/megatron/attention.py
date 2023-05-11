@@ -55,18 +55,14 @@ except (ImportError, ModuleNotFoundError):
     ModelType = AttnMaskType = AttnType = LayerType = ApexGuardDefaults()
 
 try:
-    from flash_attn.flash_attn_interface import (
-        flash_attn_unpadded_qkvpacked_func,
-        flash_attn_unpadded_kvpacked_func,
-        flash_attn_unpadded_func,
-    )
+    from flash_attn.flash_attn_interface import flash_attn_unpadded_func
     from flash_attn.bert_padding import unpad_input, pad_input
     
 except (ImportError, ModuleNotFoundError):
     logging.warning(
         "flash_attn was not found. Please see the installation instructions: https://github.com/HazyResearch/flash-attention."
     )
-    flash_attn_unpadded_qkvpacked_func, flash_attn_unpadded_kvpacked_func = None, None
+    flash_attn_unpadded_func = None
     unpad_input, pad_input = None, None
     
 from flash_attn.bert_padding import unpad_input, pad_input, index_first_axis
@@ -1081,7 +1077,7 @@ class CoreAttention(MegatronModule):
                 side_bias_idx,
             )
         
-        elif self.use_flash_attention:
+        elif self.use_flash_attention and self.attention_type == AttnType.self_attn:
             return self.flash_attention(
                 query_layer, 
                 key_layer, 
@@ -1222,11 +1218,7 @@ class CoreAttention(MegatronModule):
         # [sq, b, np, hn] --> [sq, b, hp]
         new_context_layer_shape = context_layer.size()[:-2] + (self.hidden_size_per_partition,)
         context_layer = context_layer.view(*new_context_layer_shape).contiguous()
-        
-#         import os
-#         i = len(os.listdir('check/full'))
-#         torch.save(context_layer, f'check/full/{i}.pt')
-        
+
         return context_layer
 
     def get_local_pos_bias(self, relative_position_bias, num_blocks, block_length):
@@ -1422,11 +1414,13 @@ class CoreAttention(MegatronModule):
         seqlen = query_layer.shape[1]
         nheads = query_layer.shape[2]
         
+        # [b, 1, sq, sk] -> [b, sq]
         attention_mask_q  = torch.any(torch.eq(attention_mask, False), dim=3).squeeze(1)
+        # [b, 1, sq, sk] -> [b, sk]
         attention_mask_kv = torch.any(torch.eq(attention_mask, False), dim=2).squeeze(1)
 
         q  = rearrange(query_layer, 'b s h d -> b s (h d)')
-        q, indices, cu_seqlens_q, max_seqlen_q = unpad_input(q, attention_mask_q)
+        q, indices_q, cu_seqlens_q, max_seqlen_q = unpad_input(q, attention_mask_q)
         q = rearrange(q, 'nnz (h d) -> nnz h d', h=nheads)
 
         k  = rearrange(key_layer, 'b s h d -> b s (h d)')
@@ -1434,7 +1428,7 @@ class CoreAttention(MegatronModule):
         k = rearrange(k, 'nnz (h d) -> nnz h d', h=nheads)
 
         v  = rearrange(value_layer, 'b s h d -> b s (h d)')
-        v, _, cu_seqlens_v, max_seqlen_v = unpad_input(v, attention_mask_kv)
+        v, _, _, _ = unpad_input(v, attention_mask_kv)
         v = rearrange(v, 'nnz (h d) -> nnz h d', h=nheads)
         
         context_layer = flash_attn_unpadded_func(
@@ -1443,60 +1437,12 @@ class CoreAttention(MegatronModule):
             causal=self.attn_mask_type == AttnMaskType.causal,
         )
         
-#         if self.attention_type == AttnType.self_attn:
-#             # attention_mask: [b, 1, sqkv, sqkv]
-#             # attention_mask_qkv: [b, sqkv]
-#             # mask: True -> indicates a pad value
-#             # mask: False -> indicates a value that should be attended to
-#             attention_mask_qkv  = torch.any(torch.eq(attention_mask, False), dim=2).squeeze(1)
-            
-#             # [b, sq, np, hn] -> [b, sq, 3, np, hn]
-#             qkv = torch.stack([query_layer, key_layer, value_layer]).permute([1,2,0,3,4])
-#             qkv = rearrange(qkv, 'b s three h d -> b s (three h d)')
-#             qkv, indices, cu_seqlens, max_seqlen = unpad_input(qkv, attention_mask_qkv)
-#             qkv = rearrange(qkv, 'nnz (three h d) -> nnz three h d', three=3, h=nheads)
-#             context_layer = flash_attn_unpadded_qkvpacked_func(
-#                     qkv, cu_seqlens, max_seqlen, 
-#                     dropout_p=self.attention_dropout_p if self.training else 0.0, 
-#                     causal=self.attn_mask_type == AttnMaskType.causal,
-#             )            
-#         elif self.attention_type == AttnType.cross_attn:
-            
-#             # attention_mask: [b, 1, sq, sk]
-#             # attention_mask_q: [b, sq]
-#             # attention_mask_kv: [b, sk]
-#             # mask: True -> indicates a pad value
-#             # mask: False -> indicates a value that should be attended to
-#             attention_mask_q  = torch.any(torch.eq(attention_mask, False), dim=3).squeeze(1)
-#             attention_mask_kv = torch.any(torch.eq(attention_mask, False), dim=2).squeeze(1)
-            
-#             q  = rearrange(query_layer, 'b s h d -> b s (h d)')
-#             q, indices, cu_seqlens_q, max_seqlen_q = unpad_input(q, attention_mask_q)
-#             q = rearrange(q, 'nnz (h d) -> nnz h d', h=nheads)
-            
-#             # [b, sq, np, hn] -> [b, sq, 2, np, hn]
-#             kv = torch.stack([key_layer, value_layer]).permute([1,2,0,3,4])
-#             kv = rearrange(kv, 'b s two h d -> b s (two h d)')
-#             kv, _, cu_seqlens_kv, max_seqlen_kv = unpad_input(kv, attention_mask_kv)
-#             kv = rearrange(kv, 'nnz (two h d) -> nnz two h d', two=2, h=nheads)
-            
-#             context_layer = flash_attn_unpadded_kvpacked_func(
-#                 q, kv, cu_seqlens_q, cu_seqlens_kv, max_seqlen_q, max_seqlen_kv,
-#                 dropout_p=self.attention_dropout_p if self.training else 0.0,
-#                 causal=self.attn_mask_type == AttnMaskType.causal,
-#             )
-            
-        context_layer = pad_input(context_layer, indices, batch_size, seqlen)
+        context_layer = pad_input(context_layer, indices_q, batch_size, seqlen)
+        
         # [b, s, h, d] -> [s, b, h, d]
         context_layer = context_layer.permute(1, 0, 2, 3).contiguous()
         new_context_layer_shape = context_layer.size()[:-2] + (self.hidden_size_per_partition,)
         context_layer = context_layer.reshape(*new_context_layer_shape)
-        
-#         import pdb
-#         pdb.set_trace()
-#         import os
-#         i = len(os.listdir('check/flash'))
-#         torch.save(context_layer, f'check/flash/{i}.pt')
         
         return context_layer
 
