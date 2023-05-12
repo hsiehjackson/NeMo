@@ -308,6 +308,7 @@ class ParallelAttention(MegatronModule, adapter_mixins.AdapterModuleMixin):
                 no_async_tensor_model_parallel_allreduce=no_async_tensor_model_parallel_allreduce,
                 gradient_accumulation_fusion=gradient_accumulation_fusion,
             )
+            # apex/transformer/tensor_parallel/layers.py will have non-contiguous grad_output
 
             if self.multi_query_attention:
                 kv_proj = kv_channels * 2
@@ -645,7 +646,7 @@ class ParallelAttention(MegatronModule, adapter_mixins.AdapterModuleMixin):
                 self.num_attention_heads_per_partition,
                 self.hidden_size_per_attention_head,
             )
-            query_layer = query_layer.view(*new_tensor_shape)
+            query_layer = query_layer.view(*new_tensor_shape).contiguous()
 
         if self.is_adapter_available():
             key_infused_adapter = self.get_adapter_module(AdapterName.KEY_INFUSED)
@@ -1077,7 +1078,7 @@ class CoreAttention(MegatronModule):
                 side_bias_idx,
             )
         
-        elif self.use_flash_attention and self.attention_type == AttnType.self_attn:
+        elif self.use_flash_attention:
             return self.flash_attention(
                 query_layer, 
                 key_layer, 
@@ -1218,7 +1219,7 @@ class CoreAttention(MegatronModule):
         # [sq, b, np, hn] --> [sq, b, hp]
         new_context_layer_shape = context_layer.size()[:-2] + (self.hidden_size_per_partition,)
         context_layer = context_layer.view(*new_context_layer_shape).contiguous()
-
+                
         return context_layer
 
     def get_local_pos_bias(self, relative_position_bias, num_blocks, block_length):
@@ -1440,9 +1441,8 @@ class CoreAttention(MegatronModule):
         context_layer = pad_input(context_layer, indices_q, batch_size, seqlen)
         
         # [b, s, h, d] -> [s, b, h, d]
-        context_layer = context_layer.permute(1, 0, 2, 3).contiguous()
+        context_layer = context_layer.permute(1, 0, 2, 3)
         new_context_layer_shape = context_layer.size()[:-2] + (self.hidden_size_per_partition,)
-        context_layer = context_layer.reshape(*new_context_layer_shape)
+        context_layer = context_layer.reshape(*new_context_layer_shape).contiguous()
         
         return context_layer
-
