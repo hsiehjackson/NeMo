@@ -9,7 +9,7 @@ import torch.nn as nn
 def fixed_pos_embedding(x):
     seq_len, dim = x.shape
     inv_freq = 1.0 / (10000 ** (torch.arange(0, dim) / dim))
-    sinusoid_inp = torch.einsum("i , j -> i j", torch.arange(0, seq_len, dtype=torch.float), inv_freq).to(x)
+    sinusoid_inp = torch.einsum("i , j -> i j", torch.arange(0, seq_len, dtype=x.dtype), inv_freq).to(x)
     return torch.sin(sinusoid_inp), torch.cos(sinusoid_inp)
 
 
@@ -58,6 +58,6 @@ class XPOS(nn.Module):
 
         if downscale:
             scale = 1 / scale
-
-        x = apply_rotary_pos_emb(x, sin, cos, scale)
+        
+        x = apply_rotary_pos_emb(x, sin.to(x.dtype), cos.to(x.dtype), scale.to(x.dtype))
         return x
