@@ -165,7 +165,7 @@ class MegatronTransformerEncoderModule(MegatronModule, Exportable, MegatronEncod
             transient_global_tokens=transient_global_tokens,
             global_token_mode=global_token_mode,
             multi_query_attention=multi_query_attention,
-            use_flash_attention=use_flash_attention
+            use_flash_attention=use_flash_attention,
         )
         self._model_key = 'model'
 

@@ -177,7 +177,7 @@ def get_language_model(
         fp8_amax_compute_algo=fp8_amax_compute_algo,
         reduce_amax=reduce_amax,
         use_emha=use_emha,
-        use_flash_attention=use_flash_attention
+        use_flash_attention=use_flash_attention,
     )
     # key used for checkpoints.
     language_model_key = 'language_model'

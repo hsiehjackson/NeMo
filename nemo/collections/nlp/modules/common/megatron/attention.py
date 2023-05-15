@@ -56,16 +56,18 @@ except (ImportError, ModuleNotFoundError):
 
 try:
     from flash_attn.flash_attn_interface import flash_attn_unpadded_func
+    from flash_attn.flash_attn_triton import flash_attn_func
     from flash_attn.bert_padding import unpad_input, pad_input
-    
+
 except (ImportError, ModuleNotFoundError):
     logging.warning(
         "flash_attn was not found. Please see the installation instructions: https://github.com/HazyResearch/flash-attention."
     )
     flash_attn_unpadded_func = None
     unpad_input, pad_input = None, None
-    
+
 from flash_attn.bert_padding import unpad_input, pad_input, index_first_axis
+
 """ We use the following notation throughout this file:
      h: hidden size
      n: number of attention heads
@@ -1011,7 +1013,7 @@ class CoreAttention(MegatronModule):
 
         self.transient_global_tokens = transient_global_tokens
         self.use_flash_attention = use_flash_attention
-        
+
     def forward(
         self,
         query_layer,
@@ -1035,14 +1037,33 @@ class CoreAttention(MegatronModule):
         # ===================================
 
         # [b, np, sq, sk]
-        output_size = (
+
+        batch_size, np, sq, sk, hn = (
             query_layer.size(1),
             query_layer.size(2),
             query_layer.size(0) - total_transient_tokens,
             key_layer.size(0) - total_transient_tokens,
+            query_layer.size(3),
         )
 
-        # TODO: figure out how to do this
+        #attention_bias = torch.zeros(batch_size, np, sq, sk,
+        #                             dtype=query_layer.dtype,
+        #                             device=torch.cuda.current_device())
+
+        if self.position_embedding_type.lower() == 'sandwich':
+            relative_position_bias = sandwich_pos_bias(
+                sq, sk, self.hidden_size_per_attention_head, np, torch.cuda.current_device()
+            )[None]
+
+        if relative_position_bias is not None:
+            relative_position_bias = relative_position_bias[
+                :,
+                self.num_attention_heads_partition_offset : self.num_attention_heads_partition_offset
+                + self.num_attention_heads_per_partition,
+            ]
+            if relative_position_bias.shape[0] == 1:
+                relative_position_bias = relative_position_bias.expand(batch_size, -1, -1, -1)
+
         # apply relative positional encoding (rotary embedding)
         if rotary_pos_emb is not None:
             q_pos_emb, k_pos_emb = rotary_pos_emb
@@ -1053,55 +1074,50 @@ class CoreAttention(MegatronModule):
             # absolute positional embedding.
             # otherwise, only relative positional embedding takes effect
             # value_layer = apply_rotary_pos_emb(value_layer, k_pos_emb)
-            
+
         if self.position_embedding_type.lower() == 'xpos':
             sq, bs, np, hn = query_layer.shape
             query_layer = rearrange(query_layer, 's b h d -> (b h) s d')
             key_layer = rearrange(key_layer, 's b h d -> (b h) s d')
             query_layer = self.xpos(query_layer, offset=0, downscale=False)
             key_layer = self.xpos(key_layer, offset=0, downscale=True)
-            
+
             # permute back to the expected shape below
             query_layer = query_layer.permute(1, 0, 2)
             key_layer = key_layer.permute(1, 0, 2)
             query_layer = query_layer.reshape(sq, bs, np, hn)
             key_layer = key_layer.reshape(key_layer.shape[0], bs, -1, hn)
-        
+
         if self.use_long_attention:
             return self.long_attention(
-                query_layer, 
-                key_layer, 
-                value_layer, 
-                attention_mask, 
-                relative_position_bias, 
-                total_transient_tokens, 
+                query_layer,
+                key_layer,
+                value_layer,
+                attention_mask,
+                relative_position_bias,
+                total_transient_tokens,
                 side_bias_idx,
             )
-        
+
         elif self.use_flash_attention:
-            return self.flash_attention(
-                query_layer, 
-                key_layer, 
-                value_layer, 
-                attention_mask, 
-            )
-            
+            if relative_position_bias is not None:
+                return self.flash_attention_triton(
+                    query_layer.transpose(0, 1), key_layer.transpose(0, 1), value_layer.transpose(0, 1), attention_mask, relative_position_bias,
+                )
+            else:
+
+                return self.flash_attention(query_layer, key_layer, value_layer, attention_mask,)
+
         elif self.multi_query_attention:
             # [sq, b, np, hn] -> [b, np * sq, hn]
-            query_layer = query_layer.permute([1, 2, 0, 3]).reshape(
-                output_size[0], output_size[1] * output_size[2], -1
-            )
+            query_layer = query_layer.permute([1, 2, 0, 3]).reshape(batch_size, np * sq, -1)
 
             # [sk, b, 1, hn] -> [b, hn, sk]
             key_layer = key_layer.squeeze(2).permute(1, 2, 0)
 
             # preallocting input tensor: [b, np * sq, sk]
             matmul_input_buffer = torch.empty(
-                output_size[0],
-                output_size[1] * output_size[2],
-                output_size[3],
-                dtype=query_layer.dtype,
-                device=torch.cuda.current_device(),
+                batch_size, np * sq, sq, dtype=query_layer.dtype, device=torch.cuda.current_device(),
             )
 
             # Raw attention scores. [b, np * sq, sk]
@@ -1112,20 +1128,16 @@ class CoreAttention(MegatronModule):
                 beta=0.0,
                 alpha=(1.0 / self.norm_factor),
             )
-            
-        else:                
+
+        else:
             # [sq, b, np, hn] -> [sq, b * np, hn]
-            query_layer = query_layer.view(output_size[2], output_size[0] * output_size[1], -1)
+            query_layer = query_layer.view(sq, batch_size * np, -1)
             # [sk, b, np, hn] -> [sk, b * np, hn]
-            key_layer = key_layer.view(output_size[3], output_size[0] * output_size[1], -1)
+            key_layer = key_layer.view(sk, batch_size * np, -1)
 
             # preallocting input tensor: [b * np, sq, sk]
             matmul_input_buffer = torch.empty(
-                output_size[0] * output_size[1],
-                output_size[2],
-                output_size[3],
-                dtype=query_layer.dtype,
-                device=torch.cuda.current_device(),
+                batch_size * np, sq, sk, dtype=query_layer.dtype, device=torch.cuda.current_device(),
             )
 
             # Raw attention scores. [b * np, sq, sk]
@@ -1135,26 +1147,13 @@ class CoreAttention(MegatronModule):
                 key_layer.transpose(0, 1).transpose(1, 2),  # [b * np, hn, sk]
                 beta=0.0,
                 alpha=(1.0 / self.norm_factor) if self.normalize_attention_scores else 1.0,
-                )
+            )
 
         # change view to [b, np, sq, sk]
-        attention_scores = matmul_result.view(*output_size)
-        
-        if self.position_embedding_type.lower() == 'sandwich':
-            b, np, sq, sk = attention_scores.shape
-            sandwich_bias = sandwich_pos_bias(
-                sq, sk, self.hidden_size_per_attention_head, np, torch.cuda.current_device()
-            )
-            attention_scores += sandwich_bias
+        attention_scores = matmul_result.view(batch_size, np, sq, sk)
 
         if relative_position_bias is not None:
-            attention_scores += relative_position_bias[
-                :,
-                self.num_attention_heads_partition_offset : self.num_attention_heads_partition_offset
-                + self.num_attention_heads_per_partition,
-                : attention_scores.size(2),
-                : attention_scores.size(3),
-            ]
+            attention_scores += relative_position_bias
 
         # ==================================================
         # Update attention mask for inference. [b, np, sq, sk]
@@ -1193,16 +1192,16 @@ class CoreAttention(MegatronModule):
         # [sk, b, np, hn] --> [b, np, sq, hn]
 
         # context layer shape: [b, np, sq, hn]
-        output_size = (value_layer.size(1), output_size[1], output_size[2], value_layer.size(3))
+        output_size = (batch_size, np, sq, hn)
 
         # change view [sk, b * np, hn]
         value_layer = value_layer.view(value_layer.size(0), value_layer.size(1) * value_layer.size(2), -1)
 
         # change view [b * np, sq, sk]
         if self.multi_query_attention:
-            attention_probs = attention_probs.view(output_size[0], output_size[2] * output_size[1], -1)
+            attention_probs = attention_probs.view(batch_size, sq * np, -1)
         else:
-            attention_probs = attention_probs.view(output_size[0] * output_size[1], output_size[2], -1)
+            attention_probs = attention_probs.view(batch_size * np, sq, -1)
 
         # matmul: [b * np, sq, hn]
         context_layer = torch.bmm(attention_probs, value_layer.transpose(0, 1))
@@ -1219,7 +1218,7 @@ class CoreAttention(MegatronModule):
         # [sq, b, np, hn] --> [sq, b, hp]
         new_context_layer_shape = context_layer.size()[:-2] + (self.hidden_size_per_partition,)
         context_layer = context_layer.view(*new_context_layer_shape).contiguous()
-                
+
         return context_layer
 
     def get_local_pos_bias(self, relative_position_bias, num_blocks, block_length):
@@ -1242,16 +1241,19 @@ class CoreAttention(MegatronModule):
         bias = bias.reshape(bias.shape[0], bias.shape[1], num_blocks, block_length, -1)
 
         return bias
-    
-    def long_attention(self, 
-                       query_layer, 
-                       key_layer, 
-                       value_layer, 
-                       attention_mask, 
-                       relative_position_bias, 
-                       total_transient_tokens, 
-                       side_bias_idx):
-        
+
+    def long_attention(
+        self,
+        query_layer,
+        key_layer,
+        value_layer,
+        attention_mask,
+        relative_position_bias,
+        total_transient_tokens,
+        side_bias_idx,
+        use_flash_attention=False,
+    ):
+
         if len(attention_mask.shape) > 3:
             attention_mask = attention_mask.sum(-1) == 0
             # attention_mask = attention_mask.transpose(-2, -1)
@@ -1271,20 +1273,18 @@ class CoreAttention(MegatronModule):
                 side_k = torch.gather(
                     key_layer.transpose(0, 1),
                     dim=1,
-                    index=side_bias_idx[..., None, None].expand(
-                        -1, -1, key_layer.shape[-2], key_layer.shape[-1]
-                    ),
+                    index=side_bias_idx[..., None, None].expand(-1, -1, key_layer.shape[-2], key_layer.shape[-1]),
                 )
                 side_v = torch.gather(
                     value_layer.transpose(0, 1),
                     dim=1,
-                    index=side_bias_idx[..., None, None].expand(
-                        -1, -1, value_layer.shape[-2], value_layer.shape[-1]
-                    ),
+                    index=side_bias_idx[..., None, None].expand(-1, -1, value_layer.shape[-2], value_layer.shape[-1]),
                 )
 
                 side_k = side_k.transpose(1, 2)
                 side_v = side_v.transpose(1, 2)
+
+        T_q = query_layer.shape[0]
 
         # [sq/k, b, np, hn] -> [b, hn, sq/k, np]
         query_layer = query_layer.permute(1, 2, 0, 3)
@@ -1300,8 +1300,6 @@ class CoreAttention(MegatronModule):
         key_layer = _concatenate_3_blocks(key_layer, block_dim=2, sequence_dim=3)
         value_layer = _concatenate_3_blocks(value_layer, block_dim=2, sequence_dim=3)
 
-        bs, nh, nb = key_layer.shape[:3]
-
         if side_bias_idx is not None:
             # Tile side inputs across local key/value blocks
             # New shape: (batch_size, n_heads, num_blocks, global_seq_len, dim_per_head)
@@ -1315,9 +1313,50 @@ class CoreAttention(MegatronModule):
             key_layer = torch.cat([key_layer, side_k], dim=3)
             value_layer = torch.cat([value_layer, side_v], dim=3)
 
+        batch_size, nh, nb, sk = key_layer.shape[:4]
+        sq = query_layer.shape[3]
+
+
+
+        local_attention_mask = _get_local_attention_mask(
+            ~attention_mask.squeeze(1), self.local_context, query_layer.device
+        ).expand(-1, nh, -1, -1, -1)
+
+        attention_mask = torch.empty(
+            batch_size,
+            nh,
+            nb,
+            sq,
+            sk,
+            dtype=local_attention_mask.dtype,
+            device=torch.cuda.current_device(),
+        )
+
+        attention_mask[..., :local_attention_mask.shape[-1]] = local_attention_mask
+
+
+        if self.use_flash_attention:
+            query_layer = rearrange(query_layer, "bs nh nb sq hn -> (bs nb) sq nh hn")
+            key_layer = rearrange(key_layer, "bs nh nb sk hn -> (bs nb) sk nh hn")
+            value_layer = rearrange(value_layer, "bs nh nb sk hn -> (bs nb) sk nh hn")
+
+            #relative_position_bias = relative_position_bias.expand(batch_size, -1, -1, -1, -1)
+
+            attention_mask = rearrange(attention_mask, "bs nh nb sq sk -> (bs nb) nh sq sk")
+            relative_position_bias = rearrange(relative_position_bias, "bs nh nb sq sk -> (bs nb) nh sq sk")
+
+            context_layer = self.flash_attention_triton(query_layer, key_layer, value_layer, attention_mask, relative_position_bias)
+            context_layer = context_layer.reshape(sq * nb, batch_size, -1)
+            context_layer = context_layer[:T_q]
+
+            return context_layer
+
+
         query_layer = query_layer.reshape(-1, query_layer.shape[-2], self.hidden_size_per_attention_head)
         key_layer = key_layer.reshape(-1, key_layer.shape[-2], self.hidden_size_per_attention_head)
         value_layer = value_layer.reshape(-1, key_layer.shape[-2], self.hidden_size_per_attention_head)
+
+        attention_mask = attention_mask.reshape(-1, attention_mask.shape[-2], attention_mask.shape[-1])
 
         # preallocting input tensor: [b * np, sq, sk]
         matmul_input_buffer = torch.empty(
@@ -1337,16 +1376,14 @@ class CoreAttention(MegatronModule):
             alpha=(1.0 / self.norm_factor) if self.normalize_attention_scores else 1.0,
         )
 
-        # We need to adjust position bias shape to be sum with mask
-        local_attention_mask = _get_local_attention_mask(
-            ~attention_mask.squeeze(1), self.local_context, query_layer.device
-        )
+
         # Replace masked positions with -10_000 (according to the original implementation)
-        local_attention_mask = torch.where(local_attention_mask, 0.0, -1e10)
+        attention_mask = torch.where(attention_mask, 0.0, -1e10)
 
-        attention_scores = attention_scores.reshape(bs, nh, nb, self.local_context, -1)
+        attention_scores += attention_mask
 
-        attention_scores[..., : self.local_context * 3] += local_attention_mask
+        attention_scores = attention_scores.reshape(batch_size, nh, nb, self.local_context, -1)
+
 
         if relative_position_bias is not None:
             if isinstance(relative_position_bias, torch.Tensor):
@@ -1355,10 +1392,7 @@ class CoreAttention(MegatronModule):
                     :,
                     self.num_attention_heads_partition_offset : self.num_attention_heads_partition_offset
                     + self.num_attention_heads_per_partition,
-                ] += relative_position_bias[
-                    self.num_attention_heads_partition_offset : self.num_attention_heads_partition_offset
-                    + self.num_attention_heads_per_partition
-                ]
+                ] += relative_position_bias
 
             else:
 
@@ -1384,7 +1418,6 @@ class CoreAttention(MegatronModule):
                 ]
 
         attention_probs = F.softmax(attention_scores, dim=-1)
-        # attention_probs = self.scale_mask_softmax(attention_scores, None)
 
         if not self.sequence_parallel:
             with tensor_parallel.random.get_cuda_rng_tracker().fork():
@@ -1393,56 +1426,75 @@ class CoreAttention(MegatronModule):
             attention_probs = self.attention_dropout(attention_probs)
 
         # matmul: [b * np, sq, hn]
-        attention_probs = attention_probs.reshape(bs * nh * nb, self.local_context, -1)
+        attention_probs = attention_probs.reshape(batch_size * nh * nb, self.local_context, -1)
         context_layer = torch.bmm(attention_probs, value_layer)
-        context_layer = context_layer.reshape(bs, nh, nb * self.local_context, -1)
-        context_layer = context_layer.transpose(1, 2).reshape(bs, nb * self.local_context, -1)
+        context_layer = context_layer.reshape(batch_size, nh, nb * self.local_context, -1)
+        context_layer = context_layer.transpose(1, 2).reshape(batch_size, nb * self.local_context, -1)
 
-        context_layer = context_layer[:, : output_size[2]]
+        context_layer = context_layer[:T_q]
 
-        context_layer = context_layer.transpose(0, 1).contiguous()
-        # [batch, seq, head, dim]    
-                
         return context_layer
-    
+
     def flash_attention(self, query_layer, key_layer, value_layer, attention_mask):
         # [sq, b, np, hn] -> [b, sq, np, hn]
-        query_layer = query_layer.permute([1,0,2,3])
-        key_layer = key_layer.permute([1,0,2,3])
-        value_layer = value_layer.permute([1,0,2,3])
-        
+        query_layer = query_layer.permute([1, 0, 2, 3])
+        key_layer = key_layer.permute([1, 0, 2, 3])
+        value_layer = value_layer.permute([1, 0, 2, 3])
+
         batch_size = query_layer.shape[0]
         seqlen = query_layer.shape[1]
         nheads = query_layer.shape[2]
-        
+
         # [b, 1, sq, sk] -> [b, sq]
-        attention_mask_q  = torch.any(torch.eq(attention_mask, False), dim=3).squeeze(1)
+        attention_mask_q = torch.any(torch.eq(attention_mask, False), dim=3).squeeze(1)
         # [b, 1, sq, sk] -> [b, sk]
         attention_mask_kv = torch.any(torch.eq(attention_mask, False), dim=2).squeeze(1)
 
-        q  = rearrange(query_layer, 'b s h d -> b s (h d)')
+        q = rearrange(query_layer, 'b s h d -> b s (h d)')
         q, indices_q, cu_seqlens_q, max_seqlen_q = unpad_input(q, attention_mask_q)
         q = rearrange(q, 'nnz (h d) -> nnz h d', h=nheads)
 
-        k  = rearrange(key_layer, 'b s h d -> b s (h d)')
+        k = rearrange(key_layer, 'b s h d -> b s (h d)')
         k, _, cu_seqlens_k, max_seqlen_k = unpad_input(k, attention_mask_kv)
         k = rearrange(k, 'nnz (h d) -> nnz h d', h=nheads)
 
-        v  = rearrange(value_layer, 'b s h d -> b s (h d)')
+        v = rearrange(value_layer, 'b s h d -> b s (h d)')
         v, _, _, _ = unpad_input(v, attention_mask_kv)
         v = rearrange(v, 'nnz (h d) -> nnz h d', h=nheads)
-        
+
         context_layer = flash_attn_unpadded_func(
-            q, k, v, cu_seqlens_q, cu_seqlens_k, max_seqlen_q, max_seqlen_k,
+            q,
+            k,
+            v,
+            cu_seqlens_q,
+            cu_seqlens_k,
+            max_seqlen_q,
+            max_seqlen_k,
             dropout_p=self.attention_dropout_p if self.training else 0.0,
             causal=self.attn_mask_type == AttnMaskType.causal,
         )
-        
+
         context_layer = pad_input(context_layer, indices_q, batch_size, seqlen)
-        
-        # [b, s, h, d] -> [s, b, h, d]
+
+        # [b, sq, np, hn] -> [sq, b, np * hn]
         context_layer = context_layer.permute(1, 0, 2, 3)
         new_context_layer_shape = context_layer.size()[:-2] + (self.hidden_size_per_partition,)
         context_layer = context_layer.reshape(*new_context_layer_shape).contiguous()
-        
+
+        return context_layer
+
+    def flash_attention_triton(self, query_layer, key_layer, value_layer, attention_mask, attention_bias):
+        #if self.attention_dropout_p > 0.0:
+        #    raise NotImplementedError(f'attention_dropout not implemented for flash_attention with attention bias')
+
+        attention_bias = attention_bias.masked_fill(attention_mask, torch.finfo(query_layer.dtype).min)
+
+        context_layer = flash_attn_func(
+            query_layer, key_layer, value_layer, attention_bias, self.attn_mask_type == AttnMaskType.causal
+        )
+
+        # [b, sq, np, hn] -> [sq, b, np * hn]
+        context_layer = context_layer.permute(1, 0, 2, 3)
+        new_context_layer_shape = context_layer.size()[:-2] + (self.hidden_size_per_partition,)
+        context_layer = context_layer.reshape(*new_context_layer_shape).contiguous()
         return context_layer
