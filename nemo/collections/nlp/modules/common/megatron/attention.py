@@ -1062,7 +1062,7 @@ class CoreAttention(MegatronModule):
                 + self.num_attention_heads_per_partition,
             ]
             if relative_position_bias.shape[0] == 1:
-                relative_position_bias = relative_position_bias.expand(batch_size, -1, -1, -1)
+                relative_position_bias = relative_position_bias.expand(batch_size, *([-1]*(relative_position_bias.dim() - 1)))
 
         # apply relative positional encoding (rotary embedding)
         if rotary_pos_emb is not None:
@@ -1097,6 +1097,7 @@ class CoreAttention(MegatronModule):
                 relative_position_bias,
                 total_transient_tokens,
                 side_bias_idx,
+                self.use_flash_attention
             )
 
         elif self.use_flash_attention:
@@ -1335,7 +1336,7 @@ class CoreAttention(MegatronModule):
         attention_mask[..., :local_attention_mask.shape[-1]] = local_attention_mask
 
 
-        if self.use_flash_attention:
+        if use_flash_attention:
             query_layer = rearrange(query_layer, "bs nh nb sq hn -> (bs nb) sq nh hn")
             key_layer = rearrange(key_layer, "bs nh nb sk hn -> (bs nb) sk nh hn")
             value_layer = rearrange(value_layer, "bs nh nb sk hn -> (bs nb) sk nh hn")
@@ -1430,8 +1431,8 @@ class CoreAttention(MegatronModule):
         context_layer = torch.bmm(attention_probs, value_layer)
         context_layer = context_layer.reshape(batch_size, nh, nb * self.local_context, -1)
         context_layer = context_layer.transpose(1, 2).reshape(batch_size, nb * self.local_context, -1)
-
-        context_layer = context_layer[:T_q]
+        context_layer = context_layer[:, :T_q]
+        context_layer = context_layer.transpose(0, 1).contiguous()
 
         return context_layer
 
