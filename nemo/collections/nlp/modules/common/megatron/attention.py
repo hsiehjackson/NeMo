@@ -1024,8 +1024,8 @@ class CoreAttention(MegatronModule):
         b, np, sq, sk, hn = (
             query_layer.size(1),
             query_layer.size(2),
-            query_layer.size(0),
-            key_layer.size(0),
+            query_layer.size(0) - total_transient_tokens,
+            key_layer.size(0) - total_transient_tokens,
             query_layer.size(3),
         )
                     
@@ -1052,26 +1052,13 @@ class CoreAttention(MegatronModule):
             )
         
         if relative_position_bias is not None:
-            if isinstance(relative_position_bias, torch.Tensor):
-                attention_bias = relative_position_bias[
-                    :,
-                    self.num_attention_heads_partition_offset : self.num_attention_heads_partition_offset
-                    + self.num_attention_heads_per_partition,
-                ]
-                if attention_bias.shape[0] == 1:
-                    attention_bias = attention_bias.expand(b, *([-1]*(attention_bias.dim() - 1)))
-            else:
-                # relative_position_bias is T5RelativePositionEmbedding
-                attention_bias = self.get_local_pos_bias(
-                    relative_position_bias, nb, self.local_context
-                )
-
-                if side_bias_idx is not None:
-                    side_pos_bias = self.get_side_pos_bias(
-                        relative_position_bias, nb, self.local_context, side_bias_idx
-                    )
-                    attention_bias = attention_bias.expand(*side_pos_bias.shape[:-1], -1)
-                    attention_bias = torch.cat((attention_bias, side_pos_bias), dim=-1)    
+            attention_bias = relative_position_bias[
+                :,
+                self.num_attention_heads_partition_offset : self.num_attention_heads_partition_offset
+                + self.num_attention_heads_per_partition,
+            ]
+            if attention_bias.shape[0] == 1:
+                attention_bias = attention_bias.expand(b, *([-1]*(attention_bias.dim() - 1))) 
 
                                     
         # ==================================================
@@ -1126,7 +1113,7 @@ class CoreAttention(MegatronModule):
             value_layer = rearrange(value_layer, 'sk b np hn -> b sk np hn')
         elif self.multi_query_attention:
             query_layer = rearrange(query_layer, 'sq b np hn -> b (np sq) hn')
-            key_layer = rearrange(a, 'sk b 1 hn -> b hn sk')
+            key_layer = rearrange(key_layer, 'sk b 1 hn -> b hn sk')
             value_layer = rearrange(value_layer, 'sk b np hn -> (b np) sk hn')
         else:
             query_layer = rearrange(query_layer, 'sq b np hn -> (b np) sq hn')
@@ -1210,7 +1197,7 @@ class CoreAttention(MegatronModule):
         
         if self.use_long_attention:
             assert sq == sk, 'Long Attention can only use for self-attention.'
-            nb = (sq // self.local_context)
+            nb = sq // self.local_context
             context_layer = rearrange(context_layer, '(b nb) np sq hn -> b np (nb sq) hn', nb=nb)
             context_layer = context_layer[:, :, :nb * self.local_context]
             
@@ -1332,7 +1319,7 @@ class CoreAttention(MegatronModule):
         ).expand(-1, np, -1, -1, -1)
 
         # Default attend to all tokens including global tokens
-        attention_mask = torch.zeros(
+        attention_mask = torch.ones(
             bs, np, nb, sq, sk,
             dtype=local_attention_mask.dtype,
             device=torch.cuda.current_device(),
