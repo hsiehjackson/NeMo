@@ -349,6 +349,7 @@ def synced_generate(
         )
 
     for tokens, lengths, output_logits, full_logits in batch_token_iterator:
+        import pdb; pdb.set_trace()
         context_length += 1
 
     if parallel_state.is_pipeline_last_stage():
@@ -474,6 +475,7 @@ def generate(
         repetition_penalty=repetition_penalty,
         min_tokens_to_generate=min_tokens_to_generate,
     )
+    
     special_tokens = set()
     if hasattr(tokenizer, 'pad_token') and tokenizer.pad_token is not None:
         special_tokens.add(tokenizer.pad_token)
@@ -577,6 +579,7 @@ def sample_sequence_batch(
     ), 'activations_checkpoint_method should be None during inference. Disable it in the model config if restoring from nemo or in hparams.yaml if restoring from PTL checkpoint'
 
     tokenizer = model.tokenizer
+   
     # initialize the batch
     with torch.no_grad():
         context_length = context_lengths.min().item()
@@ -601,6 +604,7 @@ def sample_sequence_batch(
             batch, tensor_shape = inference_strategy.prepare_batch_at_step(
                 tokens, maxlen, micro_batch_size, counter, context_length
             )
+            import pdb; pdb.set_trace()
             output = inference_strategy.forward_step(batch, tensor_shape)
 
             if parallel_state.is_pipeline_last_stage():
