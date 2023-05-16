@@ -1088,6 +1088,12 @@ class CoreAttention(MegatronModule):
             query_layer = query_layer.reshape(sq, bs, np, hn)
             key_layer = key_layer.reshape(key_layer.shape[0], bs, -1, hn)
 
+        print("Q:", query_layer.shape)
+        print("K:", key_layer.shape)
+        print("V:", value_layer.shape)
+        print("A:", attention_mask.shape)
+        print("=" * 40)
+
         if self.use_long_attention:
             return self.long_attention(
                 query_layer,
@@ -1101,12 +1107,13 @@ class CoreAttention(MegatronModule):
             )
 
         elif self.use_flash_attention:
+            print("flash attention")
+
             if relative_position_bias is not None:
                 return self.flash_attention_triton(
                     query_layer.transpose(0, 1), key_layer.transpose(0, 1), value_layer.transpose(0, 1), attention_mask, relative_position_bias,
                 )
             else:
-
                 return self.flash_attention(query_layer, key_layer, value_layer, attention_mask,)
 
         elif self.multi_query_attention:

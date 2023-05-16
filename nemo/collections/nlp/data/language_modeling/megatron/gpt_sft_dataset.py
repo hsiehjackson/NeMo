@@ -94,7 +94,7 @@ class GPTSFTDataset(Dataset):
         assert self.truncation_field in ["answer", "context"]
 
         self.indexed_dataset = JSONLMemMapDataset(dataset_paths=[file_path], tokenizer=None, header_lines=0)
-
+        
         # Will be None after this call if `max_num_samples` is None
         self._build_samples_mapping()
 
@@ -214,7 +214,7 @@ class GPTSFTDataset(Dataset):
             'context_ids': context_ids,
             'context_length': len(context_ids),
         }
-
+        print("-->input_ids: ", len(input_ids), "context len: ", len(context.split()))
         return processed_example
 
     def _maybe_cast_to_list(self, x):
