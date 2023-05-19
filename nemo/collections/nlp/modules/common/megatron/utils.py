@@ -402,6 +402,7 @@ def get_all_params_for_weight_decay_optimization(
 
     return ({'params': weight_decay_params},)
 
+
 def get_iterator_k_split(batch: List[torch.Tensor], num_microbatches: int) -> Iterator:
     if isinstance(batch, dict):
         items = list(batch.items())

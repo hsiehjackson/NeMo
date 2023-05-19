@@ -17,6 +17,7 @@ from omegaconf.dictconfig import DictConfig
 from pytorch_lightning.trainer.trainer import Trainer
 
 from nemo.collections.nlp.models.language_modeling.megatron_gpt_sft_model import MegatronGPTSFTModel
+
 # from nemo.collections.nlp.modules.common.megatron.adapters.parallel_adapters import (
 #     AdapterName,
 #     InfusedAdapterConfig,

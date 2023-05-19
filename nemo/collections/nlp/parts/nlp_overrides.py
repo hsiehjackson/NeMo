@@ -658,6 +658,7 @@ class GlobalBatchDataFetcher(DataFetcher):
             self.done = self.fetched >= len(dataloader)
         self.on_fetch_end(batch, start_output)
 
+
 class PEFTSaveRestoreConnector(NLPSaveRestoreConnector):
     """
     PEFT models require the ability to load/save a small subset of the full model (once PEFT params have been infused into the base model.)

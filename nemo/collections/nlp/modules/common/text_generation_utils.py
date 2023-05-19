@@ -474,7 +474,7 @@ def generate(
         repetition_penalty=repetition_penalty,
         min_tokens_to_generate=min_tokens_to_generate,
     )
-    
+
     special_tokens = set()
     if hasattr(tokenizer, 'pad_token') and tokenizer.pad_token is not None:
         special_tokens.add(tokenizer.pad_token)
@@ -578,7 +578,7 @@ def sample_sequence_batch(
     ), 'activations_checkpoint_method should be None during inference. Disable it in the model config if restoring from nemo or in hparams.yaml if restoring from PTL checkpoint'
 
     tokenizer = model.tokenizer
-   
+
     # initialize the batch
     with torch.no_grad():
         context_length = context_lengths.min().item()
