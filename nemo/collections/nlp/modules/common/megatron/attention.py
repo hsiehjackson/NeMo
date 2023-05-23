@@ -381,6 +381,9 @@ class ParallelAttention(MegatronModule, adapter_mixins.AdapterModuleMixin):
 
         # relative position embedding
         self.layer_type = layer_type
+        
+        if position_embedding_type.lower() == 'xpos':
+            self.xpos = XPOS(kv_channels)
 
     def _checkpointed_attention_forward(
         self,
@@ -700,6 +703,16 @@ class ParallelAttention(MegatronModule, adapter_mixins.AdapterModuleMixin):
         if get_key_value:
             present = (key_layer, value_layer)
 
+        if self.position_embedding_type.lower() == 'xpos':
+            b = query_layer.shape[1]
+            query_layer = rearrange(query_layer, 'sq b np hn -> (b np) sq hn')
+            key_layer = rearrange(key_layer, 'sk b np hn -> (b np) sk hn')
+            query_layer = self.xpos(query_layer, offset=0 if inference_max_sequence_len is None else end - 1, downscale=False)
+            key_layer = self.xpos(key_layer, offset=0, downscale=True)
+            query_layer = rearrange(query_layer, '(b np) sq hn -> sq b np hn', b=b)
+            key_layer = rearrange(key_layer, '(b np) sk hn -> sk b np hn', b=b)        
+    
+            
         if checkpoint_core_attention:
             context_layer = self._checkpointed_attention_forward(
                 query_layer,
@@ -992,9 +1005,6 @@ class CoreAttention(MegatronModule):
         self.attention_dropout_p = attention_dropout
         self.attention_dropout = torch.nn.Dropout(attention_dropout)
 
-        if position_embedding_type.lower() == 'xpos':
-            self.xpos = XPOS(hidden_size / num_attention_heads)
-
         self.use_long_attention = use_long_attention
         self.local_context = local_context
         self.global_tokens = global_tokens
@@ -1056,6 +1066,8 @@ class CoreAttention(MegatronModule):
                 :,
                 self.num_attention_heads_partition_offset : self.num_attention_heads_partition_offset
                 + self.num_attention_heads_per_partition,
+                -sq:,
+                -sk:,
             ]
             if attention_bias.shape[0] == 1:
                 attention_bias = attention_bias.expand(b, *([-1] * (attention_bias.dim() - 1)))
@@ -1075,13 +1087,6 @@ class CoreAttention(MegatronModule):
             # otherwise, only relative positional embedding takes effect
             # value_layer = apply_rotary_pos_emb(value_layer, k_pos_emb)
 
-        if self.position_embedding_type.lower() == 'xpos':
-            query_layer = rearrange(query_layer, 'sq b np hn -> (b np) sq hn')
-            key_layer = rearrange(key_layer, 'sk b np hn -> (b np) sk hn')
-            query_layer = self.xpos(query_layer, offset=0, downscale=False)
-            key_layer = self.xpos(key_layer, offset=0, downscale=True)
-            query_layer = rearrange(query_layer, '(b np) sq hn -> sq b np hn', b=b)
-            key_layer = rearrange(key_layer, '(b np) sk hn -> sk b np hn', b=b)
 
         # ==================================================
         # Long Attention
