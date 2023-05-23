@@ -1067,7 +1067,9 @@ class CoreAttention(MegatronModule):
                 self.num_attention_heads_partition_offset : self.num_attention_heads_partition_offset
                 + self.num_attention_heads_per_partition,
             ]
-            attention_bias = attention_bias[..., -sq:, -sk:]
+            if len(attention_bias.size()) == 4:
+                attention_bias = attention_bias[..., -sq:, -sk:]
+                
             if attention_bias.shape[0] == 1:
                 attention_bias = attention_bias.expand(b, *([-1] * (attention_bias.dim() - 1)))
 
@@ -1100,7 +1102,6 @@ class CoreAttention(MegatronModule):
                 total_transient_tokens,
                 side_bias_idx,
             )
-
         # ==================================================
         # Rearrange query_layer, key_layer, value_layer.
         # ==================================================
