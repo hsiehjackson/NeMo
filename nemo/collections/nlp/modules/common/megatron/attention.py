@@ -1066,9 +1066,8 @@ class CoreAttention(MegatronModule):
                 :,
                 self.num_attention_heads_partition_offset : self.num_attention_heads_partition_offset
                 + self.num_attention_heads_per_partition,
-                -sq:,
-                -sk:,
             ]
+            attention_bias = attention_bias[..., -sq:, -sk:]
             if attention_bias.shape[0] == 1:
                 attention_bias = attention_bias.expand(b, *([-1] * (attention_bias.dim() - 1)))
 
