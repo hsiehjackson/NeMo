@@ -165,6 +165,9 @@ class ParallelTransformerLayer_(MegatronModule, adapter_mixins.AdapterModuleMixi
         moe_frequency=1,
         moe_dropout=0.0,
         use_flash_attention=False,
+        use_long_attention=None,
+        local_context=128,
+        global_block_size=16,
     ):
         super(ParallelTransformerLayer_, self).__init__()
 
@@ -242,6 +245,9 @@ class ParallelTransformerLayer_(MegatronModule, adapter_mixins.AdapterModuleMixi
                 gradient_accumulation_fusion=gradient_accumulation_fusion,
                 normalize_attention_scores=normalize_attention_scores,
                 use_flash_attention=use_flash_attention,
+                use_long_attention=use_long_attention,
+                local_context=local_context,
+                global_block_size=global_block_size,
             )
 
             if transformer_block_type == 'normformer':
@@ -673,6 +679,9 @@ class ParallelTransformerLayer(ParallelTransformerLayer_):
         moe_frequency=1,
         moe_dropout=0.0,
         use_flash_attention=False,
+        use_long_attention=None,
+        local_context=128,
+        global_block_size=16,
     ):
         super(ParallelTransformerLayer, self).__init__(
             init_method=init_method,
@@ -716,6 +725,9 @@ class ParallelTransformerLayer(ParallelTransformerLayer_):
             moe_frequency=moe_frequency,
             moe_dropout=moe_dropout,
             use_flash_attention=use_flash_attention,
+            use_long_attention=use_long_attention,
+            local_context=local_context,
+            global_block_size=global_block_size,
         )
 
         # Dtype for forward pass - ignore amp O2
@@ -930,6 +942,9 @@ class ParallelTransformer(MegatronModule):
         moe_frequency=1,
         moe_dropout=0.0,
         use_flash_attention=False,
+        use_long_attention=None,
+        local_context=128,
+        global_block_size=16,
     ):
         super(ParallelTransformer, self).__init__()
 
@@ -1108,6 +1123,9 @@ class ParallelTransformer(MegatronModule):
                     moe_frequency=moe_frequency,
                     moe_dropout=moe_dropout,
                     use_flash_attention=use_flash_attention,
+                    use_long_attention=use_long_attention,
+                    local_context=local_context,
+                    global_block_size=global_block_size,
                 )
 
         if parallel_state.get_virtual_pipeline_model_parallel_world_size() is not None:
