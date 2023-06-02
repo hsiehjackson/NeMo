@@ -18,6 +18,7 @@ import math
 from typing import Dict, Iterator, List, Tuple, Union
 
 import torch
+import torch.nn as nn
 
 try:
     from apex.normalization import MixedFusedRMSNorm
@@ -381,3 +382,142 @@ def get_iterator_k_split(batch: List[torch.Tensor], num_microbatches: int) -> It
         microbatches = [[elem[i] for elem in split_batch] for i in range(num_microbatches)]
 
     return itertools.chain(microbatches)
+
+
+def make_global_fixed_block_ids(
+    attention_mask: torch.Tensor, global_block_size: int
+):
+    """
+    Adapted from HuggingFace LongT5 Model
+    https://github.com/huggingface/transformers/blob/main/src/transformers/models/longt5/modeling_longt5.py#L153
+    """
+    batch_size, seq_len = attention_mask.shape[:2]
+
+    def handle_orphan_tokens(block_ids: torch.Tensor) -> torch.Tensor:
+        block_ends = (torch.arange(seq_len) % global_block_size) == global_block_size - 1
+        block_ends = block_ends.to(block_ids.device)
+        true_block_ends = torch.logical_and(block_ends, block_ids >= 0)
+        full_blocks = true_block_ends.sum(-1).unsqueeze(-1).type(block_ids.dtype) - 1
+        block_ids = torch.where(block_ids < full_blocks, block_ids, full_blocks)
+        return block_ids
+
+    fixed_block_mask = torch.ones_like(attention_mask, device=attention_mask.device) / global_block_size
+    fixed_block_mask = torch.cumsum(fixed_block_mask, axis=1) - fixed_block_mask
+    mask = torch.where(attention_mask != 0.0, 1.0, -1000.0).type(attention_mask.dtype)
+    global_block_ids = torch.floor(mask + fixed_block_mask - 1.0).type(attention_mask.dtype)
+    _global_block_ids_lower_bound = torch.tensor(-1, dtype=global_block_ids.dtype, device=global_block_ids.device)
+    global_block_ids = torch.where(
+        global_block_ids > _global_block_ids_lower_bound, global_block_ids, _global_block_ids_lower_bound
+    )
+    # set padding tokens to -1
+    global_block_ids = (global_block_ids * attention_mask) + (attention_mask - 1)
+    # [batch_size, seq_len]
+    global_block_ids = handle_orphan_tokens(global_block_ids)
+    num_globals = seq_len // global_block_size
+    # [batch_size, seq_len // global_block_size]
+    if num_globals > 0:
+        _sequence_block_ids_max = torch.max(global_block_ids, dim=-1).values.repeat(num_globals, 1).transpose(0, 1)
+    else:
+        _sequence_block_ids_max = torch.zeros(
+            batch_size, 0, dtype=global_block_ids.dtype, device=global_block_ids.device
+        )
+    global_segment_ids = torch.cumsum(torch.ones(batch_size, num_globals), dim=-1) - 1
+    global_segment_ids = global_segment_ids.to(attention_mask.device)
+    global_segment_ids = torch.where(global_segment_ids <= _sequence_block_ids_max, 1, 0)
+    return global_block_ids.type(torch.int), global_segment_ids.type(torch.int)
+
+
+def pad_to_multiple(x: torch.Tensor, block_len: int, dim: int, pad_value: int = 0) -> torch.Tensor:
+    """Pad a tensor so that a sequence length will be a multiple of `block_len`"""
+    pad_len = -x.shape[dim] % block_len
+    # Handle cases when an empty input sequence is given
+    if not all(x.shape):
+        new_shape = list(x.shape)
+        new_shape[dim] += pad_len
+        return torch.zeros(new_shape, dtype=x.dtype)
+
+    pad = [(0, 0)] * x.ndim
+    pad[dim] = (0, pad_len)
+    pad = sum(pad[::-1], ())
+    x = nn.functional.pad(x, pad=pad, mode="constant", value=pad_value)
+    return x
+
+
+def split_into_blocks(x: torch.Tensor, block_len: int, dim: int) -> torch.Tensor:
+    """Split an input tensor into blocks of a given `block_len` along the given `dim`. If the dimension length
+    is not a multiple of `block_len`, it will be padded first with selected `pad_value`.
+    """
+    # pad tensor to multiple of block_len
+    if x.shape[dim] % block_len != 0:
+        x = pad_to_multiple(x, block_len, dim, pad_value=0)
+    num_blocks = x.shape[dim] // block_len
+    output_shape = x.shape[:dim] + (num_blocks, block_len) + x.shape[(dim + 1) :]
+    # If 0 is in output_shape, we cannot apply reshape because of incompatibility with ONNX conversion
+    if 0 in output_shape:
+        return torch.empty(output_shape, dtype=x.dtype, device=x.device)
+    return x.reshape(output_shape)
+
+
+def concatenate_3_blocks(x: torch.Tensor, block_dim: int, sequence_dim: int, pad_value: int = 0) -> torch.Tensor:
+    """Concatenate three consecutive blocks for each input block for local attentiont.
+
+    For more information, see: https://arxiv.org/pdf/2112.07916.pdf.
+    """
+    num_blocks = x.shape[block_dim]
+
+    pad = [(0, 0)] * x.ndim
+    pad[block_dim] = (1, 1)
+    pad = sum(pad[::-1], ())
+    # [batch_size, num_blocks, block_len] -> [batch_size, num_blocks + 2, block_len]
+    x = nn.functional.pad(x, pad=pad, mode="constant", value=pad_value)
+
+    blocks_list: List[torch.Tensor] = []
+    for i in range(3):
+        # We use indexing approach here:
+        # https://numpy.org/doc/stable/user/basics.indexing.html#dealing-with-variable-numbers-of-indices-within-programs
+        indices = [slice(0, None)] * x.ndim
+        indices[block_dim] = slice(i, i + num_blocks)
+        indices = tuple(indices)
+        blocks_list.append(x[indices])
+    # [batch_size, num_blocks, 3 * block_len, ...]
+    return torch.cat(blocks_list, dim=sequence_dim)
+
+
+def create_global_aggregates(
+    hidden_states: torch.Tensor, block_ids: torch.Tensor, global_seq_len: int
+):
+    """Compute individual block aggregates by summing over individual blocks."""
+    # (batch..., seq_len, global_seq_len))
+    block_ids = block_ids.where(
+        block_ids >= 0, torch.tensor(global_seq_len, dtype=block_ids.dtype, device=block_ids.device)
+    )
+    one_hot_block_ids = nn.functional.one_hot(block_ids.type(torch.int64), global_seq_len + 1)[:, :, :-1]
+    return torch.einsum("...nd,...ng->...gd", hidden_states, one_hot_block_ids.type(hidden_states.dtype))
+
+
+def mask_local_attention_mask(local_attention_mask: torch.Tensor, block_len: int) -> torch.Tensor:
+    """Mask local attention mask to enforce that tokens are not allowed to attend tokens farther than ``local_context."""
+    position_ids = torch.arange(3 * block_len, dtype=torch.int32)
+    center_position_ids = position_ids[block_len:-block_len]
+    # [block_len, 3 * block_len]
+    relative_position_ids = position_ids.unsqueeze(0) - center_position_ids.unsqueeze(1)
+    locality_mask = torch.abs(relative_position_ids) < block_len
+    locality_mask = locality_mask[None, None, :, :]
+    locality_mask = locality_mask.to(local_attention_mask.device)
+    return torch.logical_and(local_attention_mask, locality_mask)
+
+
+def get_local_attention_mask(attention_mask: torch.Tensor, block_len: int, device: torch.device) -> torch.Tensor:
+    """Prepare attention mask to be applied for a local attention."""
+    # [batch_size, num_blocks, block_len]
+    _blocked_attention_mask = split_into_blocks(attention_mask, block_len, dim=1)
+    # [batch_size, num_block, 3 * block_len]
+    _3blocked_attention_mask = concatenate_3_blocks(_blocked_attention_mask, block_dim=1, sequence_dim=2)
+
+    _blocked_attention_mask = _blocked_attention_mask.unsqueeze(-1)
+    _3blocked_attention_mask = _3blocked_attention_mask.unsqueeze(-2)
+    # [batch_size, num_block, block_len, 3 * block_len]
+    local_attention_mask = torch.logical_and(_blocked_attention_mask, _3blocked_attention_mask)
+    local_attention_mask = mask_local_attention_mask(local_attention_mask, block_len)
+    # [batch_size, num_block, 1, block_len, 3 * block_len]
+    return local_attention_mask.unsqueeze(1).to(device).transpose(1, 2)

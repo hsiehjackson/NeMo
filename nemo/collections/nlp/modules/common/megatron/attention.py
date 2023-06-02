@@ -29,12 +29,21 @@ from nemo.collections.nlp.modules.common.megatron.position_embedding import XPOS
 from nemo.collections.nlp.modules.common.megatron.position_embedding.rotary_position_embedding import (
     apply_rotary_pos_emb,
 )
-from nemo.collections.nlp.modules.common.megatron.utils import ApexGuardDefaults, attention_mask_func
+from nemo.collections.nlp.modules.common.megatron.utils import (
+    ApexGuardDefaults, 
+    attention_mask_func,
+    make_global_fixed_block_ids,
+    split_into_blocks,
+    concatenate_3_blocks,
+    create_global_aggregates,
+    get_local_attention_mask
+)
 from nemo.collections.nlp.parts import utils_funcs
 from nemo.core import adapter_mixins
 from nemo.utils import logging
 
 try:
+    from apex.normalization import MixedFusedRMSNorm
     from apex._autocast_utils import _cast_if_autocast_enabled
     from apex.transformer.enums import AttnMaskType, AttnType
     from apex.transformer.utils import divide as safe_divide
@@ -126,6 +135,10 @@ class ParallelAttention(MegatronModule, adapter_mixins.AdapterModuleMixin):
         global_block_size=16,
     ):
         super(ParallelAttention, self).__init__()
+        self.use_long_attention = use_long_attention
+        self.global_block_size = global_block_size
+        self.local_context = local_context
+        
         self.layer_number = max(1, layer_number)
         self.attention_type = attention_type
         self.attn_mask_type = attn_mask_type
@@ -198,7 +211,10 @@ class ParallelAttention(MegatronModule, adapter_mixins.AdapterModuleMixin):
                 async_tensor_model_parallel_allreduce=async_tensor_model_parallel_allreduce,
                 gradient_accumulation_fusion=gradient_accumulation_fusion,
             )
-
+            
+        if use_long_attention == "tglobal":
+            self.global_norm = MixedFusedRMSNorm(hidden_size, eps=1e-6)
+            
         self.core_attention = CoreAttention(
             layer_number=self.layer_number,
             num_attention_heads=num_attention_heads,
@@ -215,9 +231,6 @@ class ParallelAttention(MegatronModule, adapter_mixins.AdapterModuleMixin):
             normalize_attention_scores=normalize_attention_scores,
             position_embedding_type=position_embedding_type,
             use_flash_attention=use_flash_attention,
-            use_long_attention=use_long_attention,
-            local_context=local_context,
-            global_block_size=global_block_size,
         )
 
         # Output.
@@ -367,7 +380,8 @@ class ParallelAttention(MegatronModule, adapter_mixins.AdapterModuleMixin):
         checkpoint_core_attention=False,
     ):
         # hidden_states: [sq, b, h]
-
+        sq = hidden_states.shape[0]
+        
         # =================================================
         # Pre-allocate memory for key-values for inference.
         # =================================================
@@ -395,6 +409,20 @@ class ParallelAttention(MegatronModule, adapter_mixins.AdapterModuleMixin):
         # =====================
         # Query, Key, and Value
         # =====================
+        
+        if self.use_long_attention == 'tglobal':
+            # batch_size, seq_len, hidden_size
+            hidden_states = hidden_states.transpose(1,0)
+            block_ids, global_segment_ids = make_global_fixed_block_ids(
+                (~attention_mask.squeeze(1)).long() if attention_mask is not None else torch.ones(hidden_states.shape[:-1]),
+                self.global_block_size,
+            )
+            global_tokens_len = global_segment_ids.shape[-1]
+            global_tokens = create_global_aggregates(hidden_states, block_ids, global_tokens_len)
+            global_tokens = self.global_norm(global_tokens)
+            hidden_states = torch.cat((hidden_states, global_tokens), dim=1)
+            # seq_len, batch_size, hidden_size
+            hidden_states = hidden_states.transpose(1,0)
 
         if self.attention_type == AttnType.self_attn:
             # Attention heads [sq, b, h] --> [sq, b, (np * 3 * hn)]
@@ -496,6 +524,42 @@ class ParallelAttention(MegatronModule, adapter_mixins.AdapterModuleMixin):
 
         if get_key_value:
             present = (key_layer, value_layer)
+            
+        if self.use_long_attention is not None:
+            query_layer = query_layer.transpose(0, 1)
+            key_layer = key_layer.transpose(0, 1)
+            value_layer = value_layer.transpose(0, 1)
+            if self.use_long_attention == 'tglobal': 
+                global_key_layer = key_layer[:, -global_tokens_len:]
+                global_value_layer = value_layer[:, -global_tokens_len:]
+                query_layer = query_layer[:, :-global_tokens_len]
+                key_layer = key_layer[:, :-global_tokens_len]
+                value_layer = value_layer[:, :-global_tokens_len]
+                
+            # Split into blocks -> (batch_size, num_blocks, block_len, n_heads, dim_per_head)
+            query_layer = split_into_blocks(query_layer, self.local_context, dim=1)
+            key_layer = split_into_blocks(key_layer, self.local_context, dim=1)
+            value_layer = split_into_blocks(value_layer, self.local_context, dim=1)
+            
+            # Concatenate 3 blocks for keys and values -> (batch_size, num_blocks, 3 * block_len, n_heads, dim_per_head)
+            key_layer = concatenate_3_blocks(key_layer, block_dim=1, sequence_dim=2)
+            value_layer = concatenate_3_blocks(value_layer, block_dim=1, sequence_dim=2)
+            
+            if self.use_long_attention == 'tglobal':    
+                # Tile side inputs across local key/value blocks
+                # New shape: (batch_size, num_blocks, global_seq_len, n_heads, dim_per_head)
+                reps = [1] * (global_key_layer.ndim + 1)
+                reps[1] = key_layer.shape[1]
+                global_key_layer = global_key_layer.unsqueeze(1).repeat(reps)
+                global_value_layer = global_value_layer.unsqueeze(1).repeat(reps)
+                key_layer = torch.cat([key_layer, global_key_layer], dim=2)
+                value_layer = torch.cat([value_layer, global_value_layer], dim=2)
+                
+            query_layer = rearrange(query_layer, "bs nb sq np hn -> sq (bs nb) np hn")
+            key_layer = rearrange(key_layer, "bs nb sk np hn -> sk (bs nb) np hn")
+            value_layer = rearrange(value_layer, "bs nb sk np hn -> sk (bs nb) np hn")
+            relative_position_bias = rearrange(relative_position_bias, 'b nb np sq sk -> (b nb) np sq sk')
+            attention_mask = None
 
         if checkpoint_core_attention:
             context_layer = self._checkpointed_attention_forward(
@@ -523,7 +587,7 @@ class ParallelAttention(MegatronModule, adapter_mixins.AdapterModuleMixin):
         # =================
         # Output. [sq, b, h]
         # =================
-
+        context_layer = context_layer[:sq, ...]
         output, bias = self.dense(context_layer)
 
         if get_key_value:
@@ -784,7 +848,7 @@ class CoreAttention(MegatronModule):
 
         if position_embedding_type.lower() == 'xpos':
             self.xpos = XPOSPositionEmbedding(kv_channels)
-
+            
     def forward(
         self,
         query_layer,

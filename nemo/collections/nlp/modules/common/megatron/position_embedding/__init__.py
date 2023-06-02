@@ -29,3 +29,6 @@ from nemo.collections.nlp.modules.common.megatron.position_embedding.t5_relative
 from nemo.collections.nlp.modules.common.megatron.position_embedding.xpos_position_embedding import (
     XPOSPositionEmbedding,
 )
+from nemo.collections.nlp.modules.common.megatron.position_embedding.longt5_relative_position_embedding import (
+    LongT5RelativePositionEmbedding,
+)

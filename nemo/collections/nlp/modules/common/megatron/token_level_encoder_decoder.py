@@ -27,6 +27,7 @@ from nemo.collections.nlp.modules.common.megatron.position_embedding import (
     ALiBiRelativePositionEmbedding,
     KERPLERelativePositionEmbedding,
     T5RelativePositionEmbedding,
+    LongT5RelativePositionEmbedding,
 )
 from nemo.collections.nlp.modules.common.megatron.utils import (
     ApexGuardDefaults,
@@ -140,7 +141,7 @@ class MegatronTokenLevelEncoderDecoderModule(MegatronModule):
         self.share_token_embeddings = share_token_embeddings
         self.share_decoder_tokens_head_embeddings = share_decoder_tokens_head_embeddings
         self.tokens_head_bias = tokens_head_bias
-
+        
         encoder_kv_channels, decoder_kv_channels = self._validate_config()
 
         self.dtype = utils_funcs.dtype_from_precision(precision, megatron_amp_O2)
@@ -161,19 +162,33 @@ class MegatronTokenLevelEncoderDecoderModule(MegatronModule):
                 )
                 self._encoder_embedding_key = "encoder_embedding"
             if self.encoder_cfg.get('position_embedding_type', 'learned_absolute') == 'relative':
-                self.encoder_relative_position_embedding = T5RelativePositionEmbedding(
-                    init_method=init_method_normal(embedding_init_method_std),
-                    num_attention_heads=encoder_cfg.num_attention_heads,
-                    relative_position_num_buckets=encoder_cfg.relative_attention_num_buckets,
-                    relative_position_max_distance=encoder_cfg.relative_attention_max_distance,
-                    bidirectional=True,
-                    layer_type=LayerType.encoder,
-                )
+                if self.encoder_cfg.get('use_long_attention') is None:
+                    self.encoder_relative_position_embedding = T5RelativePositionEmbedding(
+                        init_method=init_method_normal(embedding_init_method_std),
+                        num_attention_heads=encoder_cfg.num_attention_heads,
+                        relative_position_num_buckets=encoder_cfg.relative_attention_num_buckets,
+                        relative_position_max_distance=encoder_cfg.relative_attention_max_distance,
+                        bidirectional=True,
+                        layer_type=LayerType.encoder,
+                    )
+                else:
+                    self.encoder_relative_position_embedding = LongT5RelativePositionEmbedding(
+                        init_method=init_method_normal(embedding_init_method_std),
+                        num_attention_heads=encoder_cfg.num_attention_heads,
+                        relative_position_num_buckets=encoder_cfg.relative_attention_num_buckets,
+                        relative_position_max_distance=encoder_cfg.relative_attention_max_distance,
+                        bidirectional=True,
+                        layer_type=LayerType.encoder,
+                        long_attention_type=encoder_cfg.get('use_long_attention'),
+                        local_context=encoder_cfg.get('local_context', 128),
+                        global_block_size=encoder_cfg.get('global_block_size', 16),
+                    )
                 self._encoder_relative_position_embedding_key = "encoder_relative_position_embedding"
                 # Pipeline model parallel rank 0 will have the actual RPE weights. We zero it out on all other ranks and then sync them on setup.
                 if parallel_state.get_pipeline_model_parallel_rank() != 0:
                     self.encoder_relative_position_embeddings_weight().data.fill_(0)
                     self.encoder_relative_position_embeddings_weight().shared = True
+                    
             elif self.encoder_cfg.get('position_embedding_type', 'learned_absolute') == 'alibi':
                 self.encoder_relative_position_embedding = ALiBiRelativePositionEmbedding(
                     bidirectional=True,
@@ -183,6 +198,7 @@ class MegatronTokenLevelEncoderDecoderModule(MegatronModule):
                     max_seq_len=max_position_embeddings,
                 )
                 self._encoder_relative_position_embedding_key = "encoder_alibi_position_embedding"
+                
             elif self.encoder_cfg.get('position_embedding_type', 'learned_absolute') == 'kerple':
                 self.encoder_relative_position_embedding = KERPLERelativePositionEmbedding(
                     bidirectional=True,
@@ -533,9 +549,14 @@ class MegatronTokenLevelEncoderDecoderModule(MegatronModule):
             enc_seq_length = enc_attn_mask.size(1)
 
         if self.add_encoder and self.encoder_relative_position_embedding is not None:
-            encoder_self_attention_relative_position_bias = self.encoder_relative_position_embedding(
-                query_seq_length=enc_seq_length, key_seq_length=enc_seq_length,
-            )
+            if self.encoder_cfg.get('use_long_attention') is not None:
+                encoder_self_attention_relative_position_bias = self.encoder_relative_position_embedding(
+                    attention_mask=enc_attn_mask
+                )
+            else:
+                encoder_self_attention_relative_position_bias = self.encoder_relative_position_embedding(
+                    query_seq_length=enc_seq_length, key_seq_length=enc_seq_length,
+                )
 
         if output_enc_hidden_only:
             # When pipeline parallel > 1 we need to make sure encoder exist (will be missing in decoder)
