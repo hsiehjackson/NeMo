@@ -555,10 +555,11 @@ class ParallelAttention(MegatronModule, adapter_mixins.AdapterModuleMixin):
                 key_layer = torch.cat([key_layer, global_key_layer], dim=2)
                 value_layer = torch.cat([value_layer, global_value_layer], dim=2)
                 
+            nb = query_layer.shape[1]
             query_layer = rearrange(query_layer, "bs nb sq np hn -> sq (bs nb) np hn")
             key_layer = rearrange(key_layer, "bs nb sk np hn -> sk (bs nb) np hn")
             value_layer = rearrange(value_layer, "bs nb sk np hn -> sk (bs nb) np hn")
-            relative_position_bias = rearrange(relative_position_bias, 'b nb np sq sk -> (b nb) np sq sk')
+            relative_position_bias = rearrange(relative_position_bias, 'bs nb np sq sk -> (bs nb) np sq sk')
             attention_mask = None
 
         if checkpoint_core_attention:
@@ -583,7 +584,10 @@ class ParallelAttention(MegatronModule, adapter_mixins.AdapterModuleMixin):
                 relative_position_bias=relative_position_bias,
                 headscale_tensor=self.head_scale_tensor if self.headscale else None,
             )
-
+            
+        if self.use_long_attention is not None:
+            context_layer = rearrange(context_layer, 'sq (b nb) hp -> (nb sq) b hp', nb=nb)
+            
         # =================
         # Output. [sq, b, h]
         # =================

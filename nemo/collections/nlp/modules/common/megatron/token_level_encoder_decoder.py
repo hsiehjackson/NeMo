@@ -551,7 +551,7 @@ class MegatronTokenLevelEncoderDecoderModule(MegatronModule):
         if self.add_encoder and self.encoder_relative_position_embedding is not None:
             if self.encoder_cfg.get('use_long_attention') is not None:
                 encoder_self_attention_relative_position_bias = self.encoder_relative_position_embedding(
-                    attention_mask=enc_attn_mask
+                    attention_mask=enc_attn_mask if enc_attn_mask is not None else enc_output_attn_mask
                 )
             else:
                 encoder_self_attention_relative_position_bias = self.encoder_relative_position_embedding(
