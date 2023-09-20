@@ -39,13 +39,16 @@ class RotaryEmbedding(nn.Module):
         super().__init__()
         self.seq_len_interpolation_factor = seq_len_interpolation_factor
         inv_freq = 1.0 / (10000 ** (torch.arange(0, dim, 2).float() / dim))
-        self.register_buffer('inv_freq', inv_freq)
+        self.register_buffer('inv_freq', inv_freq.to(torch.float32))
         self.pretrained_max_position_embeddings = pretrained_max_position_embeddings
 
     def forward(self, max_seq_len, offset=0):
-        seq = torch.arange(max_seq_len, device=self.inv_freq.device) + offset
-        seq = seq.type_as(self.inv_freq)
+        if self.inv_freq.dtype != torch.float32:
+            inv_freq = self.inv_freq.to(torch.float32)
+        else:
+            inv_freq = self.inv_freq
 
+        seq = torch.arange(max_seq_len, device=inv_freq.device, dtype=inv_freq.dtype) + offset
         if self.pretrained_max_position_embeddings is not None and self.seq_len_interpolation_factor is not None:
             if max_seq_len > self.pretrained_max_position_embeddings * self.seq_len_interpolation_factor:
                 # dynamic linear scaling (length > position we have learned)
@@ -54,7 +57,8 @@ class RotaryEmbedding(nn.Module):
                 # fixed linear scaling
                 seq *= 1 / self.seq_len_interpolation_factor
 
-        freqs = einsum('i , j -> i j', seq, self.inv_freq)
+        # freqs = einsum('i , j -> i j', seq, self.inv_freq)
+        freqs = torch.outer(seq, inv_freq)
         # first part even vector components, second part odd vector components,
         #  2 * dim in dimension size
         emb = torch.cat((freqs, freqs), dim=-1)
@@ -83,5 +87,5 @@ def apply_rotary_pos_emb(t, freqs):
     t, t_pass = t[..., :rot_dim], t[..., rot_dim:]
     # first part is cosine component
     # second part is sine component, need to change signs with _rotate_half method
-    t = (t * freqs.cos()) + (_rotate_half(t) * freqs.sin())
+    t = (t * freqs.cos().to(t.dtype)) + (_rotate_half(t) * freqs.sin().to(t.dtype))
     return torch.cat((t, t_pass), dim=-1)
