@@ -152,6 +152,8 @@ def main(cfg) -> None:
         
         if peft_model_cfg.get("use_flash_attention", False) or cfg.model.get("use_flash_attention", False):
             peft_model_cfg.use_flash_attention = cfg.model.use_flash_attention
+        if cfg.model.get("max_position_embeddings", None) is not None:
+            peft_model_cfg["max_position_embeddings"] = cfg.model.max_position_embeddings
         if cfg.model.get("seq_len_interpolation_factor", None) is not None:
             peft_model_cfg["seq_len_interpolation_factor"] = cfg.model.seq_len_interpolation_factor
 

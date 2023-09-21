@@ -214,6 +214,13 @@ def main(cfg) -> None:
             pretrained_cfg.activations_checkpoint_granularity = None
             pretrained_cfg.activations_checkpoint_method = None
             pretrained_cfg.precision = trainer.precision
+            if cfg.model.get("max_position_embeddings", None) is not None:
+                pretrained_cfg["max_position_embeddings"] = cfg.model.max_position_embeddings
+            if cfg.model.get("seq_len_interpolation_factor", None) is not None:
+                pretrained_cfg["seq_len_interpolation_factor"] = cfg.model.seq_len_interpolation_factor
+            if cfg.model.get("use_flash_attention", None) is not None:
+                pretrained_cfg["use_flash_attention"] = cfg.model.use_flash_attention
+                
             if pretrained_cfg.get('mcore_gpt', False):
                 # with dist checkpointing we can use the model parallel config specified by the user
                 pretrained_cfg.tensor_model_parallel_size = cfg.tensor_model_parallel_size
