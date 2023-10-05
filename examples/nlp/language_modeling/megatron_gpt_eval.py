@@ -266,7 +266,6 @@ def main(cfg) -> None:
         raise ValueError("need at least a nemo file or checkpoint dir")
 
     model.freeze()
-
     # Have to turn off activations_checkpoint_method for inference
     try:
         model.model.language_model.encoder.activations_checkpoint_method = None
@@ -321,6 +320,55 @@ def main(cfg) -> None:
     print("***************************")
     print(response)
     print("***************************")
+
+
+    if cfg.inference.get('input_file', None):
+        # read json file
+        import json
+        with open(cfg.inference.input_file) as f:
+            lines = []
+            request = []
+            for line in f:
+                line = json.loads(line)
+                lines.append(line)
+                request.append(line["input"])
+                
+        bs = cfg.inference.batch_size #8 if fp8_enabled else 2
+        ds = RequestDataSet(request)
+        request_dl = DataLoader(dataset=ds, batch_size=bs)
+        response = trainer.predict(model, request_dl)
+        response = [s for batch in response for s in batch['sentences']]
+        if model.global_rank == 0:
+            print("***************************")
+            output_file = cfg.inference.output_file
+            if output_file is not None:
+                with open(output_file, "w", encoding="utf-8") as f:
+                    for line, res in zip(lines, response):
+                        line['pred'] = res[len(line['input']):]
+                        f.write(json.dumps(line) + '\n')
+                print("predictions saved to {}".format(output_file))
+        print("***************************")
+        
+        # response = []
+        # from tqdm import tqdm
+        # for req in tqdm(request):
+        #     response.append(model.generate(
+        #         inputs=[req], length_params=length_params, sampling_params=sampling_params
+        #     ))
+        # response = [s for batch in response for s in batch['sentences']]
+        
+        # if model.global_rank == 0:
+        #     print("***************************")
+        #     output_file = cfg.inference.output_file
+        #     if output_file is not None:
+        #         with open(output_file, "w", encoding="utf-8") as f:
+        #             for line, res in zip(lines, response):
+        #                 line['pred'] = res[len(line['input']):]
+        #                 f.write(json.dumps(line) + '\n')
+        #         print("predictions saved to {}".format(output_file))
+        # print("***************************")
+
+    
 
     # Third method of running text generation, use inference server
     if cfg.server:
