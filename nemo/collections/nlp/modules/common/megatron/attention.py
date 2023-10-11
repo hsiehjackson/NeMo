@@ -855,6 +855,12 @@ class CoreAttention(MegatronModule):
             # absolute positional embedding.
             # otherwise, only relative positional embedding takes effect
             # value_layer = apply_rotary_pos_emb(value_layer, k_pos_emb)
+            # import math
+            # scale = [1.0 if i <= 16384 else math.log(i, 16384) for i in range(1, key_layer.shape[0]+1)]
+            # scale = torch.tensor(scale, device=query_layer.device)
+            # scale = scale[-query_layer.shape[0]:, None, None, None]
+            # query_layer = query_layer * scale
+        
 
         if self.position_embedding_type.lower() == 'xpos':
             query_layer = self.xpos(query_layer, offset=key_layer.shape[-2] - query_layer.shape[-2], downscale=False)
@@ -885,6 +891,8 @@ class CoreAttention(MegatronModule):
         return context_layer
 
     def torch_attention(self, query_layer, key_layer, value_layer, attention_mask, attention_bias, inference_mode):
+        import pdb
+        pdb.set_trace()
         sq, b, np, hn = query_layer.shape
         sk = key_layer.shape[0]
 
@@ -920,6 +928,11 @@ class CoreAttention(MegatronModule):
             attention_scores += attention_bias
 
         attention_probs = self.scale_mask_softmax(attention_scores, attention_mask)
+        import os
+        folder = '/home/chsieh/LC_Issue/Dataset/attention/020'
+        file_size = len(os.listdir(folder))
+        torch.save(attention_probs[0, :, -1, :], f'{folder}/{file_size}.pt')
+        
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
 

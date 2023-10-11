@@ -296,30 +296,30 @@ def main(cfg) -> None:
             cfg.prompts.append("")
             nb_paddings += 1
 
-    # First method of running text generation, call model.generate method
-    response = model.generate(
-        inputs=OmegaConf.to_container(cfg.prompts), length_params=length_params, sampling_params=sampling_params
-    )
+    # # First method of running text generation, call model.generate method
+    # response = model.generate(
+    #     inputs=OmegaConf.to_container(cfg.prompts), length_params=length_params, sampling_params=sampling_params
+    # )
 
-    if fp8_enabled:
-        response = remove_padded_prompts(response, nb_paddings)
-    print("***************************")
-    print(response)
-    print("***************************")
+    # if fp8_enabled:
+    #     response = remove_padded_prompts(response, nb_paddings)
+    # print("***************************")
+    # print(response)
+    # print("***************************")
 
-    # Second method of running text generation, call trainer.predict [recommended]
-    bs = 8 if fp8_enabled else 2
-    ds = RequestDataSet(OmegaConf.to_container(cfg.prompts))
-    request_dl = DataLoader(dataset=ds, batch_size=bs)
-    config = OmegaConf.to_container(cfg.inference)
-    model.set_inference_config(config)
-    response = trainer.predict(model, request_dl)
+    # # Second method of running text generation, call trainer.predict [recommended]
+    # bs = 8 if fp8_enabled else 2
+    # ds = RequestDataSet(OmegaConf.to_container(cfg.prompts))
+    # request_dl = DataLoader(dataset=ds, batch_size=bs)
+    # config = OmegaConf.to_container(cfg.inference)
+    # model.set_inference_config(config)
+    # response = trainer.predict(model, request_dl)
 
-    if fp8_enabled:
-        response[-1] = remove_padded_prompts(response[-1], nb_paddings)
-    print("***************************")
-    print(response)
-    print("***************************")
+    # if fp8_enabled:
+    #     response[-1] = remove_padded_prompts(response[-1], nb_paddings)
+    # print("***************************")
+    # print(response)
+    # print("***************************")
 
 
     if cfg.inference.get('input_file', None):
@@ -332,10 +332,13 @@ def main(cfg) -> None:
                 line = json.loads(line)
                 lines.append(line)
                 request.append(line["input"])
+                #break
                 
         bs = cfg.inference.batch_size #8 if fp8_enabled else 2
         ds = RequestDataSet(request)
         request_dl = DataLoader(dataset=ds, batch_size=bs)
+        config = OmegaConf.to_container(cfg.inference)
+        model.set_inference_config(config)
         response = trainer.predict(model, request_dl)
         response = [s for batch in response for s in batch['sentences']]
         if model.global_rank == 0:

@@ -178,7 +178,6 @@ class MegatronGenerate(Resource):
                 ):
                     if neighbors is not None:
                         self.inference_strategy.update_neighbors(neighbors)
-
             output = generate(
                 self.model,
                 sentences,
@@ -189,7 +188,7 @@ class MegatronGenerate(Resource):
                 top_k,
                 top_p,
                 greedy,
-                repetition_penalty,
+                repetition_penalty=repetition_penalty,
                 end_strings=end_strings,
                 min_tokens_to_generate=min_tokens_to_generate,
                 **extra,

@@ -20,7 +20,6 @@ from torch import einsum, nn
 
 __all__ = ['RotaryEmbedding', 'apply_rotary_pos_emb']
 
-mscale=1
 
 # Inverse dim formula to find dim based on number of rotations
 def find_correction_dim(num_rotations, dim, base=10000, max_position_embeddings=2048):
@@ -41,11 +40,6 @@ def linear_ramp_mask(min, max, dim):
     linear_func = (torch.arange(dim, dtype=torch.float32) - min) / (max - min)
     ramp_func = torch.clamp(linear_func, 0, 1)
     return ramp_func
-
-def get_mscale(scale=1):
-    if scale <= 1:
-        return 1.0
-    return 0.1 * math.log(scale) + 1.0
 
 
 class RotaryEmbedding(nn.Module):
@@ -75,13 +69,31 @@ class RotaryEmbedding(nn.Module):
         self.extrapolation_factor=1
         self.beta_fast=32
         self.beta_slow=1
-
+        # self.yarn(self.seq_len_interpolation_factor, self.inv_freq.device)
+        
     def forward(self, max_seq_len, offset=0):
-        seq = torch.arange(max_seq_len, device=self.inv_freq.device) + offset
-        seq = seq.type_as(self.inv_freq)
+        
+        seq = torch.arange(max_seq_len, device=self.inv_freq.device, dtype=torch.float32) + offset
+        # seq *= 1 / self.seq_len_interpolation_factor
+        
         # if self.pretrained_max_position_embeddings is not None and self.seq_len_interpolation_factor is not None:
         #     if max_seq_len > self.pretrained_max_position_embeddings * self.seq_len_interpolation_factor:
-        #         self.yarn(max_seq_len / self.pretrained_max_position_embeddings, self.inv_freq.device)
+        #         self.yarn(max_seq_len / (self.pretrained_max_position_embeddings * self.seq_len_interpolation_factor), self.inv_freq.device)
+                        
+        # if self.pretrained_max_position_embeddings is not None and self.seq_len_interpolation_factor is not None:
+        #     if max_seq_len > self.pretrained_max_position_embeddings * self.seq_len_interpolation_factor:
+        #         # dynamic ntk aware scaling (length > position we have learned)
+        #         # scale = 2 ** math.ceil(math.log(max_seq_len / (self.pretrained_max_position_embeddings * self.seq_len_interpolation_factor), 2) + 1) - 1
+        #         scale = 2 * max_seq_len / (self.pretrained_max_position_embeddings * self.seq_len_interpolation_factor) - 1
+        #         base = 10000 * (scale ** (self.dim / (self.dim-2)))
+        #         inv_freq = 1.0 / ((base ** (torch.arange(0, self.dim, 2, device=self.inv_freq.device).float() / self.dim)))
+        #         self.register_buffer("inv_freq", inv_freq)
+
+                # scale = max_seq_len / (self.pretrained_max_position_embeddings * self.seq_len_interpolation_factor)
+                # base = 10000 * scale
+                # inv_freq = 1.0 / ((base ** (torch.arange(0, self.dim, 2, device=self.inv_freq.device).float() / self.dim)))
+                # inv_freq = inv_freq / (scale ** (2 / self.dim))
+                # self.register_buffer("inv_freq", inv_freq)
         
         if self.pretrained_max_position_embeddings is not None and self.seq_len_interpolation_factor is not None:
             if max_seq_len > self.pretrained_max_position_embeddings * self.seq_len_interpolation_factor:
@@ -91,7 +103,9 @@ class RotaryEmbedding(nn.Module):
                 # fixed linear scaling
                 seq *= 1 / self.seq_len_interpolation_factor
 
-        freqs = einsum('i , j -> i j', seq, self.inv_freq)
+        # freqs = einsum('i , j -> i j', seq, self.inv_freq)
+        freqs = torch.outer(seq, self.inv_freq)
+        
         # first part even vector components, second part odd vector components,
         #  2 * dim in dimension size
         emb = torch.cat((freqs, freqs), dim=-1)
@@ -99,6 +113,7 @@ class RotaryEmbedding(nn.Module):
         return rearrange(emb, 'n d -> n 1 1 d')
 
     def yarn(self, scale, device):
+        
         pos_freqs = 10000 ** (torch.arange(0, self.dim, 2).float().to(device) / self.dim)
         inv_freq_extrapolation = 1.0 / pos_freqs
         inv_freq_interpolation = 1.0 / (scale * pos_freqs)
@@ -108,7 +123,6 @@ class RotaryEmbedding(nn.Module):
         inv_freq = inv_freq_interpolation * (1 - inv_freq_mask) + inv_freq_extrapolation * inv_freq_mask
 
         self.register_buffer("inv_freq", inv_freq)
-        mscale = float(get_mscale(scale) * self.attn_factor) # Get n-d magnitude scaling corrected for interpolation
 
 
 def _rotate_half(x):
@@ -132,5 +146,8 @@ def apply_rotary_pos_emb(t, freqs):
     t, t_pass = t[..., :rot_dim], t[..., rot_dim:]
     # first part is cosine component
     # second part is sine component, need to change signs with _rotate_half method
-    t = (t * freqs.cos() * mscale) + (_rotate_half(t) * freqs.sin() * mscale)
+    # cos_ = torch.cos(freqs).to(t.dtype)
+    # sin_ = torch.sin(freqs).to(t.dtype)
+    # t = ((t * cos_) + (_rotate_half(t) * sin_)) 
+    t = ((t * freqs.cos()) + (_rotate_half(t) * freqs.sin()))
     return torch.cat((t, t_pass), dim=-1)
