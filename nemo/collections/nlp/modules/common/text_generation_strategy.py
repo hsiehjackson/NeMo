@@ -260,21 +260,93 @@ class GPTModelTextGenerationStrategy(TextGenerationStrategy):
             if maxlen > self.model.cfg.encoder_seq_length + 1:
                 maxlen = self.model.cfg.encoder_seq_length + 1
         return maxlen
+        
+    def tokenize_batch(self, sentences, max_len, add_BOS):
+        """
+        convert the sentences into lists of tokens, pad them to the same length, add bos tokens if it is needed
+        Args:
+            sentences (List[str]): list of input sentences in str format.
+            max_len (int): max number of tokens to generate.
+            add_BOS (bool): whether to add the BOS token at the beginning
+        Returns:
+            Tuple[torch.Tensor], the tokenized and padded torch tensor and the token context length tensor.
+        """
+        tokenizer = self.model.tokenizer
+
+        
+        if add_BOS:
+            context_tokens = [[tokenizer.bos_id] + tokenizer.text_to_ids(s) for s in sentences]
+            context_texts = [[''] + tokenizer.text_to_tokens(s) for s in sentences]
+        else:
+            context_tokens = [tokenizer.text_to_ids(s) for s in sentences]
+            context_texts = [tokenizer.text_to_tokens(s) for s in sentences]
+
+        # pos_ids = []
+        # ctx_ends = []
+        # for text in context_texts:
+        #     init_pos = 0
+        #     curr_pos = 0
+        #     max_curr_pos = 0
+        #     pos_id = []
+        #     flag = False
+        #     for t in text:
+        #         pos_id.append(curr_pos)
+        #         curr_pos += 1
+        #         max_curr_pos = max(max_curr_pos, curr_pos)
+        #         if not flag:
+        #             init_pos += 1
+                
+        #         if flag is not None and t == '<0x0A>':
+        #             curr_pos = init_pos
+        #             flag = True
+                    
+        #         # elif t == '"}':
+        #         elif t == '"}':
+        #             flag = None
+        #             init_pos = max_curr_pos
+        #             ctx_ends.append(len(pos_id))
+        #     pos_ids.append(pos_id + list(range(max(pos_id)+1, max(pos_id)+1+max_len)))
+
+        # max_pos_id_len = max([len(pos_id) for pos_id in pos_ids])
+        # pos_ids = [pos_id + list(range(max(pos_id)+1, max(pos_id)+1+max_pos_id_len-len(pos_id))) for pos_id in pos_ids]
+        # self.position_ids = torch.tensor(pos_ids).type(torch.float32)
+        # # False means not mask; True means mask
+        # attention_mask = torch.tril(torch.ones((self.position_ids.shape[0], 1, max_pos_id_len, max_pos_id_len)))
+        
+        # for i, (pos_id, ctx_end) in enumerate(zip(pos_ids, ctx_ends)):
+        #     mask_start, mask_end = 0, 0
+        #     for pos in range(1,len(pos_id)):
+        #         if pos == ctx_end:
+        #             break
+                    
+        #         if pos_id[pos-1] > pos_id[pos]:
+        #             mask_start = pos_id[pos]
+        #             mask_end = pos
+                    
+        #         attention_mask[i, :, pos, mask_start:mask_end] = 0.0
+
+        # self.attention_mask = attention_mask < 0.5
+
+        context_tokens, context_lengths = pad_batch(context_tokens, tokenizer.eos_id, max_len)
+        context_tokens_tensor = torch.cuda.LongTensor(context_tokens)
+        context_length_tensor = torch.cuda.LongTensor(context_lengths)
+        return context_tokens_tensor, context_length_tensor
 
     def init_batch(self, context_tokens: torch.Tensor, context_length: int, compute_attention_mask: bool):
         """initialize the batch data before the inference steps."""
-        # Move to GPU.
-        tokenizer = self.model.tokenizer
-        tokens = context_tokens.contiguous().cuda()
-        # Get the attention mask and postition ids.
-        self.attention_mask, _, self.position_ids = get_ltor_masks_and_position_ids(
-            tokens,
-            tokenizer.eos_id,
-            self.model.cfg.get('reset_position_ids', False),
-            self.model.cfg.get('reset_attention_mask', False),
-            self.model.cfg.get('eod_mask_loss', False),
-            compute_attention_mask=compute_attention_mask,
-        )
+        if not hasattr(self, 'attention_mask') and not hasattr(self, 'position_ids'):
+            # Move to GPU.
+            tokenizer = self.model.tokenizer
+            tokens = context_tokens.contiguous().cuda()
+            # Get the attention mask and postition ids.
+            self.attention_mask, _, self.position_ids = get_ltor_masks_and_position_ids(
+                tokens,
+                tokenizer.eos_id,
+                self.model.cfg.get('reset_position_ids', False),
+                self.model.cfg.get('reset_attention_mask', False),
+                self.model.cfg.get('eod_mask_loss', False),
+                compute_attention_mask=compute_attention_mask,
+            )
 
     def prepare_batch_at_step(
         self,
@@ -301,7 +373,8 @@ class GPTModelTextGenerationStrategy(TextGenerationStrategy):
             # Set this to false so the memory is not reallocated.
             set_inference_key_value_memory = False
             tokens2use = tokens[:, context_length - 1].view(micro_batch_size, -1)
-            positions2use = self.position_ids[:, context_length - 1].view(micro_batch_size, -1)
+            #positions2use = self.position_ids[:, context_length - 1].view(micro_batch_size, -1)
+            positions2use = self.position_ids[:, :context_length].view(micro_batch_size, -1)
             # not using type2use. uncomment it if it is used
             # if type_ids is not None:
             #     types2use = type_ids[:, context_length - 1].view(batch_size, -1)

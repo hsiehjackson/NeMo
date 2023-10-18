@@ -71,9 +71,15 @@ class RotaryEmbedding(nn.Module):
         self.beta_slow=1
         # self.yarn(self.seq_len_interpolation_factor, self.inv_freq.device)
         
-    def forward(self, max_seq_len, offset=0):
+    def forward(self, max_seq_len, position_ids=None, offset=0):
         
+        # if position_ids is not None:
+        #     seq = position_ids.type(torch.float32).to(self.inv_freq.device).squeeze(0)
+        # else:
+        #     seq = torch.arange(max_seq_len, device=self.inv_freq.device, dtype=torch.float32) + offset
+
         seq = torch.arange(max_seq_len, device=self.inv_freq.device, dtype=torch.float32) + offset
+
         # seq *= 1 / self.seq_len_interpolation_factor
         
         # if self.pretrained_max_position_embeddings is not None and self.seq_len_interpolation_factor is not None:

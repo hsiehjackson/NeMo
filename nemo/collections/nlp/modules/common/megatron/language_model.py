@@ -770,7 +770,7 @@ class TransformerLanguageModel(MegatronModule, adapter_mixins.AdapterModuleMixin
         rotary_pos_emb = None
         encoder_self_attention_relative_position_bias = None
         if self.position_embedding_type == 'rope':
-            rotary_pos_emb = self.rotary_pos_emb(enc_seq_length)
+            rotary_pos_emb = self.rotary_pos_emb(enc_seq_length, enc_position_ids)
         elif (
             self.position_embedding_type == 'alibi'
             or self.position_embedding_type == 'sandwich'

@@ -394,6 +394,7 @@ class ParallelAttention(MegatronModule, adapter_mixins.AdapterModuleMixin):
         if self.attention_type == AttnType.self_attn:
             # Attention heads [sq, b, h] --> [sq, b, (np * 3 * hn)]
             mixed_x_layer, _ = self.query_key_value(hidden_states)
+            
             if self.is_adapter_available():
                 lora_kqv_adapter = self.get_adapter_module(AdapterName.LORA_KQV_ADAPTER)
                 if lora_kqv_adapter:
@@ -469,7 +470,6 @@ class ParallelAttention(MegatronModule, adapter_mixins.AdapterModuleMixin):
         # duplicate the pos_emb for self attention
         if rotary_pos_emb is not None:
             rotary_pos_emb = rotary_pos_emb if isinstance(rotary_pos_emb, tuple) else ((rotary_pos_emb,) * 2)
-
         if inference_max_sequence_len:
             # Adjust the range variables.
             start = self.inference_current_sequence_len
@@ -480,6 +480,7 @@ class ParallelAttention(MegatronModule, adapter_mixins.AdapterModuleMixin):
             self.inference_value_memory[start:end, ...] = value_layer
             key_layer = self.inference_key_memory[:end, ...]
             value_layer = self.inference_value_memory[:end, ...]
+            
             # Adjust attention mask
             if attention_mask is not None:
                 attention_mask = attention_mask[..., start:end, :end]
@@ -494,7 +495,7 @@ class ParallelAttention(MegatronModule, adapter_mixins.AdapterModuleMixin):
                     q_pos_emb = q_pos_emb[:end, :, :, :]
                 k_pos_emb = k_pos_emb[:end, :, :, :]
                 rotary_pos_emb = (q_pos_emb, k_pos_emb)
-
+            
         if layer_past is not None:
             past_key, past_value = layer_past
             key_layer = torch.cat((past_key.type_as(key_layer), key_layer), dim=0)
@@ -891,8 +892,6 @@ class CoreAttention(MegatronModule):
         return context_layer
 
     def torch_attention(self, query_layer, key_layer, value_layer, attention_mask, attention_bias, inference_mode):
-        import pdb
-        pdb.set_trace()
         sq, b, np, hn = query_layer.shape
         sk = key_layer.shape[0]
 
@@ -928,11 +927,11 @@ class CoreAttention(MegatronModule):
             attention_scores += attention_bias
 
         attention_probs = self.scale_mask_softmax(attention_scores, attention_mask)
-        import os
-        folder = '/home/chsieh/LC_Issue/Dataset/attention/020'
-        file_size = len(os.listdir(folder))
-        torch.save(attention_probs[0, :, -1, :], f'{folder}/{file_size}.pt')
-        
+        # import os
+        # folder = '/home/chsieh/LC_Issue/Dataset/debug/002'
+        # file_size = len(os.listdir(folder))
+        # torch.save(attention_scores[0, :, :, :], f'{folder}/{file_size}.pt')
+
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
 
