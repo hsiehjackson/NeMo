@@ -1,0 +1,117 @@
+defaults:
+  - _self_
+
+name: huggingface
+restore_from_path: null # used when starting from a .nemo file
+
+trainer:
+  devices: 1
+  num_nodes: 1
+  accelerator: gpu
+  strategy: ddp
+  precision: 16
+  logger: False # logger provided by exp_manager
+  enable_checkpointing: False
+  use_distributed_sampler: False
+  max_epochs: -1 # PTL default. In practice, max_steps will be reached first.
+  max_steps: 100000 # consumed_samples = global_step * micro_batch_size * data_parallel_size * accumulate_grad_batches
+  log_every_n_steps: 10
+  val_check_interval: 100
+  limit_val_batches: 50
+  limit_test_batches: 0
+  accumulate_grad_batches: 1
+  gradient_clip_val: 1.0
+  benchmark: False
+  enable_model_summary: True
+
+exp_manager:
+  explicit_log_dir: null
+  exp_dir: null
+  name: huggingface
+  create_wandb_logger: False
+  wandb_logger_kwargs:
+    project: null
+    name: null
+  resume_if_exists: True
+  resume_ignore_no_checkpoint: True
+  resume_from_checkpoint: ${model.resume_from_checkpoint}
+  create_checkpoint_callback: True
+  checkpoint_callback_params:
+    monitor: val_loss
+    save_top_k: 3
+    mode: min
+    always_save_nemo: False # saves nemo file during validation, not implemented for model parallel
+    save_nemo_on_train_end: True # not recommended when training large models on clusters with short time limits
+    filename: 'huggingface--{val_loss:.2f}-{step}-{consumed_samples}'
+
+model:
+  resume_from_checkpoint: null # manually set the checkpoint file to load from
+  seed: 1234
+  micro_batch_size: 4
+  hf_login_key: ???
+  hf_model_class: AutoModelForCausalLM
+  hf_model_name_or_path: ???
+  hf_config: null # you can change any huggingface configs (e.g. max_position_embeddings or n_positions)
+  
+  optim:
+    name: fused_adam
+    lr: 2e-4
+    weight_decay: 0.01
+    betas:
+    - 0.9
+    - 0.98
+    sched:
+      name: CosineAnnealing
+      warmup_steps: 500
+      constant_steps: 0
+      min_lr: 2e-5
+      
+  tokenizer:
+    library: 'huggingface' # huggingface, sentencepiece, byte-level, regex, megatron, tabular
+    name: null
+    model: null
+    vocab_file: null
+    merge_file: null
+    delimiter: null # only used for tabular tokenizer
+    trust_remote_code: True
+    sentencepiece_legacy: False
+
+  data:
+   # Path to data must be specified by the user.
+    # Supports List, String and Dictionary
+    # List : can override from the CLI: "model.data.data_prefix=[.5,/raid/data/pile/my-gpt3_00_text_document,.5,/raid/data/pile/my-gpt3_01_text_document]",
+    # Or see example below:
+    # data_prefix:
+    #   - .5
+    #   - /raid/data/pile/my-gpt3_00_text_document
+    #   - .5
+    #   - /raid/data/pile/my-gpt3_01_text_document
+    # Dictionary: can override from CLI "model.data.data_prefix"={"train":[1.0, /path/to/data], "validation":/path/to/data, "test":/path/to/test}
+    # Or see example below:
+    # "model.data.data_prefix: {train:[1.0,/path/to/data], validation:[/path/to/data], test:[/path/to/test]}"
+    data_prefix: ???
+    splits_string: 980,20,
+    index_mapping_dir: null # path to save index mapping .npy files, by default will save in the same location as data_prefix
+    mmap_bin_files: True
+    
+    dataloader_type: single # cyclic
+    drop_last: True # Set to false if the last partial samples is to be consumed
+    num_workers: 2
+
+    dataset_type: gpt # gpt, t5, bert
+    
+    gpt_reset_position_ids: False # Reset position ids after end-of-document token
+    gpt_reset_attention_mask: False # Reset attention mask after end-of-document token
+    gpt_eod_mask_loss: False # Mask loss for the end of document tokens
+    gpt_create_attention_mask: False
+    
+    t5_masked_lm_prob: 0.15
+    t5_short_seq_prob: 0
+    t5_max_ngram_size: 10
+    t5_whole_word_masking: True
+    t5_permutation: False
+    t5_favor_longer_ngrams: False
+    t5_geometric_dist: True
+    
+    bert_masked_lm_prob: 0.15
+    bert_short_seq_prob: 0.1
