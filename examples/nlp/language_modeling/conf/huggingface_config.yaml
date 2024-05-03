@@ -51,6 +51,7 @@ model:
   hf_login_key: ???
   hf_model_class: AutoModelForCausalLM
   hf_model_name_or_path: ???
+  hf_attention: null
   hf_config: null # you can change any huggingface configs (e.g. max_position_embeddings or n_positions)
   
   optim:

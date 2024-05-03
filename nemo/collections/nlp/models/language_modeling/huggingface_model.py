@@ -195,7 +195,8 @@ class HuggingfaceModel(ModelPT, Exportable):
         if self.cfg.get('hf_config'):
             model_config.update(OmegaConf.to_container(self.cfg.get('hf_config')))
             
-        model = model_class.from_config(model_config)
+        model = model_class.from_config(model_config, attn_implementation=self.cfg.get('hf_attention'))
+        # [TODO] add torch type
 
         # model = model_class.from_pretrained(self.cfg.get('hf_model_name_or_path'))
         # model_config = model.config
